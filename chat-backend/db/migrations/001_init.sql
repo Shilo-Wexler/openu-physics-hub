@@ -1,6 +1,6 @@
 -- Chat DB initial schema: tables, keys, checks, indexes, the blocked-user trigger
 -- and the soft-delete function. All other logic and permission checks live in the Python backend.
--- Course data is loaded separately from db/seed/courses.csv.
+-- Course data is loaded separately from shared/courses.csv (repo root).
 
 -- Users. id is an internal uuid set by the app (not the Google id).
 create table users (
