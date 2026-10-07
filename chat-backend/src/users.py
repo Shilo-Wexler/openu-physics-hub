@@ -1,5 +1,6 @@
 """Users: find the user behind a login identity, or create one."""
 
+import re
 import secrets
 import uuid
 from uuid import UUID
@@ -7,6 +8,9 @@ from uuid import UUID
 import asyncpg
 
 import db
+
+# 3-30 characters: Hebrew or English letters, digits, space, underscore, hyphen, dot.
+_NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9\u05D0-\u05EA _.-]{3,30}")
 
 # Attempts at a free random nickname before giving up (collisions are rare).
 _NICKNAME_ATTEMPTS = 5
@@ -44,3 +48,32 @@ async def find_or_create(provider: str, provider_user_id: str) -> UUID:
                 return await db.pool.fetchval(find, provider, provider_user_id)
             raise
     raise RuntimeError("could not find a free nickname")
+
+
+class InvalidNickname(Exception):
+    pass
+
+
+class NicknameTaken(Exception):
+    pass
+
+
+async def get(user_id: UUID) -> asyncpg.Record | None:
+    return await db.pool.fetchrow("select id, nickname from users where id = $1", user_id)
+
+
+async def set_nickname(user_id: UUID, nickname: str) -> str:
+    """Change a user's nickname and return it as saved. Blocked users cannot change it."""
+    nickname = nickname.strip()
+    if not _NICKNAME_PATTERN.fullmatch(nickname):
+        raise InvalidNickname()
+    try:
+        updated = await db.pool.fetchval(
+            "update users set nickname = $2 where id = $1 and not is_blocked returning nickname",
+            user_id, nickname,
+        )
+    except asyncpg.UniqueViolationError:
+        raise NicknameTaken()
+    if updated is None:
+        raise PermissionError("user is blocked")
+    return updated
