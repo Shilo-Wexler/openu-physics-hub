@@ -33,6 +33,12 @@ DB_POOL_MAX = int(os.environ.get("DB_POOL_MAX", "10"))
 # OAuth client id from Google Cloud Console. Not a secret: it is also used in the browser.
 GOOGLE_CLIENT_ID = _required("GOOGLE_CLIENT_ID")
 
+
+# Shared secret the admin backend sends to reach the /internal moderation routes.
+MOD_API_TOKEN = _secret("MOD_API_TOKEN")
+if len(MOD_API_TOKEN) < 32:
+    raise RuntimeError("MOD_API_TOKEN must be at least 32 characters")
+
 # A session expires after this many days without a visit. 400 is Chrome's cookie limit.
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "400"))
 

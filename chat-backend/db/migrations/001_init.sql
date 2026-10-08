@@ -3,12 +3,12 @@
 -- Course data is loaded separately from shared/courses.csv (repo root).
 
 -- Users. id is an internal uuid set by the app (not the Google id).
+-- blocked_at null = not blocked; set and cleared from the admin console.
 create table users (
-  id           uuid primary key,
-  nickname     text not null check (length(trim(nickname)) between 3 and 30),
-  is_blocked   boolean not null default false,
-  is_moderator boolean not null default false,
-  created_at   timestamptz not null default now()
+  id         uuid primary key,
+  nickname   text not null check (length(trim(nickname)) between 3 and 30),
+  blocked_at timestamptz,
+  created_at timestamptz not null default now()
 );
 
 -- Nicknames are unique regardless of letter case ("Shilo" and "shilo" are the same).
@@ -35,6 +35,7 @@ create table courses (
 -- Messages. reply_to_id null = top-level message; otherwise the message being replied to.
 -- deleted_at null = active message. Rows are never physically deleted.
 -- A reply must be in the same course as the message it replies to.
+-- deleted_by says who deleted it: the author or a moderator (from the admin console).
 -- deleted_at and deleted_by are either both set or both null.
 create table messages (
   id          bigint generated always as identity primary key,
@@ -45,7 +46,7 @@ create table messages (
   created_at  timestamptz not null default now(),
   edited_at   timestamptz,
   deleted_at  timestamptz,
-  deleted_by  uuid references users (id),
+  deleted_by  text check (deleted_by in ('author', 'moderator')),
   unique (id, course_id),
   constraint messages_deleted_fields_together check ((deleted_at is null) = (deleted_by is null)),
   foreign key (reply_to_id, course_id) references messages (id, course_id)
@@ -55,6 +56,8 @@ create table messages (
 -- id breaks ties between messages with the same created_at.
 create index messages_course_idx on messages (course_id, created_at desc, id desc)
   where deleted_at is null;
+-- A user's messages, for the admin console (removed messages, report counts).
+create index messages_user_idx on messages (user_id);
 
 -- Course ratings: one per user per course.
 create table ratings (
@@ -90,6 +93,9 @@ create table reports (
   constraint reports_one_per_user unique (message_id, reporter_id)
 );
 
+-- Open reports per message, for the admin console's list.
+create index reports_open_idx on reports (message_id) where status = 'open';
+
 -- Blocked users cannot write: rejects new messages, edits, likes, ratings and reports.
 -- The trigger argument is the name of the column that holds the acting user's id.
 create function reject_blocked_user()
@@ -99,7 +105,7 @@ as $$
 begin
   if exists (
     select 1 from users
-     where id = (to_jsonb(new) ->> tg_argv[0])::uuid and is_blocked
+     where id = (to_jsonb(new) ->> tg_argv[0])::uuid and blocked_at is not null
   ) then
     raise exception 'user is blocked';
   end if;

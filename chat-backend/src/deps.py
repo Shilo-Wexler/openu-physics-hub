@@ -1,9 +1,10 @@
-"""Request dependencies shared by the routers: the session cookie and who is signed in."""
+"""Request dependencies shared by the routers: who is signed in, and the admin backend's token."""
 
+import hmac
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Cookie, Depends, HTTPException, Response
+from fastapi import Cookie, Depends, Header, HTTPException, Response
 
 import sessions
 import settings
@@ -40,3 +41,12 @@ async def current_user_id(
     if user_id is None:
         raise HTTPException(status_code=401, detail="not signed in")
     return user_id
+
+
+async def require_mod_token(authorization: Annotated[str | None, Header()] = None) -> None:
+    """For the /internal routes: the caller must send "Authorization: Bearer <MOD_API_TOKEN>"."""
+    expected = f"Bearer {settings.MOD_API_TOKEN}"
+    # compare_digest takes the same time however much of the guess is right,
+    # so response times do not leak the token one character at a time.
+    if authorization is None or not hmac.compare_digest(authorization.encode(), expected.encode()):
+        raise HTTPException(status_code=401, detail="invalid token")

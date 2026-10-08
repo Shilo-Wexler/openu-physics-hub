@@ -69,7 +69,11 @@ async def set_nickname(user_id: UUID, nickname: str) -> str:
         raise InvalidNickname()
     try:
         updated = await db.pool.fetchval(
-            "update users set nickname = $2 where id = $1 and not is_blocked returning nickname",
+            """
+            update users set nickname = $2
+             where id = $1 and blocked_at is null
+            returning nickname
+            """,
             user_id, nickname,
         )
     except asyncpg.UniqueViolationError:

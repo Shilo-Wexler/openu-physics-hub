@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 import db
-from routes import auth, courses, health, me, messages
+from routes import auth, courses, health, internal, me, messages
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,3 +21,4 @@ app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(courses.router)
 app.include_router(messages.router)
+app.include_router(internal.router)
