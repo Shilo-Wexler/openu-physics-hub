@@ -25,7 +25,7 @@ os.environ.pop("MOD_API_TOKEN_FILE", None)
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.main import app  # noqa: E402
+from app.main import API_PREFIX, app  # noqa: E402
 from app.routes.deps import SESSION_COOKIE  # noqa: E402
 from app.services import google_auth  # noqa: E402
 
@@ -91,6 +91,9 @@ class Student:
         self.user_id = user_id
 
     def request(self, method: str, url: str, **kwargs):
+        # Tests use public paths without the prefix ("/courses"); the unprefixed routes stay as is.
+        if not url.startswith(("/internal", "/health")):
+            url = API_PREFIX + url
         # One client is shared by all students, so its cookie jar is reset per request.
         self.client.cookies.clear()
         if self.token:
