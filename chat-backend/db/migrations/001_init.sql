@@ -1,5 +1,5 @@
--- Chat DB initial schema: tables, keys, checks, indexes, the blocked-user trigger
--- and the soft-delete function. All other logic and permission checks live in the Python backend.
+-- Chat DB initial schema: tables, keys, checks, indexes and the blocked-user trigger.
+-- All other logic and permission checks live in the Python backend.
 -- Course data is loaded separately from shared/courses.csv (repo root).
 
 -- Users. id is an internal uuid set by the app (not the Google id).
@@ -55,7 +55,6 @@ create table messages (
 -- id breaks ties between messages with the same created_at.
 create index messages_course_idx on messages (course_id, created_at desc, id desc)
   where deleted_at is null;
-create index messages_reply_to_idx on messages (reply_to_id);
 
 -- Course ratings: one per user per course.
 create table ratings (
@@ -117,24 +116,4 @@ create trigger ratings_reject_blocked before insert or update on ratings
   for each row execute function reject_blocked_user('user_id');
 create trigger reports_reject_blocked before insert on reports
   for each row execute function reject_blocked_user('reporter_id');
-
--- Cascading soft delete: marks the message and all its replies, at any depth.
--- Messages already deleted keep their original deleted_at and deleted_by.
--- Returns the number of messages marked.
-create function soft_delete_message(p_message_id bigint, p_deleted_by uuid)
-returns integer
-language sql
-as $$
-  with recursive thread as (
-    select id from messages where id = p_message_id
-    union all
-    select m.id from messages m join thread t on m.reply_to_id = t.id
-  ),
-  marked as (
-    update messages
-       set deleted_at = now(), deleted_by = p_deleted_by
-     where id in (select id from thread) and deleted_at is null
-    returning 1
-  )
-  select count(*)::integer from marked;
-$$;
+  
