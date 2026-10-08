@@ -1,4 +1,5 @@
 import { NavLink, Route, Routes } from "react-router";
+import CoursesPage from "./pages/CoursesPage";
 
 // Temporary stand-in until each page gets its own file in src/pages/.
 function Placeholder({ title }: { title: string }) {
@@ -21,7 +22,7 @@ export default function App() {
       <main>
         <Routes>
           <Route path="/" element={<Placeholder title="דף הבית" />} />
-          <Route path="/courses" element={<Placeholder title="קורסים" />} />
+          <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<Placeholder title="צ'אט הקורס" />} />
           <Route path="/about" element={<Placeholder title="אודות" />} />
           <Route path="*" element={<Placeholder title="הדף לא נמצא" />} />
