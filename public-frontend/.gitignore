@@ -1,0 +1,10 @@
+# Installed packages, rebuilt from package-lock.json
+node_modules/
+
+# Build output
+dist/
+
+# Local settings and secrets; .env.example stays tracked
+.env
+.env.*
+!.env.example
