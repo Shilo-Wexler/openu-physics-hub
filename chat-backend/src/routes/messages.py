@@ -1,4 +1,7 @@
-"""Course messages over HTTP. Reading is open to everyone; writing needs a signed-in user."""
+"""Course messages, likes and reports over HTTP.
+
+Reading is open to everyone; everything else needs a signed-in user."""
+
 
 from typing import Annotated
 from uuid import UUID
@@ -88,4 +91,34 @@ async def delete_message(message_id: int, user_id: Annotated[UUID, Depends(curre
         await messages.delete(message_id, user_id)
     except messages.MessageNotFound:
         raise HTTPException(status_code=404, detail="message not found")
+    return {"status": "ok"}
+
+
+@router.put("/messages/{message_id}/like")
+async def like_message(message_id: int, user_id: Annotated[UUID, Depends(current_user_id)]):
+    try:
+        await messages.like(message_id, user_id)
+    except messages.MessageNotFound:
+        raise HTTPException(status_code=404, detail="message not found")
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="user is blocked")
+    return {"liked": True}
+
+
+@router.delete("/messages/{message_id}/like")
+async def unlike_message(message_id: int, user_id: Annotated[UUID, Depends(current_user_id)]):
+    await messages.unlike(message_id, user_id)
+    return {"liked": False}
+
+
+@router.post("/messages/{message_id}/report", status_code=201)
+async def report_message(message_id: int, user_id: Annotated[UUID, Depends(current_user_id)]):
+    try:
+        await messages.report(message_id, user_id)
+    except messages.MessageNotFound:
+        raise HTTPException(status_code=404, detail="message not found")
+    except messages.AlreadyReported:
+        raise HTTPException(status_code=409, detail="already reported")
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="user is blocked")
     return {"status": "ok"}

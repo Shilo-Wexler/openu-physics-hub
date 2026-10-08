@@ -1,4 +1,6 @@
-"""Course messages: read a page, post, edit, delete. Replies are a flat list with a quote."""
+"""Course messages: read a page, post, edit, delete, like, report.
+
+Replies are a flat list with a quote."""
 
 from uuid import UUID
 
@@ -50,6 +52,10 @@ class MessageNotFound(Exception):
 
 
 class ReplyTargetNotFound(Exception):
+    pass
+
+
+class AlreadyReported(Exception):
     pass
 
 
@@ -129,4 +135,52 @@ async def delete(message_id: int, user_id: UUID) -> None:
         message_id, user_id,
     )
     if status == "UPDATE 0":
+        raise MessageNotFound()
+
+
+async def like(message_id: int, user_id: UUID) -> None:
+    """Idempotent: liking twice is not an error. Only active messages can be liked."""
+    try:
+        found = await db.pool.fetchval(
+            """
+            with target as (
+                select id from messages where id = $1 and deleted_at is null
+            ), added as (
+                insert into likes (user_id, message_id)
+                select $2, id from target
+                on conflict do nothing
+            )
+            select exists (select 1 from target)
+            """,
+            message_id, user_id,
+        )
+    except asyncpg.RaiseError as exc:
+        raise PermissionError(str(exc)) from exc
+    if not found:
+        raise MessageNotFound()
+
+
+async def unlike(message_id: int, user_id: UUID) -> None:
+    """Idempotent: removing a like that is not there is not an error."""
+    await db.pool.execute(
+        "delete from likes where message_id = $1 and user_id = $2", message_id, user_id
+    )
+
+
+async def report(message_id: int, user_id: UUID) -> None:
+    try:
+        report_id = await db.pool.fetchval(
+            """
+            insert into reports (message_id, reporter_id)
+            select id, $2 from messages where id = $1 and deleted_at is null
+            returning id
+            """,
+            message_id, user_id,
+        )
+    except asyncpg.UniqueViolationError:
+        # reports_one_per_user: this user already reported this message.
+        raise AlreadyReported()
+    except asyncpg.RaiseError as exc:
+        raise PermissionError(str(exc)) from exc
+    if report_id is None:
         raise MessageNotFound()

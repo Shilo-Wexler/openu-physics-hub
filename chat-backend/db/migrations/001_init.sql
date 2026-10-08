@@ -85,7 +85,6 @@ create table reports (
   id          bigint generated always as identity primary key,
   message_id  bigint not null references messages (id),
   reporter_id uuid not null references users (id),
-  reason      text not null check (length(trim(reason)) between 1 and 1000),
   status      text not null default 'open' check (status in ('open', 'resolved', 'dismissed')),
   created_at  timestamptz not null default now(),
   constraint reports_one_per_user unique (message_id, reporter_id)
