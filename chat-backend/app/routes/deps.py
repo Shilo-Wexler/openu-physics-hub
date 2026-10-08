@@ -6,8 +6,8 @@ from uuid import UUID
 
 from fastapi import Cookie, Depends, Header, HTTPException, Response
 
-import sessions
-import settings
+from app.core import settings
+from app.services import sessions
 
 SESSION_COOKIE = "session"
 

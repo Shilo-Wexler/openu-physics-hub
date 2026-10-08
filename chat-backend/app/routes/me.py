@@ -6,8 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-import users
-from deps import current_user_id
+from app.routes.deps import current_user_id
+from app.services import users
 
 router = APIRouter(prefix="/me", tags=["me"])
 

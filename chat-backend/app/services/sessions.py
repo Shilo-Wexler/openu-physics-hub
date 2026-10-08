@@ -5,8 +5,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-import db
-import settings
+from app.core import db, settings
 
 # last_seen_at is refreshed at most this often, to avoid a DB write on every request.
 _TOUCH_INTERVAL = timedelta(days=1)

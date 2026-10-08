@@ -1,5 +1,5 @@
 # Allowlist: send only what the image needs, so secrets like .env never reach it.
 *
 !requirements.txt
-!src/
+!app/
 **/__pycache__

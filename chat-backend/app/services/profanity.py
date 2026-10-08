@@ -9,7 +9,7 @@ still match. Hebrew prefixes (ו, ה, מ...) are deliberately not stripped:
 import re
 from pathlib import Path
 
-_WORDS_FILE = Path(__file__).with_name("blocked_words.txt")
+_WORDS_FILE = Path(__file__).parent.parent / "data" / "blocked_words.txt"
 
 _NIQQUD = re.compile(r"[֑-ׇ]")
 _FINAL_LETTERS = str.maketrans("ךםןףץ", "כמנפצ")

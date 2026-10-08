@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-import db
-from routes import auth, courses, health, internal, me, messages
+from app.core import db
+from app.routes import auth, courses, health, internal, me, messages
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

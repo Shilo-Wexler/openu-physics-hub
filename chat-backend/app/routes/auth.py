@@ -6,10 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from pydantic import BaseModel
 
-import google_auth
-import sessions
-import users
-from deps import SESSION_COOKIE, current_user_id, set_session_cookie
+from app.routes.deps import SESSION_COOKIE, current_user_id, set_session_cookie
+from app.services import google_auth, sessions, users
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

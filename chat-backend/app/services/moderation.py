@@ -7,8 +7,8 @@ from uuid import UUID
 
 import asyncpg
 
-import db
-from messages import MessageNotFound
+from app.core import db
+from app.services.messages import MessageNotFound
 
 # Most reported messages returned in one list; the console shows the worst first.
 REPORTED_LIMIT = 100
