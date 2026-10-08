@@ -129,7 +129,7 @@ async def delete(message_id: int, user_id: UUID) -> None:
     """Soft delete of the user's own message only; replies to it stay."""
     status = await db.pool.execute(
         """
-        update messages set deleted_at = now(), deleted_by = $2
+         update messages set deleted_at = now(), deleted_by = 'author'
          where id = $1 and user_id = $2 and deleted_at is null
         """,
         message_id, user_id,
