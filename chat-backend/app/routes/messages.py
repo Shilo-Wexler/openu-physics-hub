@@ -9,9 +9,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-import messages
-from courses import CourseNotFound
-from deps import current_user_id, optional_user_id
+from app.routes.deps import current_user_id, optional_user_id
+from app.services import messages
+from app.services.courses import CourseNotFound
 
 router = APIRouter(tags=["messages"])
 

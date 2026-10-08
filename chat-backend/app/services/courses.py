@@ -4,7 +4,7 @@ from uuid import UUID
 
 import asyncpg
 
-import db
+from app.core import db
 
 # Averages and count per course. Left join keeps courses that have no ratings yet (avg is null).
 _COURSES_WITH_RATINGS = """

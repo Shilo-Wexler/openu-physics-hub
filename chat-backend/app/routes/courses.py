@@ -6,8 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-import courses  # the logic module src/courses.py, not this file
-from deps import current_user_id, optional_user_id
+from app.routes.deps import current_user_id, optional_user_id
+from app.services import courses
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 

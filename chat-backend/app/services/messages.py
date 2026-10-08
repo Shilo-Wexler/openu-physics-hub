@@ -6,9 +6,9 @@ from uuid import UUID
 
 import asyncpg
 
-import db
-import profanity
-from courses import CourseNotFound
+from app.core import db
+from app.services import profanity
+from app.services.courses import CourseNotFound
 
 # Messages per page; older ones are loaded with the id of the oldest message seen.
 PAGE_SIZE = 50

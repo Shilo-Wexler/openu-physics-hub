@@ -4,9 +4,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 
-import moderation
-from deps import require_mod_token
-from messages import MessageNotFound
+from app.routes.deps import require_mod_token
+from app.services import moderation
+from app.services.messages import MessageNotFound
 
 # The dependency on the router protects every route here, including ones added later.
 router = APIRouter(

@@ -3,8 +3,7 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-import db
-import settings
+from app.core import db, settings
 
 router = APIRouter(prefix="/health", tags=["health"])
 

@@ -2,7 +2,7 @@
 
 import asyncpg
 
-import settings
+from app.core import settings
 
 pool: asyncpg.Pool | None = None
 

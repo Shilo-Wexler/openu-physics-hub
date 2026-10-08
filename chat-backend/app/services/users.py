@@ -7,7 +7,7 @@ from uuid import UUID
 
 import asyncpg
 
-import db
+from app.core import db
 
 # 3-30 characters: Hebrew or English letters, digits, space, underscore, hyphen, dot.
 _NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9\u05D0-\u05EA _.-]{3,30}")

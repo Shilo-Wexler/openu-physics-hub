@@ -4,7 +4,7 @@ import asyncio
 
 import jwt
 
-import settings
+from app.core import settings
 
 # Google's public signing keys. PyJWKClient caches them in memory,
 # so most verifications are a local signature check with no network call.
