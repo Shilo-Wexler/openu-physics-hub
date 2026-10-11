@@ -31,12 +31,23 @@ _FIELDS = """
              where l.message_id = m.id and l.user_id = $2) as liked_by_me
 """
 
-# Reviews of a course with their reply counts. A deleted review is listed only while
-# it still has active replies. The cursor ($3) is the id of the last review seen.
+# Active replies under the review m.
+_REPLY_COUNT = """
+    (select count(*) from messages r
+      where r.thread_id = m.id and r.deleted_at is null) as reply_count
+"""
+
+# A deleted review is shown only while it still has active replies.
+_REVIEW_VISIBLE = """
+    (m.deleted_at is null
+     or exists (select 1 from messages r
+                 where r.thread_id = m.id and r.deleted_at is null))
+"""
+
+# Reviews of a course with their reply counts. The cursor ($3) is the id of the last
+# review seen.
 _REVIEWS = f"""
-    select {_FIELDS},
-           (select count(*) from messages r
-             where r.thread_id = m.id and r.deleted_at is null) as reply_count
+    select {_FIELDS}, {_REPLY_COUNT}
       from messages m
       join users u on u.id = m.user_id
      where m.course_id = $1 and m.thread_id is null
@@ -47,9 +58,7 @@ _REVIEWS = f"""
 
 # Newest first, uses messages_reviews_new_idx.
 _REVIEWS_NEW = _REVIEWS.format(
-    filter="""(m.deleted_at is null
-            or exists (select 1 from messages r
-                        where r.thread_id = m.id and r.deleted_at is null))
+    filter=f"""{_REVIEW_VISIBLE}
        and ($3::bigint is null
             or (m.created_at, m.id) < (select created_at, id from messages where id = $3))""",
     order="m.created_at desc, m.id desc",
@@ -82,6 +91,19 @@ _REPLIES = f"""
             or (m.created_at, m.id) > (select created_at, id from messages where id = $3))
      order by m.created_at, m.id
      limit $4
+"""
+
+# The review a shared message ($1) belongs to: the message itself when it is a review,
+# otherwise the review of its discussion. A deleted reply is not shared; a deleted
+# review follows the same rule as in the list. Two primary key lookups.
+_SHARED = f"""
+    select {_FIELDS}, {_REPLY_COUNT}, m.course_id
+      from messages s
+      join messages m on m.id = coalesce(s.thread_id, s.id)
+      join users u on u.id = m.user_id
+     where s.id = $1
+       and (s.thread_id is null or s.deleted_at is null)
+       and {_REVIEW_VISIBLE}
 """
 
 
@@ -136,6 +158,14 @@ async def list_replies(
     ):
         raise MessageNotFound()
     return rows
+
+
+async def get_shared(message_id: int, viewer_id: UUID | None) -> asyncpg.Record:
+    """The review to show for a shared link to a review or a reply."""
+    row = await db.pool.fetchrow(_SHARED, message_id, viewer_id)
+    if row is None:
+        raise MessageNotFound()
+    return row
 
 
 async def post(

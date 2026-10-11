@@ -66,6 +66,22 @@ async def list_replies(
     return {"replies": items, "next_after": next_after}
 
 
+@router.get("/messages/{message_id}")
+async def get_shared(
+    message_id: int, viewer_id: Annotated[UUID | None, Depends(optional_user_id)]
+):
+    """For a shared link: the review to show on top, and the reply to point at if the
+    link is to a reply (its discussion opens on the page)."""
+    try:
+        row = await messages.get_shared(message_id, viewer_id)
+    except messages.MessageNotFound:
+        raise HTTPException(status_code=404, detail="message not found")
+    review = _public(row, viewer_id)
+    course_id = review.pop("course_id")
+    reply_id = message_id if message_id != review["id"] else None
+    return {"course_id": course_id, "review": review, "reply_id": reply_id}
+
+
 class NewMessage(BaseModel):
     content: str
     reply_to_id: int | None = None
