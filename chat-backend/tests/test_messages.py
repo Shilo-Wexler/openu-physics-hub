@@ -190,6 +190,40 @@ def test_deleted_reply_keeps_quotes_of_it(sign_in, guest, course_id):
     assert shown[0]["reply_to_content"] is None
 
 
+# Shared links
+
+
+def test_shared_review_and_reply_point_to_the_review(sign_in, guest, course_id):
+    alice, bob = sign_in("alice"), sign_in("bob")
+    review = post(alice, course_id, "review").json()
+    reply = post(bob, course_id, "answer", reply_to_id=review["id"]).json()
+
+    shared = guest.get(f"/messages/{review['id']}").json()
+    assert shared["course_id"] == course_id
+    assert shared["review"]["content"] == "review"
+    assert shared["review"]["reply_count"] == 1
+    assert shared["reply_id"] is None
+
+    shared = guest.get(f"/messages/{reply['id']}").json()
+    assert shared["review"]["id"] == review["id"]
+    assert shared["reply_id"] == reply["id"]
+
+
+def test_shared_deleted_message(sign_in, guest, course_id):
+    alice, bob = sign_in("alice"), sign_in("bob")
+    review = post(alice, course_id).json()
+    reply = post(bob, course_id, reply_to_id=review["id"]).json()
+    alice.delete(f"/messages/{review['id']}")
+    # The review is gone but its discussion is still there, as in the list.
+    assert guest.get(f"/messages/{review['id']}").json()["review"]["deleted"] is True
+    assert guest.get(f"/messages/{reply['id']}").status_code == 200
+
+    bob.delete(f"/messages/{reply['id']}")
+    assert guest.get(f"/messages/{reply['id']}").status_code == 404
+    assert guest.get(f"/messages/{review['id']}").status_code == 404
+    assert guest.get(f"/messages/{MISSING}").status_code == 404
+
+
 # Likes and reports
 
 
