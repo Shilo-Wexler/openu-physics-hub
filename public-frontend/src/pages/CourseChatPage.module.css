@@ -1,0 +1,10 @@
+/* The shared review sits above the tabs, set apart from the list under it. */
+.shared {
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.notice {
+  color: var(--color-text-muted);
+}

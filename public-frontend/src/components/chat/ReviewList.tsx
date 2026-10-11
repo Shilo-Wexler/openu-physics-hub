@@ -10,8 +10,14 @@ const SORTS: { value: ReviewSort; label: string }[] = [
   { value: "top", label: "מובילות" },
 ];
 
+interface Props {
+  courseId: number;
+  /** A review already shown above the list (a shared one), left out of the list. */
+  hiddenId?: number | null;
+}
+
 /** The reviews of a course, with sort tabs above them. */
-export default function ReviewList({ courseId }: { courseId: number }) {
+export default function ReviewList({ courseId, hiddenId = null }: Props) {
   const [sort, setSort] = useState<ReviewSort>("new");
 
   return (
@@ -32,7 +38,7 @@ export default function ReviewList({ courseId }: { courseId: number }) {
       </div>
 
       {/* key: another sort mounts a fresh list, so pages of the old sort never mix in. */}
-      <SortedReviews key={sort} courseId={courseId} sort={sort} />
+      <SortedReviews key={sort} courseId={courseId} sort={sort} hiddenId={hiddenId} />
     </section>
   );
 }
@@ -42,7 +48,7 @@ type State =
   | { status: "error" }
   | { status: "ready"; reviews: Review[]; nextBefore: number | null };
 
-function SortedReviews({ courseId, sort }: { courseId: number; sort: ReviewSort }) {
+function SortedReviews({ courseId, sort, hiddenId }: Props & { sort: ReviewSort }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [loadingMore, setLoadingMore] = useState(false);
   // Aborts requests still running when this list goes away (another sort or another page).
@@ -108,18 +114,23 @@ function SortedReviews({ courseId, sort }: { courseId: number; sort: ReviewSort 
   if (state.status === "error") {
     return <p className={styles.status}>לא הצלחנו לטעון את הביקורות. נסו לרענן את הדף.</p>;
   }
-  if (state.reviews.length === 0) {
+  const reviews = state.reviews.filter((review) => review.id !== hiddenId);
+  if (reviews.length === 0 && hiddenId === null) {
     return <p className={styles.status}>עוד אין ביקורות בקורס הזה. אפשר להיות הראשונים לכתוב.</p>;
   }
 
   return (
     <>
       <ol className={styles.list}>
-        {state.reviews.map((review) => (
+        {reviews.map((review) => (
           <li key={review.id} className={styles.item}>
-            <MessageItem message={review}>
+            <MessageItem message={review} courseId={courseId}>
               {review.reply_count > 0 && (
-                <ReplyThread reviewId={review.id} replyCount={review.reply_count} />
+                <ReplyThread
+                  courseId={courseId}
+                  reviewId={review.id}
+                  replyCount={review.reply_count}
+                />
               )}
             </MessageItem>
           </li>

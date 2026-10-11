@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import type { Reply, Review } from "../../api/chat";
 import Avatar from "../Avatar";
+import MessageMenu from "./MessageMenu";
 import styles from "./MessageItem.module.css";
 
 const relativeTime = new Intl.RelativeTimeFormat("he", { numeric: "auto" });
@@ -28,20 +29,40 @@ function timeAgo(iso: string): string {
 
 interface Props {
   message: Review | Reply;
+  courseId: number;
   /** Smaller avatar, for replies inside a thread. */
   compact?: boolean;
+  /** Marked and scrolled into view: the message a shared link points at. */
+  highlighted?: boolean;
   /** Shown under the message, e.g. the replies of a review. */
   children?: ReactNode;
 }
 
 /** One review or reply: avatar, author and time, the quote it answers, text and likes. */
-export default function MessageItem({ message, compact = false, children }: Props) {
+export default function MessageItem({
+  message,
+  courseId,
+  compact = false,
+  highlighted = false,
+  children,
+}: Props) {
+  const article = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (highlighted) article.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlighted]);
+
   // Only replies have a quote; `in` checks that the field exists on this message.
   const hasQuote = "reply_to_id" in message && message.reply_to_id !== null;
 
   return (
-    <article className={compact ? `${styles.message} ${styles.compact}` : styles.message}>
-          <Avatar avatar={message.avatar} size={compact ? 28 : 36} />
+    <article
+      ref={article}
+      className={[styles.message, compact && styles.compact, highlighted && styles.highlighted]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <Avatar avatar={message.avatar} size={compact ? 28 : 36} />
+
       <div className={styles.body}>
         {message.deleted ? (
           <p className={styles.deleted}>הביקורת נמחקה</p>
@@ -56,6 +77,7 @@ export default function MessageItem({ message, compact = false, children }: Prop
                 {timeAgo(message.created_at)}
               </time>
               {message.edited_at && <span>(נערך)</span>}
+              <MessageMenu courseId={courseId} messageId={message.id} />
             </div>
 
             {hasQuote && (
