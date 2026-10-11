@@ -15,12 +15,16 @@ _NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9א-ת _.-]{3,30}")
 # Attempts at a free random nickname before giving up (collisions are rare).
 _NICKNAME_ATTEMPTS = 5
 
-# Ready-made avatars a user can pick from; the frontend draws each key as an icon.
-# A new user gets a random one. Adding a key here (and its picture in the frontend) is enough.
+# Ready-made avatars a user can pick from; the frontend shows each key as a picture
+# (public-frontend/public/avatars/<key>.svg). A new user gets a random one.
+# Adding a key here (and its picture in the frontend) is enough.
 AVATARS = frozenset({
-    "atom", "orbit", "magnet", "zap", "lightbulb", "telescope", "rocket", "flask",
-    "sigma", "infinity", "waves", "sun", "moon", "sparkles", "earth", "satellite",
+    "atom", "telescope", "microscope", "rocket", "satellite", "saturn",
+    "test-tube", "dna", "magnet", "bulb", "comet", "galaxy",
+    "flask", "sun", "moon", "earth", "lightning", "snowflake",
+    "rainbow", "volcano", "owl", "fox", "octopus", "robot",
 })
+
 _AVATAR_CHOICES = sorted(AVATARS)
 
 
