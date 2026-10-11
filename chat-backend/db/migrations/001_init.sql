@@ -32,33 +32,47 @@ create table courses (
   name text not null
 );
 
--- Messages. reply_to_id null = top-level message; otherwise the message being replied to.
+-- Messages: course reviews and the discussion under each one, one level deep.
 -- deleted_at null = active message. Rows are never physically deleted.
--- A reply must be in the same course as the message it replies to.
+-- thread_id: null for a review; for a reply, the review it belongs to.
+-- reply_to_id: the message a reply quotes (WhatsApp style); null when it just answers the review.
+-- Both must be in the same course as the message itself.
+-- like_count is kept up to date by the backend with each like and unlike,
+-- so sorting reviews by likes needs no counting.
 -- deleted_by says who deleted it: the author or a moderator (from the admin console).
 -- deleted_at and deleted_by are either both set or both null.
 create table messages (
   id          bigint generated always as identity primary key,
   course_id   integer not null references courses (id),
   user_id     uuid not null references users (id),
+  thread_id   bigint,
   reply_to_id bigint,
   content     text not null check (length(trim(content)) between 1 and 4000),
+  like_count  integer not null default 0 check (like_count >= 0),
   created_at  timestamptz not null default now(),
   edited_at   timestamptz,
   deleted_at  timestamptz,
   deleted_by  text check (deleted_by in ('author', 'moderator')),
   unique (id, course_id),
   constraint messages_deleted_fields_together check ((deleted_at is null) = (deleted_by is null)),
+  constraint messages_quote_needs_thread check (reply_to_id is null or thread_id is not null),
+  foreign key (thread_id, course_id) references messages (id, course_id),
   foreign key (reply_to_id, course_id) references messages (id, course_id)
 );
 
--- Paginated loading of a course's active messages, newest first.
+-- A course's reviews, newest first. Deleted reviews stay in the index: one that
+-- still has replies is shown as "deleted" above its discussion.
 -- id breaks ties between messages with the same created_at.
-create index messages_course_idx on messages (course_id, created_at desc, id desc)
-  where deleted_at is null;
+create index messages_reviews_new_idx on messages (course_id, created_at desc, id desc)
+  where thread_id is null;
+-- A course's active reviews, most liked first.
+create index messages_reviews_top_idx on messages (course_id, like_count desc, id desc)
+  where thread_id is null and deleted_at is null;
+-- The replies of one review, oldest first (also used to count them).
+create index messages_thread_idx on messages (thread_id, created_at, id)
+  where thread_id is not null;
 -- A user's messages, for the admin console (removed messages, report counts).
 create index messages_user_idx on messages (user_id);
-
 -- Course ratings: one per user per course.
 create table ratings (
   user_id        uuid not null references users (id),
