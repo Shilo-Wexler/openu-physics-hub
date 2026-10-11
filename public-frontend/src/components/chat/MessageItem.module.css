@@ -1,11 +1,37 @@
 .message {
   display: flex;
-  flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  padding-block: var(--space-3);
+}
+
+/* The circle with the first letter of the nickname. */
+.avatar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-primary-soft);
+}
+
+.compact {
+  padding-block: var(--space-1);
+}
+
+.compact .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.85rem;
+}
+
+/* min-width: 0 lets long words wrap instead of pushing the layout wider. */
+.body {
+  flex: 1;
+  min-width: 0;
 }
 
 .meta {
@@ -21,15 +47,11 @@
   color: var(--color-text);
 }
 
-.edited {
-  font-style: italic;
-}
-
-/* The quoted message: a side bar on the start edge (the right, in RTL). */
+/* The quoted reply: a side bar on the start edge (the right, in RTL), as in WhatsApp. */
 .quote {
   display: flex;
   flex-direction: column;
-  margin: 0;
+  margin: var(--space-1) 0;
   padding: var(--space-1) var(--space-2);
   font-size: 0.9rem;
   color: var(--color-text-muted);
@@ -40,9 +62,10 @@
 
 .quoteAuthor {
   font-weight: 600;
+  color: var(--color-primary);
 }
 
-/* Long quotes are cut to two lines; the full text is in the original message. */
+/* Long quotes are cut to two lines; the full text is in the original reply. */
 .quoteText {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -52,7 +75,9 @@
 }
 
 .deleted {
+  margin: 0;
   font-style: italic;
+  color: var(--color-text-muted);
 }
 
 /* pre-wrap keeps the line breaks the writer typed; break-word wraps long links. */
@@ -65,6 +90,7 @@
 .actions {
   display: flex;
   gap: var(--space-3);
+  margin-top: var(--space-1);
   font-size: 0.85rem;
   color: var(--color-text-muted);
 }
