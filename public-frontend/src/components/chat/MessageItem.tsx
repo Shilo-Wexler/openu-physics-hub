@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { Reply, Review } from "../../api/chat";
+import Avatar from "../Avatar";
 import styles from "./MessageItem.module.css";
 
 const relativeTime = new Intl.RelativeTimeFormat("he", { numeric: "auto" });
@@ -40,10 +41,7 @@ export default function MessageItem({ message, compact = false, children }: Prop
 
   return (
     <article className={compact ? `${styles.message} ${styles.compact}` : styles.message}>
-      <div className={styles.avatar} aria-hidden="true">
-        {message.deleted ? "?" : message.nickname.charAt(0).toUpperCase()}
-      </div>
-
+          <Avatar avatar={message.avatar} size={compact ? 28 : 36} />
       <div className={styles.body}>
         {message.deleted ? (
           <p className={styles.deleted}>הביקורת נמחקה</p>

@@ -42,7 +42,7 @@ declare
   nicknames text[] := array['demo_dana', 'demo_yossi', 'demo_noa', 'demo_amit',
                             'demo_maya', 'demo_omer', 'demo_shira', 'demo_eitan'];
   avatars text[] := array['atom', 'rocket', 'magnet', 'telescope',
-                            'orbit', 'lightbulb', 'waves', 'satellite'];
+                          'saturn', 'bulb', 'galaxy', 'owl'];
   user_ids uuid[];
   main_course integer;
   demo_courses integer[];

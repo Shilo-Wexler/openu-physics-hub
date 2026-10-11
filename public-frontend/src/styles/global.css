@@ -8,6 +8,14 @@
   --color-primary: #2563eb;
   --color-primary-soft: #e8efff;
 
+  /* Avatar backgrounds; Avatar.tsx picks one by the avatar's place in its list. */
+  --avatar-bg-1: #dbeafe;
+  --avatar-bg-2: #ede9fe;
+  --avatar-bg-3: #fce7f3;
+  --avatar-bg-4: #dcfce7;
+  --avatar-bg-5: #fef3c7;
+  --avatar-bg-6: #e0f2fe;
+
   --radius: 10px;
   --space-1: 4px;
   --space-2: 8px;
@@ -33,6 +41,12 @@
     --color-border: #2f343b;
     --color-primary: #6b9bff;
     --color-primary-soft: #1f2a40;
+    --avatar-bg-1: #1e3a5f;
+    --avatar-bg-2: #3b2f5c;
+    --avatar-bg-3: #4a2640;
+    --avatar-bg-4: #1f4030;
+    --avatar-bg-5: #4a3b1a;
+    --avatar-bg-6: #1c3d52;
   }
 }
 

@@ -26,6 +26,7 @@ export interface CourseDetails extends Course {
 export interface Me {
   user_id: string;
   nickname: string;
+  avatar: string; // a key from AVATARS in components/Avatar.tsx
 }
 
 // Fields every review and reply has.
@@ -41,8 +42,8 @@ interface MessageFields {
 // The text of a message, or nothing when it was deleted. `deleted` tells TypeScript which
 // case it is: after `if (!review.deleted)`, nickname and content are known to be strings.
 type Text =
-  | { deleted: false; nickname: string; content: string }
-  | { deleted: true; nickname: null; content: null };
+  | { deleted: false; nickname: string; avatar: string; content: string }
+  | { deleted: true; nickname: null; avatar: null; content: null };
 
 // A top-level message. A deleted review is still listed while it has replies.
 export type Review = MessageFields &
@@ -54,6 +55,7 @@ export type Review = MessageFields &
 export type Reply = MessageFields & {
   deleted: false;
   nickname: string;
+  avatar: string;
   content: string;
   reply_to_id: number | null; // the reply it quotes; null when it just answers the review
   reply_to_deleted: boolean; // the quoted reply was deleted, so the quote shows "deleted"
@@ -105,6 +107,13 @@ export function changeNickname(nickname: string) {
   return request<{ nickname: string }>(`${BASE}/me/nickname`, {
     method: "PUT",
     body: { nickname },
+  });
+}
+
+export function changeAvatar(avatar: string) {
+  return request<{ avatar: string }>(`${BASE}/me/avatar`, {
+    method: "PUT",
+    body: { avatar },
   });
 }
 

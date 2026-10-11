@@ -4,29 +4,10 @@
   padding-block: var(--space-3);
 }
 
-/* The circle with the first letter of the nickname. */
-.avatar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  background: var(--color-primary-soft);
-}
-
 .compact {
   padding-block: var(--space-1);
 }
 
-.compact .avatar {
-  width: 28px;
-  height: 28px;
-  font-size: 0.85rem;
-}
 
 /* min-width: 0 lets long words wrap instead of pushing the layout wider. */
 .body {

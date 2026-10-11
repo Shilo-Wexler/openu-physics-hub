@@ -1,3 +1,7 @@
+-- Chat DB initial schema: tables, keys, checks, indexes and the blocked-user trigger.
+-- All other logic and permission checks live in the Python backend.
+-- Course data is loaded separately from shared/courses.csv (repo root).
+
 -- Users. id is an internal uuid set by the app (not the Google id).
 -- avatar is the key of a ready-made picture (e.g. 'atom'); the list of keys lives in the backend.
 -- blocked_at null = not blocked; set and cleared from the admin console.
@@ -71,6 +75,7 @@ create index messages_thread_idx on messages (thread_id, created_at, id)
   where thread_id is not null;
 -- A user's messages, for the admin console (removed messages, report counts).
 create index messages_user_idx on messages (user_id);
+
 -- Course ratings: one per user per course.
 create table ratings (
   user_id        uuid not null references users (id),
