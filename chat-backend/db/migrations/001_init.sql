@@ -1,12 +1,10 @@
--- Chat DB initial schema: tables, keys, checks, indexes and the blocked-user trigger.
--- All other logic and permission checks live in the Python backend.
--- Course data is loaded separately from shared/courses.csv (repo root).
-
 -- Users. id is an internal uuid set by the app (not the Google id).
+-- avatar is the key of a ready-made picture (e.g. 'atom'); the list of keys lives in the backend.
 -- blocked_at null = not blocked; set and cleared from the admin console.
 create table users (
   id         uuid primary key,
   nickname   text not null check (length(trim(nickname)) between 3 and 30),
+  avatar     text not null,
   blocked_at timestamptz,
   created_at timestamptz not null default now()
 );

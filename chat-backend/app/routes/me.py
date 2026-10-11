@@ -15,7 +15,7 @@ router = APIRouter(prefix="/me", tags=["me"])
 @router.get("")
 async def me(user_id: Annotated[UUID, Depends(current_user_id)]):
     user = await users.get(user_id)
-    return {"user_id": user["id"], "nickname": user["nickname"]}
+    return {"user_id": user["id"], "nickname": user["nickname"], "avatar": user["avatar"]}
 
 
 class NicknameChange(BaseModel):
@@ -37,3 +37,18 @@ async def change_nickname(
     except PermissionError:
         raise HTTPException(status_code=403, detail="user is blocked")
     return {"nickname": nickname}
+
+
+class AvatarChange(BaseModel):
+    avatar: str
+
+
+@router.put("/avatar")
+async def change_avatar(body: AvatarChange, user_id: Annotated[UUID, Depends(current_user_id)]):
+    try:
+        avatar = await users.set_avatar(user_id, body.avatar)
+    except users.InvalidAvatar:
+        raise HTTPException(status_code=422, detail="unknown avatar")
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="user is blocked")
+    return {"avatar": avatar}

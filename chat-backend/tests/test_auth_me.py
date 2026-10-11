@@ -1,17 +1,19 @@
-"""Sign-in, the user's own profile, nickname changes and sign-out."""
+"""Sign-in, the user's own profile, nickname and avatar changes, and sign-out."""
 
 import re
 
 from app.services import google_auth
+from app.services.users import AVATARS
 from conftest import Student
 
 
-def test_sign_in_creates_user_with_random_nickname(sign_in):
+def test_sign_in_creates_user_with_random_nickname_and_avatar(sign_in):
     alice = sign_in("alice")
     response = alice.get("/me")
     assert response.status_code == 200
     assert response.json()["user_id"] == alice.user_id
     assert re.fullmatch(r"student\d{6}", response.json()["nickname"])
+    assert response.json()["avatar"] in AVATARS
 
 
 def test_same_google_account_is_same_user(sign_in):
@@ -48,6 +50,13 @@ def test_invalid_nickname_is_rejected(sign_in):
 def test_nickname_taken_ignores_case(sign_in):
     sign_in("alice").put("/me/nickname", json={"nickname": "Alice"})
     assert sign_in("bob").put("/me/nickname", json={"nickname": "ALICE"}).status_code == 409
+
+
+def test_change_avatar(sign_in):
+    alice = sign_in("alice")
+    assert alice.put("/me/avatar", json={"avatar": "rocket"}).json() == {"avatar": "rocket"}
+    assert alice.get("/me").json()["avatar"] == "rocket"
+    assert alice.put("/me/avatar", json={"avatar": "einstein"}).status_code == 422
 
 
 def test_logout_ends_only_this_session(sign_in):
