@@ -1,0 +1,70 @@
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.nickname {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.edited {
+  font-style: italic;
+}
+
+/* The quoted message: a side bar on the start edge (the right, in RTL). */
+.quote {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  border-inline-start: 3px solid var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: 4px;
+}
+
+.quoteAuthor {
+  font-weight: 600;
+}
+
+/* Long quotes are cut to two lines; the full text is in the original message. */
+.quoteText {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.deleted {
+  font-style: italic;
+}
+
+/* pre-wrap keeps the line breaks the writer typed; break-word wraps long links. */
+.content {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
