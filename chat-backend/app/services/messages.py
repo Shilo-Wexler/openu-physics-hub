@@ -20,11 +20,12 @@ MAX_LENGTH = 4000
 Sort = Literal["new", "top"]
 
 # Fields shared by reviews and replies. A deleted review keeps its place (it may have
-# replies) but shows no author or text. $2 is the viewer, null for a guest.
+# replies) but shows no author, avatar or text. $2 is the viewer, null for a guest.
 _FIELDS = """
     m.id, m.user_id, m.created_at, m.edited_at, m.like_count,
     m.deleted_at is not null                            as deleted,
     case when m.deleted_at is null then u.nickname end  as nickname,
+    case when m.deleted_at is null then u.avatar end    as avatar,
     case when m.deleted_at is null then m.content end   as content,
     exists (select 1 from likes l
              where l.message_id = m.id and l.user_id = $2) as liked_by_me

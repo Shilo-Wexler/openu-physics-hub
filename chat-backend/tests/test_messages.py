@@ -154,6 +154,15 @@ def test_edit_checks_content(sign_in, course_id):
     assert response.status_code == 422
 
 
+def test_message_shows_author_avatar(sign_in, guest, course_id):
+    alice = sign_in("alice")
+    alice.put("/me/avatar", json={"avatar": "rocket"})
+    review = post(alice, course_id).json()
+    post(alice, course_id, reply_to_id=review["id"])
+    assert page(guest, course_id)["messages"][0]["avatar"] == "rocket"
+    assert replies(guest, review["id"])["replies"][0]["avatar"] == "rocket"
+
+
 def test_deleted_review_stays_while_it_has_replies(sign_in, guest, course_id):
     alice, bob = sign_in("alice"), sign_in("bob")
     review = post(alice, course_id, "review").json()
@@ -161,7 +170,7 @@ def test_deleted_review_stays_while_it_has_replies(sign_in, guest, course_id):
     assert alice.delete(f"/messages/{review['id']}").status_code == 200
     shown = page(guest, course_id)["messages"][0]
     assert shown["deleted"] is True
-    assert shown["content"] is None and shown["nickname"] is None
+    assert shown["content"] is None and shown["nickname"] is None and shown["avatar"] is None
     assert [r["content"] for r in replies(guest, review["id"])["replies"]] == ["answer"]
 
     # Once its last reply is gone too, the deleted review disappears from the list.

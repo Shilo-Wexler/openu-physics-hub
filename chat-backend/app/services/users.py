@@ -1,4 +1,4 @@
-"""Users: find the user behind a login identity, or create one."""
+"""Users: find the user behind a login identity or create one, and change nickname or avatar."""
 
 import re
 import secrets
@@ -10,10 +10,18 @@ import asyncpg
 from app.core import db
 
 # 3-30 characters: Hebrew or English letters, digits, space, underscore, hyphen, dot.
-_NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9\u05D0-\u05EA _.-]{3,30}")
+_NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9א-ת _.-]{3,30}")
 
 # Attempts at a free random nickname before giving up (collisions are rare).
 _NICKNAME_ATTEMPTS = 5
+
+# Ready-made avatars a user can pick from; the frontend draws each key as an icon.
+# A new user gets a random one. Adding a key here (and its picture in the frontend) is enough.
+AVATARS = frozenset({
+    "atom", "orbit", "magnet", "zap", "lightbulb", "telescope", "rocket", "flask",
+    "sigma", "infinity", "waves", "sun", "moon", "sparkles", "earth", "satellite",
+})
+_AVATAR_CHOICES = sorted(AVATARS)
 
 
 def _random_nickname() -> str:
@@ -32,7 +40,8 @@ async def find_or_create(provider: str, provider_user_id: str) -> UUID:
         try:
             async with db.pool.acquire() as conn, conn.transaction():
                 await conn.execute(
-                    "insert into users (id, nickname) values ($1, $2)", new_id, _random_nickname()
+                    "insert into users (id, nickname, avatar) values ($1, $2, $3)",
+                    new_id, _random_nickname(), secrets.choice(_AVATAR_CHOICES),
                 )
                 await conn.execute(
                     "insert into user_identities (user_id, provider, provider_user_id)"
@@ -58,8 +67,12 @@ class NicknameTaken(Exception):
     pass
 
 
+class InvalidAvatar(Exception):
+    pass
+
+
 async def get(user_id: UUID) -> asyncpg.Record | None:
-    return await db.pool.fetchrow("select id, nickname from users where id = $1", user_id)
+    return await db.pool.fetchrow("select id, nickname, avatar from users where id = $1", user_id)
 
 
 async def set_nickname(user_id: UUID, nickname: str) -> str:
@@ -78,6 +91,19 @@ async def set_nickname(user_id: UUID, nickname: str) -> str:
         )
     except asyncpg.UniqueViolationError:
         raise NicknameTaken()
+    if updated is None:
+        raise PermissionError("user is blocked")
+    return updated
+
+
+async def set_avatar(user_id: UUID, avatar: str) -> str:
+    """Change a user's avatar to one of AVATARS. Blocked users cannot change it."""
+    if avatar not in AVATARS:
+        raise InvalidAvatar()
+    updated = await db.pool.fetchval(
+        "update users set avatar = $2 where id = $1 and blocked_at is null returning avatar",
+        user_id, avatar,
+    )
     if updated is None:
         raise PermissionError("user is blocked")
     return updated

@@ -41,6 +41,8 @@ do $$
 declare
   nicknames text[] := array['demo_dana', 'demo_yossi', 'demo_noa', 'demo_amit',
                             'demo_maya', 'demo_omer', 'demo_shira', 'demo_eitan'];
+  avatars text[] := array['atom', 'rocket', 'magnet', 'telescope',
+                            'orbit', 'lightbulb', 'waves', 'satellite'];
   user_ids uuid[];
   main_course integer;
   demo_courses integer[];
@@ -76,8 +78,10 @@ begin
   -- Ids come from the nickname, so the same demo user gets the same id on every run.
   select array_agg(md5(n)::uuid order by ord) into user_ids
     from unnest(nicknames) with ordinality as t(n, ord);
-  insert into users (id, nickname)
-    select md5(n)::uuid, n from unnest(nicknames) as n;
+  -- Each demo user gets a different avatar (keys from AVATARS in app/services/users.py).
+  insert into users (id, nickname, avatar)
+    select md5(n)::uuid, n, avatars[ord]
+      from unnest(nicknames) with ordinality as t(n, ord);
 
   select array_agg(id order by id) into demo_courses
     from (select id from courses order by id limit 3) c;
