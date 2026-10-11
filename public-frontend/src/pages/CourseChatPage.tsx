@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 
-import { getCourse, listMessages, type CourseDetails, type Message } from "../api/chat";
+import { getCourse, type CourseDetails } from "../api/chat";
 import { ApiError } from "../api/client";
-import MessageList from "../components/chat/MessageList";
+import ReviewList from "../components/chat/ReviewList";
 
 type State =
   | { status: "loading" }
   | { status: "not-found" }
   | { status: "error" }
-  | { status: "ready"; course: CourseDetails; messages: Message[]; nextBefore: number | null };
+  | { status: "ready"; course: CourseDetails };
 
 export default function CourseChatPage() {
   const courseId = Number(useParams().courseId);
@@ -22,18 +22,11 @@ export default function CourseChatPage() {
 
 function CourseChat({ courseId }: { courseId: number }) {
   const [state, setState] = useState<State>({ status: "loading" });
-  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
-    // Both requests run at the same time; the page waits for the slower one only.
-    Promise.all([
-      getCourse(courseId, controller.signal),
-      listMessages(courseId, undefined, controller.signal),
-    ])
-      .then(([course, page]) =>
-        setState({ status: "ready", course, messages: page.messages, nextBefore: page.next_before }),
-      )
+    getCourse(courseId, controller.signal)
+      .then((course) => setState({ status: "ready", course }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         if (error instanceof ApiError && error.status === 404) {
@@ -46,30 +39,9 @@ function CourseChat({ courseId }: { courseId: number }) {
     return () => controller.abort();
   }, [courseId]);
 
-  async function loadMore() {
-    if (state.status !== "ready" || state.nextBefore === null) return;
-    setLoadingMore(true);
-    try {
-      const page = await listMessages(courseId, state.nextBefore);
-      setState((current) =>
-        current.status === "ready"
-          ? {
-              ...current,
-              messages: [...current.messages, ...page.messages],
-              nextBefore: page.next_before,
-            }
-          : current,
-      );
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoadingMore(false);
-    }
-  }
-
   if (state.status === "loading") return <p>טוען...</p>;
   if (state.status === "not-found") return <p>הקורס לא נמצא.</p>;
-  if (state.status === "error") return <p>לא הצלחנו לטעון את הצ'אט. נסו לרענן את הדף.</p>;
+  if (state.status === "error") return <p>לא הצלחנו לטעון את הקורס. נסו לרענן את הדף.</p>;
 
   const { course } = state;
   return (
@@ -82,12 +54,8 @@ function CourseChat({ courseId }: { courseId: number }) {
           ? "עוד אין דירוגים לקורס הזה."
           : `קושי ${course.avg_difficulty?.toFixed(1)} · המלצה ${course.avg_recommendation?.toFixed(1)}`}
       </p>
-      <MessageList
-        messages={state.messages}
-        hasMore={state.nextBefore !== null}
-        loadingMore={loadingMore}
-        onLoadMore={() => void loadMore()}
-      />
+      {/* The reviews load on their own, so the course header shows as soon as it arrives. */}
+      <ReviewList courseId={courseId} />
     </>
   );
 }

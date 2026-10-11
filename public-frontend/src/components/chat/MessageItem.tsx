@@ -1,4 +1,6 @@
-import type { Message } from "../../api/chat";
+import type { ReactNode } from "react";
+
+import type { Reply, Review } from "../../api/chat";
 import styles from "./MessageItem.module.css";
 
 const relativeTime = new Intl.RelativeTimeFormat("he", { numeric: "auto" });
@@ -24,43 +26,70 @@ function timeAgo(iso: string): string {
 }
 
 interface Props {
-  message: Message;
+  message: Review | Reply;
+  /** Smaller avatar, for replies inside a thread. */
+  compact?: boolean;
+  /** Shown under the message, e.g. the replies of a review. */
+  children?: ReactNode;
 }
 
-export default function MessageItem({ message }: Props) {
+/** One review or reply: avatar, author and time, the quote it answers, text and likes. */
+export default function MessageItem({ message, compact = false, children }: Props) {
+  // Only replies have a quote; `in` checks that the field exists on this message.
+  const hasQuote = "reply_to_id" in message && message.reply_to_id !== null;
+
   return (
-    <article className={styles.message}>
-      <header className={styles.meta}>
-        <span className={styles.nickname}>{message.nickname}</span>
-        <time dateTime={message.created_at} title={fullDate.format(new Date(message.created_at))}>
-          {timeAgo(message.created_at)}
-        </time>
-        {message.edited_at && <span className={styles.edited}>(נערך)</span>}
-      </header>
+    <article className={compact ? `${styles.message} ${styles.compact}` : styles.message}>
+      <div className={styles.avatar} aria-hidden="true">
+        {message.deleted ? "?" : message.nickname.charAt(0).toUpperCase()}
+      </div>
 
-      {message.reply_to_id !== null && (
-        <blockquote className={styles.quote}>
-          {message.reply_to_deleted ? (
-            <span className={styles.deleted}>ההודעה נמחקה</span>
-          ) : (
-            <>
-              <span className={styles.quoteAuthor}>{message.reply_to_nickname}</span>
-              <span className={styles.quoteText} dir="auto">
-                {message.reply_to_content}
+      <div className={styles.body}>
+        {message.deleted ? (
+          <p className={styles.deleted}>הביקורת נמחקה</p>
+        ) : (
+          <>
+            <div className={styles.meta}>
+              <span className={styles.nickname}>{message.nickname}</span>
+              <time
+                dateTime={message.created_at}
+                title={fullDate.format(new Date(message.created_at))}
+              >
+                {timeAgo(message.created_at)}
+              </time>
+              {message.edited_at && <span>(נערך)</span>}
+            </div>
+
+            {hasQuote && (
+              <blockquote className={styles.quote}>
+                {message.reply_to_deleted ? (
+                  <span className={styles.deleted}>ההודעה נמחקה</span>
+                ) : (
+                  <>
+                    <span className={styles.quoteAuthor}>{message.reply_to_nickname}</span>
+                    <span className={styles.quoteText} dir="auto">
+                      {message.reply_to_content}
+                    </span>
+                  </>
+                )}
+              </blockquote>
+            )}
+
+            {/* dir="auto": a message written in English is shown left-to-right. */}
+            <p className={styles.content} dir="auto">
+              {message.content}
+            </p>
+
+            <div className={styles.actions}>
+              <span aria-label={`${message.like_count} לייקים`}>
+                {message.liked_by_me ? "♥" : "♡"} {message.like_count}
               </span>
-            </>
-          )}
-        </blockquote>
-      )}
+            </div>
+          </>
+        )}
 
-      {/* dir="auto": a message written in English is shown left-to-right. */}
-      <p className={styles.content} dir="auto">
-        {message.content}
-      </p>
-
-      <footer className={styles.actions}>
-        <span aria-label={`${message.like_count} לייקים`}>👍 {message.like_count}</span>
-      </footer>
+        {children}
+      </div>
     </article>
   );
 }
