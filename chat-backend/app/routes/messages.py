@@ -1,7 +1,6 @@
-"""Course messages, likes and reports over HTTP.
+"""Course reviews, their replies, likes and reports over HTTP.
 
 Reading is open to everyone; everything else needs a signed-in user."""
-
 
 from typing import Annotated
 from uuid import UUID
@@ -27,25 +26,44 @@ def _content_error(exc: Exception) -> HTTPException:
     return HTTPException(status_code=403, detail="user is blocked")
 
 
+def _public(row, viewer_id: UUID | None) -> dict:
+    item = dict(row)
+    # The author's internal id stays on the server; the page only needs "is it mine".
+    item["is_mine"] = item.pop("user_id") == viewer_id
+    return item
+
+
 @router.get("/courses/{course_id}/messages")
-async def list_messages(
+async def list_reviews(
     course_id: int,
     viewer_id: Annotated[UUID | None, Depends(optional_user_id)],
+    sort: messages.Sort = "new",
     before: int | None = None,
 ):
     try:
-        rows = await messages.list_for_course(course_id, viewer_id, before)
+        rows = await messages.list_reviews(course_id, viewer_id, sort, before)
     except CourseNotFound:
         raise HTTPException(status_code=404, detail="course not found")
-    items = []
-    for row in rows:
-        item = dict(row)
-        # The author's internal id stays on the server; the page only needs "is it mine".
-        item["is_mine"] = item.pop("user_id") == viewer_id
-        items.append(item)
-    # A full page may have older messages behind it; pass this as ?before= to get them.
+    items = [_public(row, viewer_id) for row in rows]
+    # A full page may have more reviews behind it; pass this as ?before= to get them.
     next_before = items[-1]["id"] if len(items) == messages.PAGE_SIZE else None
     return {"messages": items, "next_before": next_before}
+
+
+@router.get("/messages/{review_id}/replies")
+async def list_replies(
+    review_id: int,
+    viewer_id: Annotated[UUID | None, Depends(optional_user_id)],
+    after: int | None = None,
+):
+    try:
+        rows = await messages.list_replies(review_id, viewer_id, after)
+    except messages.MessageNotFound:
+        raise HTTPException(status_code=404, detail="message not found")
+    items = [_public(row, viewer_id) for row in rows]
+    # A full page may have newer replies after it; pass this as ?after= to get them.
+    next_after = items[-1]["id"] if len(items) == messages.PAGE_SIZE else None
+    return {"replies": items, "next_after": next_after}
 
 
 class NewMessage(BaseModel):

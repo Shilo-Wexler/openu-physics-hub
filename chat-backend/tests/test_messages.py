@@ -1,4 +1,4 @@
-"""Course messages: posting, replies, editing, deleting, paging, likes and reports."""
+"""Course reviews and their discussions: posting, replies, editing, deleting, paging, likes, reports."""
 
 from app.services.messages import MAX_LENGTH, PAGE_SIZE
 
@@ -11,9 +11,16 @@ def post(student, course_id, content="hello", reply_to_id=None):
     )
 
 
-def page(student, course_id, before=None):
+def page(student, course_id, before=None, sort=None):
     params = {"before": before} if before else {}
+    if sort:
+        params["sort"] = sort
     return student.get(f"/courses/{course_id}/messages", params=params).json()
+
+
+def replies(student, review_id, after=None):
+    params = {"after": after} if after else {}
+    return student.get(f"/messages/{review_id}/replies", params=params).json()
 
 
 def other_course(guest, course_id):
@@ -70,14 +77,29 @@ def test_paging_with_before(sign_in, guest, course_id):
 # Replies
 
 
-def test_reply_shows_quote(sign_in, guest, course_id):
+def test_reply_goes_under_its_review(sign_in, guest, course_id):
     alice, bob = sign_in("alice"), sign_in("bob")
-    original = post(alice, course_id, "question").json()
-    post(bob, course_id, "answer", reply_to_id=original["id"])
-    reply = page(guest, course_id)["messages"][0]
-    assert reply["reply_to_id"] == original["id"]
-    assert reply["reply_to_content"] == "question"
-    assert reply["reply_to_deleted"] is False
+    review = post(alice, course_id, "review").json()
+    reply = post(bob, course_id, "answer", reply_to_id=review["id"]).json()
+    assert reply["thread_id"] == review["id"]
+    assert reply["reply_to_id"] is None  # answering the review itself needs no quote
+    reviews = page(guest, course_id)["messages"]
+    assert [(r["content"], r["reply_count"]) for r in reviews] == [("review", 1)]
+    shown = replies(guest, review["id"])["replies"]
+    assert [r["content"] for r in shown] == ["answer"]
+
+
+def test_reply_to_reply_quotes_it_and_stays_one_level(sign_in, guest, course_id):
+    alice, bob = sign_in("alice"), sign_in("bob")
+    review = post(alice, course_id, "review").json()
+    first = post(bob, course_id, "first", reply_to_id=review["id"]).json()
+    second = post(alice, course_id, "second", reply_to_id=first["id"]).json()
+    assert second["thread_id"] == review["id"]
+    assert second["reply_to_id"] == first["id"]
+    shown = replies(guest, review["id"])["replies"]
+    assert [r["content"] for r in shown] == ["first", "second"]  # oldest first
+    assert shown[1]["reply_to_content"] == "first"
+    assert shown[1]["reply_to_deleted"] is False
 
 
 def test_reply_to_other_course_or_missing_is_404(sign_in, guest, course_id):
@@ -85,6 +107,25 @@ def test_reply_to_other_course_or_missing_is_404(sign_in, guest, course_id):
     elsewhere = post(alice, other_course(guest, course_id)).json()
     assert post(alice, course_id, reply_to_id=elsewhere["id"]).status_code == 404
     assert post(alice, course_id, reply_to_id=MISSING).status_code == 404
+
+
+def test_replies_of_missing_or_non_review_is_404(sign_in, guest, course_id):
+    review = post(sign_in("alice"), course_id).json()
+    reply = post(sign_in("bob"), course_id, reply_to_id=review["id"]).json()
+    assert guest.get(f"/messages/{MISSING}/replies").status_code == 404
+    assert guest.get(f"/messages/{reply['id']}/replies").status_code == 404
+
+
+def test_replies_paging_with_after(sign_in, guest, course_id):
+    alice = sign_in("alice")
+    review = post(alice, course_id).json()
+    for i in range(PAGE_SIZE + 1):
+        post(alice, course_id, f"reply {i}", reply_to_id=review["id"])
+    first = replies(guest, review["id"])
+    assert len(first["replies"]) == PAGE_SIZE
+    second = replies(guest, review["id"], after=first["next_after"])
+    assert [r["content"] for r in second["replies"]] == [f"reply {PAGE_SIZE}"]
+    assert second["next_after"] is None
 
 
 # Editing and deleting
@@ -113,15 +154,31 @@ def test_edit_checks_content(sign_in, course_id):
     assert response.status_code == 422
 
 
-def test_delete_keeps_replies_with_deleted_quote(sign_in, guest, course_id):
+def test_deleted_review_stays_while_it_has_replies(sign_in, guest, course_id):
     alice, bob = sign_in("alice"), sign_in("bob")
-    original = post(alice, course_id, "question").json()
-    post(bob, course_id, "answer", reply_to_id=original["id"])
-    assert alice.delete(f"/messages/{original['id']}").status_code == 200
-    messages = page(guest, course_id)["messages"]
-    assert [m["content"] for m in messages] == ["answer"]
-    assert messages[0]["reply_to_deleted"] is True
-    assert messages[0]["reply_to_content"] is None
+    review = post(alice, course_id, "review").json()
+    reply = post(bob, course_id, "answer", reply_to_id=review["id"]).json()
+    assert alice.delete(f"/messages/{review['id']}").status_code == 200
+    shown = page(guest, course_id)["messages"][0]
+    assert shown["deleted"] is True
+    assert shown["content"] is None and shown["nickname"] is None
+    assert [r["content"] for r in replies(guest, review["id"])["replies"]] == ["answer"]
+
+    # Once its last reply is gone too, the deleted review disappears from the list.
+    assert bob.delete(f"/messages/{reply['id']}").status_code == 200
+    assert page(guest, course_id)["messages"] == []
+
+
+def test_deleted_reply_keeps_quotes_of_it(sign_in, guest, course_id):
+    alice, bob = sign_in("alice"), sign_in("bob")
+    review = post(alice, course_id).json()
+    first = post(bob, course_id, "first", reply_to_id=review["id"]).json()
+    post(alice, course_id, "second", reply_to_id=first["id"])
+    assert bob.delete(f"/messages/{first['id']}").status_code == 200
+    shown = replies(guest, review["id"])["replies"]
+    assert [r["content"] for r in shown] == ["second"]
+    assert shown[0]["reply_to_deleted"] is True
+    assert shown[0]["reply_to_content"] is None
 
 
 # Likes and reports
@@ -139,6 +196,20 @@ def test_like_is_idempotent_and_can_be_removed(sign_in, course_id):
 
     assert bob.delete(f"/messages/{message_id}/like").json() == {"liked": False}
     assert page(bob, course_id)["messages"][0]["like_count"] == 0
+
+
+def test_sort_top_puts_most_liked_first(sign_in, guest, course_id):
+    alice, bob, carol = sign_in("alice"), sign_in("bob"), sign_in("carol")
+    quiet = post(alice, course_id, "quiet").json()["id"]
+    liked = post(alice, course_id, "liked").json()["id"]
+    loved = post(alice, course_id, "loved").json()["id"]
+    for student in (bob, carol):
+        student.put(f"/messages/{loved}/like")
+    bob.put(f"/messages/{liked}/like")
+    shown = page(guest, course_id, sort="top")["messages"]
+    assert [m["id"] for m in shown] == [loved, liked, quiet]
+    assert [m["like_count"] for m in shown] == [2, 1, 0]
+    assert guest.get(f"/courses/{course_id}/messages", params={"sort": "best"}).status_code == 422
 
 
 def test_like_missing_message_is_404(sign_in):
