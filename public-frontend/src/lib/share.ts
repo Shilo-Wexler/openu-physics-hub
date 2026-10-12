@@ -1,3 +1,8 @@
+/** The link to a course page. */
+export function courseUrl(courseId: number): string {
+  return `${window.location.origin}/courses/${courseId}`;
+}
+
 /** The link that opens a message on its course page (see the route in App.tsx). */
 export function messageUrl(courseId: number, messageId: number): string {
   return `${window.location.origin}/courses/${courseId}/m/${messageId}`;

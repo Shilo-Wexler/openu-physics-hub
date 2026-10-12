@@ -11,6 +11,8 @@ import { ApiError } from "../api/client";
 import MessageItem from "../components/chat/MessageItem";
 import ReplyThread from "../components/chat/ReplyThread";
 import ReviewList from "../components/chat/ReviewList";
+import ShareButton from "../components/ShareButton";
+import { courseUrl } from "../lib/share";
 import styles from "./CourseChatPage.module.css";
 
 type State =
@@ -88,9 +90,12 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   const { course } = state;
   return (
     <>
-      <h1>
-        {course.name} <small>({course.id})</small>
-      </h1>
+    <div className={styles.header}>
+        <h1>
+          {course.name} <small>({course.id})</small>
+        </h1>
+        <ShareButton url={courseUrl(course.id)} />
+      </div>
       <p>
         {course.ratings_count === 0
           ? "עוד אין דירוגים לקורס הזה."
