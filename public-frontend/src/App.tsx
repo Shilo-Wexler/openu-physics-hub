@@ -1,10 +1,10 @@
 import { NavLink, Route, Routes } from "react-router";
 
-import { useAuth } from "./auth/AuthContext";
-import GoogleButton from "./auth/GoogleButton";
-import Avatar from "./components/Avatar";
-import CoursesPage from "./pages/CoursesPage";
-import CourseChatPage from "./pages/CourseChatPage";
+import { useAuth } from "./features/auth/AuthContext";
+import GoogleButton from "./features/auth/GoogleButton";
+import Avatar from "./shared/components/Avatar";
+import CoursesPage from "./features/courses/CoursesPage";
+import CourseChatPage from "./features/chat/CourseChatPage";
 
 // Temporary stand-in until each page gets its own file in src/pages/.
 function Placeholder({ title }: { title: string }) {

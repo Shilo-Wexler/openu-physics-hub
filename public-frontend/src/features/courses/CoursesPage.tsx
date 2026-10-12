@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { listCourses, type Course } from "../api/chat";
-import CourseSearch from "../components/CourseSearch";
+import { listCourses, type Course } from "../../shared/api/chat";
+import CourseSearch from "./CourseSearch";
 
 type State =
   | { status: "loading" }

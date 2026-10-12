@@ -6,13 +6,13 @@ import {
   getSharedMessage,
   type CourseDetails,
   type SharedMessage,
-} from "../api/chat";
-import { ApiError } from "../api/client";
-import MessageItem from "../components/chat/MessageItem";
-import ReplyThread from "../components/chat/ReplyThread";
-import ReviewList from "../components/chat/ReviewList";
-import ShareButton from "../components/ShareButton";
-import { courseUrl } from "../lib/share";
+} from "../../shared/api/chat";
+import { ApiError } from "../../shared/api/client";
+import MessageItem from "./MessageItem";
+import ReplyThread from "./ReplyThread";
+import ReviewList from "./ReviewList";
+import ShareButton from "./ShareButton";
+import { courseUrl } from "./share";
 import styles from "./CourseChatPage.module.css";
 
 type State =

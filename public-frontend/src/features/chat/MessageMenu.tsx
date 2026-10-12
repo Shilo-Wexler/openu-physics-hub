@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { messageUrl, shareLink } from "../../lib/share";
+import { messageUrl, shareLink } from "./share";
 import styles from "./MessageMenu.module.css";
 
 interface Props {

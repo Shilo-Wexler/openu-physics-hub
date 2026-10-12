@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { SignInResult } from "../api/chat";
+import type { SignInResult } from "../../shared/api/chat";
 import { useAuth } from "./AuthContext";
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
