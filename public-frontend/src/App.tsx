@@ -1,7 +1,9 @@
 import { Link, NavLink, Route, Routes, useNavigate } from "react-router";
 
+import { GENERAL_COURSE_ID } from "./shared/api/chat";
 import { useAuth } from "./features/auth/AuthContext";
 import GoogleButton from "./features/auth/GoogleButton";
+import ChatHubPage from "./features/chat/ChatHubPage";
 import CourseChatPage from "./features/chat/CourseChatPage";
 import CoursesPage from "./features/courses/CoursesPage";
 import ProfilePage from "./features/profile/ProfilePage";
@@ -56,7 +58,7 @@ export default function App() {
           <NavLink to="/" end>
             ראשי
           </NavLink>
-          <NavLink to="/courses">קורסים</NavLink>
+          <NavLink to="/chat">צ'אט</NavLink>
           <NavLink to="/about">אודות</NavLink>
         </nav>
         <AccountArea />
@@ -66,6 +68,12 @@ export default function App() {
       <main>
         <Routes>
           <Route path="/" element={<Placeholder title="דף הבית" />} />
+          <Route path="/chat" element={<ChatHubPage />} />
+          <Route path="/chat/general" element={<CourseChatPage courseId={GENERAL_COURSE_ID} />} />
+          <Route
+            path="/chat/general/m/:messageId"
+            element={<CourseChatPage courseId={GENERAL_COURSE_ID} />}
+          />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<CourseChatPage />} />
           <Route path="/courses/:courseId/m/:messageId" element={<CourseChatPage />} />

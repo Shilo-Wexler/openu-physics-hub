@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router";
 
 import {
+  GENERAL_COURSE_ID,
   getCourse,
   getSharedMessage,
   type CourseDetails,
@@ -13,7 +14,7 @@ import RatingPanel from "./RatingPanel";
 import ReviewCard from "./ReviewCard";
 import ReviewList from "./ReviewList";
 import ShareButton from "./ShareButton";
-import { courseUrl } from "./share";
+import { coursePath, courseUrl, messagePath } from "./share";
 import styles from "./CourseChatPage.module.css";
 
 type State =
@@ -29,13 +30,25 @@ type Shared =
   | { status: "missing" }
   | ({ status: "found"; loadedFor: number } & SharedMessage);
 
-/** A course page: /courses/:courseId, or /courses/:courseId/m/:messageId for a shared message. */
-export default function CourseChatPage() {
+interface PageProps {
+  /** A fixed course instead of the one in the address: the general chat (/chat/general). */
+  courseId?: number;
+}
+
+/**
+ * A course page: /courses/:courseId, or /courses/:courseId/m/:messageId for a shared message.
+ * The general chat is the same page for its own course, at /chat/general.
+ */
+export default function CourseChatPage(props: PageProps) {
   const params = useParams();
-  const courseId = Number(params.courseId);
+  const courseId = props.courseId ?? Number(params.courseId);
   const messageId = params.messageId === undefined ? null : Number(params.messageId);
-  if (!Number.isInteger(courseId) || courseId <= 0) {
+  if (!Number.isInteger(courseId) || courseId < 0) {
     return <p>הקורס לא נמצא.</p>;
+  }
+  // /courses/0 typed by hand: the general chat lives at its own address.
+  if (props.courseId === undefined && courseId === GENERAL_COURSE_ID) {
+    return <Navigate to={coursePath(courseId)} replace />;
   }
   // key: moving to another course or link mounts a fresh CourseChat, so no state leaks.
   return (
@@ -95,8 +108,8 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   }, [messageId, generation]);
 
   // A link with the wrong course number still works: move to the right course.
-  if (shared?.status === "found" && shared.course_id !== courseId) {
-    return <Navigate to={`/courses/${shared.course_id}/m/${messageId}`} replace />;
+  if (shared?.status === "found" && messageId !== null && shared.course_id !== courseId) {
+    return <Navigate to={messagePath(shared.course_id, messageId)} replace />;
   }
 
   if (state.status === "loading" || shared?.status === "loading") return <p>טוען...</p>;
@@ -104,20 +117,28 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   if (state.status === "error") return <p>לא הצלחנו לטעון את הקורס. נסו לרענן את הדף.</p>;
 
   const { course } = state;
+  const general = course.id === GENERAL_COURSE_ID;
   return (
     <>
       <div className={styles.header}>
-        <h1>
-          {course.name} <small>({course.id})</small>
-        </h1>
+        {general ? (
+          <h1>צ'אט כללי</h1>
+        ) : (
+          <h1>
+            {course.name} <small>({course.id})</small>
+          </h1>
+        )}
         <ShareButton url={courseUrl(course.id)} />
       </div>
-      {/* key: once the course reloads for a new viewer, a fresh panel starts from their rating. */}
-      <RatingPanel
-        key={state.loadedFor}
-        course={course}
-        onChange={(next) => setState((s) => (s.status === "ready" ? { ...s, course: next } : s))}
-      />
+      {/* The general chat is not a course, so it has nothing to rate.
+          key: once the course reloads for a new viewer, a fresh panel starts from their rating. */}
+      {!general && (
+        <RatingPanel
+          key={state.loadedFor}
+          course={course}
+          onChange={(next) => setState((s) => (s.status === "ready" ? { ...s, course: next } : s))}
+        />
+      )}
 
       {shared?.status === "missing" && (
         <p className={styles.notice}>ההודעה ששותפה כבר לא קיימת. אלה שאר הביקורות בקורס.</p>
@@ -142,4 +163,3 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
     </>
   );
 }
- 

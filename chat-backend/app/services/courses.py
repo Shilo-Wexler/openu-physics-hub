@@ -6,6 +6,11 @@ import asyncpg
 
 from app.core import db
 
+# The general chat is stored as a course with this id (row "0,כללי" in shared/courses.csv),
+# so messages, replies, likes and moderation work for it unchanged. It is not a real course:
+# it is left out of the course list and cannot be rated.
+GENERAL_COURSE_ID = 0
+
 # Averages and count per course. Left join keeps courses that have no ratings yet (avg is null).
 _COURSES_WITH_RATINGS = """
     select c.id, c.name,
@@ -22,7 +27,11 @@ class CourseNotFound(Exception):
 
 
 async def list_all() -> list[asyncpg.Record]:
-    return await db.pool.fetch(_COURSES_WITH_RATINGS + " group by c.id order by c.id")
+    """The real courses, without the general chat."""
+    return await db.pool.fetch(
+        _COURSES_WITH_RATINGS + " where c.id <> $1 group by c.id order by c.id",
+        GENERAL_COURSE_ID,
+    )
 
 
 async def get(course_id: int) -> asyncpg.Record | None:
@@ -40,6 +49,8 @@ async def get_user_rating(course_id: int, user_id: UUID) -> asyncpg.Record | Non
 
 async def rate(course_id: int, user_id: UUID, difficulty: int, recommendation: int) -> None:
     """Create or replace the user's rating of a course (one per user per course)."""
+    if course_id == GENERAL_COURSE_ID:
+        raise CourseNotFound()
     try:
         await db.pool.execute(
             """

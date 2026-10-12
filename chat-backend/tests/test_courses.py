@@ -1,5 +1,7 @@
 """Course list, course page and ratings."""
 
+from app.services.courses import GENERAL_COURSE_ID
+
 MISSING_COURSE = 999999999
 
 
@@ -56,3 +58,14 @@ def test_rating_out_of_range_is_422(sign_in, course_id):
 
 def test_guest_cannot_rate(guest, course_id):
     assert rate(guest, course_id, 3, 3).status_code == 401
+
+
+def test_general_chat_is_not_in_course_list(guest):
+    ids = [c["id"] for c in guest.get("/courses").json()]
+    assert GENERAL_COURSE_ID not in ids
+    # Its page still opens: the /chat page loads it like a course.
+    assert guest.get(f"/courses/{GENERAL_COURSE_ID}").status_code == 200
+
+
+def test_general_chat_cannot_be_rated(sign_in):
+    assert rate(sign_in("alice"), GENERAL_COURSE_ID, 3, 3).status_code == 404
