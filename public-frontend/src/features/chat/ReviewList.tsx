@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { listReviews, type Review, type ReviewSort } from "../../api/chat";
+import { listReviews, type Review, type ReviewSort } from "../../shared/api/chat";
 import MessageItem from "./MessageItem";
 import ReplyThread from "./ReplyThread";
 import styles from "./ReviewList.module.css";

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
-import type { Reply, Review } from "../../api/chat";
-import Avatar from "../Avatar";
+import type { Reply, Review } from "../../shared/api/chat";
+import Avatar from "../../shared/components/Avatar";
 import MessageMenu from "./MessageMenu";
 import styles from "./MessageItem.module.css";
 

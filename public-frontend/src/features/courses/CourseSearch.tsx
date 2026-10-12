@@ -1,8 +1,8 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 
-import type { Course } from "../api/chat";
-import { createCourseSearch } from "../lib/courseSearch";
+import type { Course } from "../../shared/api/chat";
+import { createCourseSearch } from "./searchCourses";
 import styles from "./CourseSearch.module.css";
 
 interface Props {

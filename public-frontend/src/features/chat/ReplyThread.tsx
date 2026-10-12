@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { listReplies, type Reply } from "../../api/chat";
+import { listReplies, type Reply } from "../../shared/api/chat";
 import MessageItem from "./MessageItem";
 import styles from "./ReplyThread.module.css";
 

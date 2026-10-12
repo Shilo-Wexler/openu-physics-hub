@@ -3,8 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
-import { getMe, logout, signInWithGoogle } from "../api/chat";
-import type { Me, SignInResult } from "../api/chat";
+import { getMe, logout, signInWithGoogle } from "../../shared/api/chat";
+import type { Me, SignInResult } from "../../shared/api/chat";
 
 interface Auth {
   user: Me | null; // null for a guest (and while loading)

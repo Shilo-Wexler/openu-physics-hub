@@ -2,7 +2,7 @@
 
 import Fuse from "fuse.js";
 
-import type { Course } from "../api/chat";
+import type { Course } from "../../shared/api/chat";
 
 const NIQQUD = /[֑-ׇ]/g; // vowel points and cantillation marks
 const FINAL_LETTERS: Record<string, string> = { ך: "כ", ם: "מ", ן: "נ", ף: "פ", ץ: "צ" };

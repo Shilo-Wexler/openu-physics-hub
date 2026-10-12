@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { shareLink } from "../lib/share";
+import { shareLink } from "./share";
 import styles from "./ShareButton.module.css";
 
 // How long "link copied" stays on the button.
