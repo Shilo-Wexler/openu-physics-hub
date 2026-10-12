@@ -84,3 +84,12 @@ def test_logout_all_ends_every_session(sign_in):
     assert laptop.post("/auth/logout-all").status_code == 200
     assert laptop.get("/me").status_code == 401
     assert phone.get("/me").status_code == 401
+
+
+def test_session_cookie_is_sent_only_to_chat_api(guest, sign_in):
+    # Path limits the cookie to the chat API, so other services on the domain never receive it.
+    sign_in_response = guest.post("/auth/google", json={"id_token": "alice"})
+    assert "path=/api/chat" in sign_in_response.headers["set-cookie"].lower()
+    # Logout must delete it with the same path, or the browser keeps the cookie.
+    logout_response = sign_in("alice").post("/auth/logout")
+    assert "path=/api/chat" in logout_response.headers["set-cookie"].lower()

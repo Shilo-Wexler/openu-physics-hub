@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from pydantic import BaseModel
 
-from app.routes.deps import SESSION_COOKIE, current_user_id, set_session_cookie
+from app.routes.deps import clear_session_cookie, current_user_id, set_session_cookie
 from app.services import google_auth, sessions, users
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -38,12 +38,12 @@ async def sign_in_with_google(body: GoogleSignIn, response: Response):
 async def logout(response: Response, session: Annotated[str | None, Cookie()] = None):
     if session:
         await sessions.delete(session)
-    response.delete_cookie(SESSION_COOKIE)
+    clear_session_cookie(response)
     return {"status": "ok"}
 
 
 @router.post("/logout-all")
 async def logout_all(response: Response, user_id: Annotated[UUID, Depends(current_user_id)]):
     await sessions.delete_all(user_id)
-    response.delete_cookie(SESSION_COOKIE)
+    clear_session_cookie(response)
     return {"status": "ok"}

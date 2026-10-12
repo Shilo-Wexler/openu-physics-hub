@@ -10,6 +10,9 @@ from app.core import settings
 from app.services import sessions
 
 SESSION_COOKIE = "session"
+# The browser sends the cookie only to the chat API, not to other services on the same domain
+# (the inquiries backend, the admin console). Must match API_PREFIX in app/main.py.
+SESSION_COOKIE_PATH = "/api/chat"
 
 
 def set_session_cookie(response: Response, token: str) -> None:
@@ -17,9 +20,21 @@ def set_session_cookie(response: Response, token: str) -> None:
         SESSION_COOKIE,
         token,
         max_age=settings.SESSION_DAYS * 24 * 60 * 60,
+        path=SESSION_COOKIE_PATH,
         httponly=True,  # page JavaScript cannot read it
         secure=True,  # sent over HTTPS only (browsers allow localhost too)
         samesite="lax",  # not sent on cross-site POSTs
+    )
+
+
+def clear_session_cookie(response: Response) -> None:
+    """Deletes the cookie. A browser matches it by name and path, so these must equal the above."""
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path=SESSION_COOKIE_PATH,
+        httponly=True,
+        secure=True,
+        samesite="lax",
     )
 
 
