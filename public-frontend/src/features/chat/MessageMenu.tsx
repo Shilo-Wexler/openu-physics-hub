@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
+import { reportMessage } from "../../shared/api/chat";
+import { ApiError } from "../../shared/api/client";
+import { useAuth } from "../auth/AuthContext";
 import { messageUrl, shareLink } from "./share";
 import styles from "./MessageMenu.module.css";
 
@@ -10,22 +13,43 @@ interface Props {
   onEdit?: () => void;
   /** Shows "delete" (the reader's own message); called once the reader confirmed. */
   onDelete?: () => void;
+  /** Shows "report" (someone else's message). Guests are asked to sign in first. */
+  reportable?: boolean;
 }
 
-// How long "link copied" stays on the button.
-const COPIED_MS = 2000;
+// An action that needs a second click, so a slip of the finger does nothing.
+type Confirm = "delete" | "report";
 
-/** The ⋯ menu of a message: share, and edit or delete for the reader's own messages. */
-export default function MessageMenu({ courseId, messageId, onEdit, onDelete }: Props) {
+const QUESTIONS: Record<Confirm, string> = {
+  delete: "למחוק את ההודעה?",
+  report: "לדווח על ההודעה?",
+};
+const CONFIRM_LABELS: Record<Confirm, string> = {
+  delete: "כן, למחוק",
+  report: "כן, לדווח",
+};
+
+// How long a short notice ("link copied", "reported") stays on the button.
+const NOTICE_MS = 2000;
+
+/** The ⋯ menu of a message: share and report, and edit or delete for the reader's own messages. */
+export default function MessageMenu({
+  courseId,
+  messageId,
+  onEdit,
+  onDelete,
+  reportable = false,
+}: Props) {
+  const { requireSignIn } = useAuth();
   const [open, setOpen] = useState(false);
-  // "delete" was picked once: the menu now asks to confirm instead of listing actions.
-  const [confirming, setConfirming] = useState(false);
-  const [copied, setCopied] = useState(false);
+  // An action picked once: the menu now asks to confirm it instead of listing actions.
+  const [confirming, setConfirming] = useState<Confirm | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
 
   function close() {
     setOpen(false);
-    setConfirming(false);
+    setConfirming(null);
   }
 
   // Close on a click outside the menu or on Escape, as menus usually do.
@@ -33,7 +57,7 @@ export default function MessageMenu({ courseId, messageId, onEdit, onDelete }: P
     if (!open) return;
     function dismiss() {
       setOpen(false);
-      setConfirming(false);
+      setConfirming(null);
     }
     function onPointerDown(event: PointerEvent) {
       if (!root.current?.contains(event.target as Node)) dismiss();
@@ -50,26 +74,54 @@ export default function MessageMenu({ courseId, messageId, onEdit, onDelete }: P
   }, [open]);
 
   useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), COPIED_MS);
+    if (notice === null) return;
+    const timer = setTimeout(() => setNotice(null), NOTICE_MS);
     return () => clearTimeout(timer);
-  }, [copied]);
+  }, [notice]);
 
   async function share() {
     close();
     try {
-      if ((await shareLink(messageUrl(courseId, messageId))) === "copied") setCopied(true);
+      if ((await shareLink(messageUrl(courseId, messageId))) === "copied") {
+        setNotice("הקישור הועתק");
+      }
     } catch (error) {
       console.error(error);
     }
   }
 
-  // Closes the menu, then runs the action.
-  function pick(action: () => void) {
-    return () => {
+  function askToReport() {
+    // A guest gets the sign-in dialog; the menu closes so it does not sit behind it.
+    if (!requireSignIn()) {
       close();
-      action();
-    };
+      return;
+    }
+    setConfirming("report");
+  }
+
+  async function report() {
+    close();
+    try {
+      await reportMessage(messageId);
+      setNotice("תודה, הדיווח נשלח");
+    } catch (error) {
+      // 409: this reader already reported it, and the report is still waiting for review.
+      if (error instanceof ApiError && error.status === 409) {
+        setNotice("כבר דיווחת, ההודעה בבדיקה");
+      } else {
+        console.error(error);
+        setNotice("הדיווח נכשל, נסו שוב");
+      }
+    }
+  }
+
+  function confirm(action: Confirm) {
+    if (action === "delete") {
+      close();
+      onDelete?.();
+    } else {
+      void report();
+    }
   }
 
   return (
@@ -82,21 +134,21 @@ export default function MessageMenu({ courseId, messageId, onEdit, onDelete }: P
         aria-expanded={open}
         onClick={() => (open ? close() : setOpen(true))}
       >
-        {copied ? "הקישור הועתק" : "⋯"}
+        {notice ?? "⋯"}
       </button>
       {open && (
         <ul className={styles.items} role="menu">
-          {confirming && onDelete ? (
+          {confirming ? (
             <>
-              <li role="none">למחוק את ההודעה?</li>
+              <li role="none">{QUESTIONS[confirming]}</li>
               <li role="none">
                 <button
                   className={styles.item}
                   type="button"
                   role="menuitem"
-                  onClick={pick(onDelete)}
+                  onClick={() => confirm(confirming)}
                 >
-                  כן, למחוק
+                  {CONFIRM_LABELS[confirming]}
                 </button>
               </li>
               <li role="none">
@@ -118,7 +170,10 @@ export default function MessageMenu({ courseId, messageId, onEdit, onDelete }: P
                     className={styles.item}
                     type="button"
                     role="menuitem"
-                    onClick={pick(onEdit)}
+                    onClick={() => {
+                      close();
+                      onEdit();
+                    }}
                   >
                     עריכה
                   </button>
@@ -130,9 +185,21 @@ export default function MessageMenu({ courseId, messageId, onEdit, onDelete }: P
                     className={styles.item}
                     type="button"
                     role="menuitem"
-                    onClick={() => setConfirming(true)}
+                    onClick={() => setConfirming("delete")}
                   >
                     מחיקה
+                  </button>
+                </li>
+              )}
+              {reportable && (
+                <li role="none">
+                  <button
+                    className={styles.item}
+                    type="button"
+                    role="menuitem"
+                    onClick={askToReport}
+                  >
+                    דיווח
                   </button>
                 </li>
               )}
