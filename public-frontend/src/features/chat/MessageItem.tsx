@@ -2,8 +2,9 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import type { Reply, Review } from "../../shared/api/chat";
 import Avatar from "../../shared/components/Avatar";
-import MessageMenu from "./MessageMenu";
+import { useAuth } from "../auth/AuthContext";
 import LikeButton from "./LikeButton";
+import MessageMenu from "./MessageMenu";
 import styles from "./MessageItem.module.css";
 
 const relativeTime = new Intl.RelativeTimeFormat("he", { numeric: "auto" });
@@ -35,18 +36,22 @@ interface Props {
   compact?: boolean;
   /** Marked and scrolled into view: the message a shared link points at. */
   highlighted?: boolean;
+  /** Shows a reply button; called when the signed-in reader wants to answer this message. */
+  onReply?: () => void;
   /** Shown under the message, e.g. the replies of a review. */
   children?: ReactNode;
 }
 
-/** One review or reply: avatar, author and time, the quote it answers, text and likes. */
+/** One review or reply: avatar, author and time, the quote it answers, text, likes and reply. */
 export default function MessageItem({
   message,
   courseId,
   compact = false,
   highlighted = false,
+  onReply,
   children,
 }: Props) {
+  const { requireSignIn } = useAuth();
   const article = useRef<HTMLElement>(null);
   useEffect(() => {
     if (highlighted) article.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -54,6 +59,9 @@ export default function MessageItem({
 
   // Only replies have a quote; `in` checks that the field exists on this message.
   const hasQuote = "reply_to_id" in message && message.reply_to_id !== null;
+  // A message still being sent has a temporary negative id: the server does not know it yet,
+  // so liking or answering it would fail.
+  const saved = message.id > 0;
 
   return (
     <article
@@ -78,7 +86,7 @@ export default function MessageItem({
                 {timeAgo(message.created_at)}
               </time>
               {message.edited_at && <span>(נערך)</span>}
-              <MessageMenu courseId={courseId} messageId={message.id} />
+              {saved && <MessageMenu courseId={courseId} messageId={message.id} />}
             </div>
 
             {hasQuote && (
@@ -100,14 +108,26 @@ export default function MessageItem({
             <p className={styles.content} dir="auto">
               {message.content}
             </p>
-            
-            <div className={styles.actions}>
-              <LikeButton
-                messageId={message.id}
-                liked={message.liked_by_me}
-                count={message.like_count}
-              />
-            </div>
+
+            {saved && (
+              <div className={styles.actions}>
+                <LikeButton
+                  messageId={message.id}
+                  liked={message.liked_by_me}
+                  count={message.like_count}
+                />
+                {onReply && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (requireSignIn()) onReply();
+                    }}
+                  >
+                    הגב
+                  </button>
+                )}
+              </div>
+            )}
           </>
         )}
 

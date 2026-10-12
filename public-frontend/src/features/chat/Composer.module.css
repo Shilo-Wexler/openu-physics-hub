@@ -1,15 +1,26 @@
-/* Sticks to the bottom of the screen; real colors come with the design stage. */
+/* Only what the box needs to work; real colors come with the design stage. */
 .composer {
+  padding: 8px 0;
+}
+
+/* The new-review box sticks to the bottom of the screen. */
+.sticky {
   position: sticky;
   bottom: 0;
   background: Canvas;
-  padding: 8px 0;
 }
 
 .composer textarea {
   width: 100%;
   box-sizing: border-box;
   resize: vertical;
+}
+
+.replyingTo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
 
 .footer {

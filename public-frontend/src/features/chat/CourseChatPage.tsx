@@ -8,8 +8,7 @@ import {
   type SharedMessage,
 } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
-import MessageItem from "./MessageItem";
-import ReplyThread from "./ReplyThread";
+import ReviewCard from "./ReviewCard";
 import ReviewList from "./ReviewList";
 import ShareButton from "./ShareButton";
 import { courseUrl } from "./share";
@@ -90,7 +89,7 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   const { course } = state;
   return (
     <>
-    <div className={styles.header}>
+      <div className={styles.header}>
         <h1>
           {course.name} <small>({course.id})</small>
         </h1>
@@ -107,20 +106,12 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
       )}
       {shared?.status === "found" && (
         <section className={styles.shared} aria-label="הודעה ששותפה">
-          <MessageItem
-            message={shared.review}
+          <ReviewCard
+            review={shared.review}
             courseId={courseId}
             highlighted={shared.reply_id === null}
-          >
-            {shared.review.reply_count > 0 && (
-              <ReplyThread
-                courseId={courseId}
-                reviewId={shared.review.id}
-                replyCount={shared.review.reply_count}
-                highlightId={shared.reply_id}
-              />
-            )}
-          </MessageItem>
+            highlightReplyId={shared.reply_id}
+          />
         </section>
       )}
 
