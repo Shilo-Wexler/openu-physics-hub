@@ -8,6 +8,8 @@ import {
   type SharedMessage,
 } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
+import { useAuth } from "../auth/AuthContext";
+import RatingPanel from "./RatingPanel";
 import ReviewCard from "./ReviewCard";
 import ReviewList from "./ReviewList";
 import ShareButton from "./ShareButton";
@@ -18,10 +20,14 @@ type State =
   | { status: "loading" }
   | { status: "not-found" }
   | { status: "error" }
-  | { status: "ready"; course: CourseDetails };
+  // loadedFor: the viewer generation the data was loaded for (see `viewer` below).
+  | { status: "ready"; course: CourseDetails; loadedFor: number };
 
 // The message of a shared link: still loading, gone (deleted or never existed), or found.
-type Shared = { status: "loading" } | { status: "missing" } | ({ status: "found" } & SharedMessage);
+type Shared =
+  | { status: "loading" }
+  | { status: "missing" }
+  | ({ status: "found"; loadedFor: number } & SharedMessage);
 
 /** A course page: /courses/:courseId, or /courses/:courseId/m/:messageId for a shared message. */
 export default function CourseChatPage() {
@@ -47,10 +53,21 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
     messageId === null ? null : { status: "loading" },
   );
 
+  const { user, loading } = useAuth();
+  const userId = user?.user_id ?? null;
+  // Goes up when someone signs in or out on this page, so the course (my_rating) and the shared
+  // review (liked_by_me) load again for the new viewer. The first /me answer does not count.
+  const [viewer, setViewer] = useState({ loading, userId, generation: 0 });
+  if (viewer.loading !== loading || viewer.userId !== userId) {
+    const changed = !viewer.loading;
+    setViewer({ loading, userId, generation: changed ? viewer.generation + 1 : viewer.generation });
+  }
+  const { generation } = viewer;
+
   useEffect(() => {
     const controller = new AbortController();
     getCourse(courseId, controller.signal)
-      .then((course) => setState({ status: "ready", course }))
+      .then((course) => setState({ status: "ready", course, loadedFor: generation }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         if (error instanceof ApiError && error.status === 404) {
@@ -61,21 +78,21 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
         }
       });
     return () => controller.abort();
-  }, [courseId]);
+  }, [courseId, generation]);
 
   // Loads together with the course, not after it.
   useEffect(() => {
     if (messageId === null) return;
     const controller = new AbortController();
     getSharedMessage(messageId, controller.signal)
-      .then((message) => setShared({ status: "found", ...message }))
+      .then((message) => setShared({ status: "found", ...message, loadedFor: generation }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         if (!(error instanceof ApiError && error.status === 404)) console.error(error);
         setShared({ status: "missing" });
       });
     return () => controller.abort();
-  }, [messageId]);
+  }, [messageId, generation]);
 
   // A link with the wrong course number still works: move to the right course.
   if (shared?.status === "found" && shared.course_id !== courseId) {
@@ -95,11 +112,12 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
         </h1>
         <ShareButton url={courseUrl(course.id)} />
       </div>
-      <p>
-        {course.ratings_count === 0
-          ? "עוד אין דירוגים לקורס הזה."
-          : `קושי ${course.avg_difficulty?.toFixed(1)} · המלצה ${course.avg_recommendation?.toFixed(1)}`}
-      </p>
+      {/* key: once the course reloads for a new viewer, a fresh panel starts from their rating. */}
+      <RatingPanel
+        key={state.loadedFor}
+        course={course}
+        onChange={(next) => setState((s) => (s.status === "ready" ? { ...s, course: next } : s))}
+      />
 
       {shared?.status === "missing" && (
         <p className={styles.notice}>ההודעה ששותפה כבר לא קיימת. אלה שאר הביקורות בקורס.</p>
@@ -107,6 +125,7 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
       {shared?.status === "found" && (
         <section className={styles.shared} aria-label="הודעה ששותפה">
           <ReviewCard
+            key={shared.loadedFor}
             review={shared.review}
             courseId={courseId}
             highlighted={shared.reply_id === null}
@@ -123,3 +142,4 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
     </>
   );
 }
+ 
