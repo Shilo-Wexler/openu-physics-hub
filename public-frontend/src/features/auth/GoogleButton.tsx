@@ -27,8 +27,10 @@ declare global {
   }
 }
 
-// Google calls one callback for the whole page; it forwards to the button that is mounted.
-let handleCredential: ((idToken: string) => void) | null = null;
+// Google calls one callback for the whole page. Several buttons can be on screen at once
+// (the header and the sign-in dialog): the newest one handles it, and when it goes away
+// the one before it takes over again.
+const credentialHandlers: ((idToken: string) => void)[] = [];
 
 // The script loads and initializes once per page, however many times a button mounts.
 let googlePromise: Promise<GoogleIdentity> | null = null;
@@ -50,7 +52,7 @@ function loadGoogle(): Promise<GoogleIdentity> {
       }
       google.accounts.id.initialize({
         client_id: CLIENT_ID,
-        callback: (response) => handleCredential?.(response.credential),
+        callback: (response) => credentialHandlers.at(-1)?.(response.credential),
       });
       resolve(google);
     };
@@ -82,7 +84,7 @@ export default function GoogleButton({ onSignedIn }: Props) {
   useEffect(() => {
     let active = true;
 
-    handleCredential = async (idToken) => {
+    const handleCredential = async (idToken: string) => {
       try {
         const result = await signIn(idToken);
         onSignedInRef.current?.(result);
@@ -91,6 +93,7 @@ export default function GoogleButton({ onSignedIn }: Props) {
         if (active) setFailed(true);
       }
     };
+    credentialHandlers.push(handleCredential);
 
     loadGoogle()
       .then((google) => {
@@ -111,7 +114,8 @@ export default function GoogleButton({ onSignedIn }: Props) {
 
     return () => {
       active = false;
-      handleCredential = null;
+      const index = credentialHandlers.indexOf(handleCredential);
+      if (index !== -1) credentialHandlers.splice(index, 1);
     };
   }, [signIn]);
 

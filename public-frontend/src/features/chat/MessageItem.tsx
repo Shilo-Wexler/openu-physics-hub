@@ -3,6 +3,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import type { Reply, Review } from "../../shared/api/chat";
 import Avatar from "../../shared/components/Avatar";
 import MessageMenu from "./MessageMenu";
+import LikeButton from "./LikeButton";
 import styles from "./MessageItem.module.css";
 
 const relativeTime = new Intl.RelativeTimeFormat("he", { numeric: "auto" });
@@ -99,11 +100,13 @@ export default function MessageItem({
             <p className={styles.content} dir="auto">
               {message.content}
             </p>
-
+            
             <div className={styles.actions}>
-              <span aria-label={`${message.like_count} לייקים`}>
-                {message.liked_by_me ? "♥" : "♡"} {message.like_count}
-              </span>
+              <LikeButton
+                messageId={message.id}
+                liked={message.liked_by_me}
+                count={message.like_count}
+              />
             </div>
           </>
         )}

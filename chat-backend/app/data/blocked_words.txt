@@ -44,6 +44,7 @@
 שרמוטות
 שרמוטים
 שרמיט
+חרא
 
 # English: from List of Dirty, Naughty, Obscene, and Otherwise Bad Words
 # (https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words),

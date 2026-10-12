@@ -13,6 +13,10 @@ interface Auth {
   signOut: () => Promise<void>;
   signOutAll: () => Promise<void>; // ends the sessions on every device
   updateUser: (changes: Partial<Me>) => void; // after a nickname or avatar change
+  /** For write actions: true when signed in; for a guest, opens the sign-in dialog and returns false. */
+  requireSignIn: () => boolean;
+  signInPromptOpen: boolean;
+  closeSignInPrompt: () => void;
 }
 
 const AuthContext = createContext<Auth | null>(null);
@@ -20,6 +24,7 @@ const AuthContext = createContext<Auth | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signInPromptOpen, setSignInPromptOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -41,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await signInWithGoogle(idToken);
     const { is_new: _isNew, ...me } = result;
     setUser(me);
+    setSignInPromptOpen(false); // signed in from the dialog: it has done its job
     return result; // the caller uses is_new to offer a nickname change
   }, []);
 
@@ -49,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-    const signOutAll = useCallback(async () => {
+  const signOutAll = useCallback(async () => {
     await logoutAll();
     setUser(null);
   }, []);
@@ -58,13 +64,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((current) => (current ? { ...current, ...changes } : current));
   }, []);
 
+  const requireSignIn = useCallback(() => {
+    if (user) return true;
+    setSignInPromptOpen(true);
+    return false;
+  }, [user]);
+
+  const closeSignInPrompt = useCallback(() => setSignInPromptOpen(false), []);
+
   // A new object only when something changed, so components that use auth do not re-render
   // on every render of the provider.
-    const value = useMemo(
-    () => ({ user, loading, signIn, signOut, signOutAll, updateUser }),
-    [user, loading, signIn, signOut, signOutAll, updateUser],
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      signIn,
+      signOut,
+      signOutAll,
+      updateUser,
+      requireSignIn,
+      signInPromptOpen,
+      closeSignInPrompt,
+    }),
+    [user, loading, signIn, signOut, signOutAll, updateUser, requireSignIn, signInPromptOpen, closeSignInPrompt],
   );
-  
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
