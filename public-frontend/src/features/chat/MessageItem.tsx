@@ -1,9 +1,10 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import type { Reply, Review } from "../../shared/api/chat";
+import { deleteMessage, editMessage, type Reply, type Review } from "../../shared/api/chat";
 import Avatar from "../../shared/components/Avatar";
 import { useAuth } from "../auth/AuthContext";
 import LikeButton from "./LikeButton";
+import MessageEditor from "./MessageEditor";
 import MessageMenu from "./MessageMenu";
 import styles from "./MessageItem.module.css";
 
@@ -57,11 +58,45 @@ export default function MessageItem({
     if (highlighted) article.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlighted]);
 
+  // Changes the reader made here to their own message. The lists above keep the message as
+  // it came from the server; this item shows it with these changes on top.
+  const [editing, setEditing] = useState(false);
+  const [edited, setEdited] = useState<{ content: string; edited_at: string } | null>(null);
+  const [removed, setRemoved] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
+
   // Only replies have a quote; `in` checks that the field exists on this message.
-  const hasQuote = "reply_to_id" in message && message.reply_to_id !== null;
+  const isReply = "reply_to_id" in message;
+  const hasQuote = isReply && message.reply_to_id !== null;
   // A message still being sent has a temporary negative id: the server does not know it yet,
   // so liking or answering it would fail.
   const saved = message.id > 0;
+
+  // A deleted reply, or a review nobody answered, disappears. A deleted review with replies
+  // stays as "deleted" above them, as the server shows it after a refresh.
+  const keepsPlace = !isReply && message.reply_count > 0;
+  if (removed && !keepsPlace) return null;
+
+  async function saveEdit(content: string) {
+    const result = await editMessage(message.id, content);
+    setEdited({ content, edited_at: result.edited_at });
+    setEditing(false);
+  }
+
+  // Optimistic: the message goes at once, and comes back if the server refused.
+  async function remove() {
+    setDeleteFailed(false);
+    setRemoved(true);
+    try {
+      await deleteMessage(message.id);
+    } catch (error) {
+      console.error(error);
+      setRemoved(false);
+      setDeleteFailed(true);
+    }
+  }
+
+  const mine = saved && message.is_mine;
 
   return (
     <article
@@ -70,10 +105,10 @@ export default function MessageItem({
         .filter(Boolean)
         .join(" ")}
     >
-      <Avatar avatar={message.avatar} size={compact ? 28 : 36} />
+      <Avatar avatar={removed ? null : message.avatar} size={compact ? 28 : 36} />
 
       <div className={styles.body}>
-        {message.deleted ? (
+        {message.deleted || removed ? (
           <p className={styles.deleted}>הביקורת נמחקה</p>
         ) : (
           <>
@@ -85,9 +120,18 @@ export default function MessageItem({
               >
                 {timeAgo(message.created_at)}
               </time>
-              {message.edited_at && <span>(נערך)</span>}
-              {saved && <MessageMenu courseId={courseId} messageId={message.id} />}
+              {(edited?.edited_at ?? message.edited_at) && <span>(נערך)</span>}
+              {saved && !editing && (
+                <MessageMenu
+                  courseId={courseId}
+                  messageId={message.id}
+                  onEdit={mine ? () => setEditing(true) : undefined}
+                  onDelete={mine ? () => void remove() : undefined}
+                />
+              )}
             </div>
+
+            {deleteFailed && <p role="alert">המחיקה נכשלה, נסו שוב</p>}
 
             {hasQuote && (
               <blockquote className={styles.quote}>
@@ -104,29 +148,39 @@ export default function MessageItem({
               </blockquote>
             )}
 
-            {/* dir="auto": a message written in English is shown left-to-right. */}
-            <p className={styles.content} dir="auto">
-              {message.content}
-            </p>
+            {editing ? (
+              <MessageEditor
+                initial={edited?.content ?? message.content}
+                onSave={saveEdit}
+                onCancel={() => setEditing(false)}
+              />
+            ) : (
+              <>
+                {/* dir="auto": a message written in English is shown left-to-right. */}
+                <p className={styles.content} dir="auto">
+                  {edited?.content ?? message.content}
+                </p>
 
-            {saved && (
-              <div className={styles.actions}>
-                <LikeButton
-                  messageId={message.id}
-                  liked={message.liked_by_me}
-                  count={message.like_count}
-                />
-                {onReply && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (requireSignIn()) onReply();
-                    }}
-                  >
-                    הגב
-                  </button>
+                {saved && (
+                  <div className={styles.actions}>
+                    <LikeButton
+                      messageId={message.id}
+                      liked={message.liked_by_me}
+                      count={message.like_count}
+                    />
+                    {onReply && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (requireSignIn()) onReply();
+                        }}
+                      >
+                        הגב
+                      </button>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </>
         )}
