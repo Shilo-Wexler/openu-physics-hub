@@ -75,6 +75,14 @@ export interface ReplyPage {
   next_after: number | null; // pass as `after` for the next page; null means no more
 }
 
+// What a shared link (/courses/{id}/m/{messageId}) opens: the review to show on top, and
+// the reply to point at when the link is to a reply.
+export interface SharedMessage {
+  course_id: number;
+  review: Review;
+  reply_id: number | null;
+}
+
 export interface NewMessage {
   id: number;
   thread_id: number | null; // the review a new reply went under; null for a new review
@@ -149,6 +157,11 @@ export function listReviews(
 export function listReplies(reviewId: number, after?: number, signal?: AbortSignal) {
   const query = after === undefined ? "" : `?after=${after}`;
   return request<ReplyPage>(`${BASE}/messages/${reviewId}/replies${query}`, { signal });
+}
+
+/** The review of a shared message. 404 when the message was deleted or never existed. */
+export function getSharedMessage(messageId: number, signal?: AbortSignal) {
+  return request<SharedMessage>(`${BASE}/messages/${messageId}`, { signal });
 }
 
 /** A new review, or a reply when replyToId is given (a review or another reply). */

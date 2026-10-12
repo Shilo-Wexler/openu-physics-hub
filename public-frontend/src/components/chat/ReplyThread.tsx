@@ -1,17 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { listReplies, type Reply } from "../../api/chat";
 import MessageItem from "./MessageItem";
 import styles from "./ReplyThread.module.css";
 
 interface Props {
+  courseId: number;
   reviewId: number;
   replyCount: number;
+  /** Opens the thread right away and marks this reply (a shared link to a reply). */
+  highlightId?: number | null;
 }
 
 /** The replies under one review: closed behind "show N replies" until the reader opens it. */
-export default function ReplyThread({ reviewId, replyCount }: Props) {
-  const [open, setOpen] = useState(false);
+export default function ReplyThread({ courseId, reviewId, replyCount, highlightId = null }: Props) {
+  const [open, setOpen] = useState(highlightId !== null);
   // null until the first page arrives. Replies stay loaded after "hide", so reopening is instant.
   const [replies, setReplies] = useState<Reply[] | null>(null);
   const [nextAfter, setNextAfter] = useState<number | null>(null);
@@ -23,7 +26,10 @@ export default function ReplyThread({ reviewId, replyCount }: Props) {
     setFailed(false);
     try {
       const page = await listReplies(reviewId, after);
-      setReplies((current) => [...(current ?? []), ...page.replies]);
+      // The first page replaces, so loading it twice (React's dev mode does) adds nothing twice.
+      setReplies((current) =>
+        after === undefined ? page.replies : [...(current ?? []), ...page.replies],
+      );
       setNextAfter(page.next_after);
     } catch (error) {
       console.error(error);
@@ -32,6 +38,12 @@ export default function ReplyThread({ reviewId, replyCount }: Props) {
       setLoading(false);
     }
   }
+
+  // A thread that starts open loads its first page at once.
+  useEffect(() => {
+    if (highlightId !== null) void load();
+    // Only on mount: highlightId comes with the page and does not change.
+  }, []);
 
   function show() {
     setOpen(true);
@@ -52,7 +64,12 @@ export default function ReplyThread({ reviewId, replyCount }: Props) {
         <ol className={styles.list}>
           {replies.map((reply) => (
             <li key={reply.id}>
-              <MessageItem message={reply} compact />
+              <MessageItem
+                message={reply}
+                courseId={courseId}
+                compact
+                highlighted={reply.id === highlightId}
+              />
             </li>
           ))}
         </ol>

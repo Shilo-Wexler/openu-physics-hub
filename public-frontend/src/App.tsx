@@ -25,6 +25,7 @@ export default function App() {
           <Route path="/" element={<Placeholder title="דף הבית" />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<CourseChatPage />} />
+          <Route path="/courses/:courseId/m/:messageId" element={<CourseChatPage />} />
           <Route path="/about" element={<Placeholder title="אודות" />} />
           <Route path="*" element={<Placeholder title="הדף לא נמצא" />} />
         </Routes>
