@@ -28,6 +28,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.main import API_PREFIX, app  # noqa: E402
 from app.routes.deps import SESSION_COOKIE  # noqa: E402
 from app.services import google_auth  # noqa: E402
+from app.services.courses import GENERAL_COURSE_ID  # noqa: E402
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 MIGRATIONS_DIR = BACKEND_DIR / "db" / "migrations"
@@ -137,5 +138,5 @@ def mod_headers() -> dict:
 
 @pytest.fixture(scope="session")
 def course_id() -> int:
-    """Any real course from the shared list."""
-    return _courses()[0][0]
+    """Any real course from the shared list (not the general chat)."""
+    return next(id_ for id_, _ in _courses() if id_ != GENERAL_COURSE_ID)

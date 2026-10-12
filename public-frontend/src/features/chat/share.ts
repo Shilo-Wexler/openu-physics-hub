@@ -1,11 +1,23 @@
-/** The link to a course page. */
-export function courseUrl(courseId: number): string {
-  return `${window.location.origin}/courses/${courseId}`;
+import { GENERAL_COURSE_ID } from "../../shared/api/chat";
+
+/** The path of a course page; the general chat has its own (see the routes in App.tsx). */
+export function coursePath(courseId: number): string {
+  return courseId === GENERAL_COURSE_ID ? "/chat/general" : `/courses/${courseId}`;
 }
 
-/** The link that opens a message on its course page (see the route in App.tsx). */
+/** The path that opens a message on its course page. */
+export function messagePath(courseId: number, messageId: number): string {
+  return `${coursePath(courseId)}/m/${messageId}`;
+}
+
+/** The full link to a course page, for sharing. */
+export function courseUrl(courseId: number): string {
+  return window.location.origin + coursePath(courseId);
+}
+
+/** The full link to a message, for sharing. */
 export function messageUrl(courseId: number, messageId: number): string {
-  return `${window.location.origin}/courses/${courseId}/m/${messageId}`;
+  return window.location.origin + messagePath(courseId, messageId);
 }
 
 /**

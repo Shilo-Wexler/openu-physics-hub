@@ -4,6 +4,9 @@ import { request } from "./client";
 
 const BASE = "/api/chat";
 
+// The general chat is stored as this course (GENERAL_COURSE_ID in app/services/courses.py).
+export const GENERAL_COURSE_ID = 0;
+
 // ---- Types -------------------------------------------------------------
 
 export interface Course {
