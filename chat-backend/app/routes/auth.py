@@ -22,9 +22,16 @@ async def sign_in_with_google(body: GoogleSignIn, response: Response):
         google_user_id = await google_auth.verify_id_token(body.id_token)
     except google_auth.InvalidGoogleToken:
         raise HTTPException(status_code=401, detail="invalid Google token")
-    user_id = await users.find_or_create("google", google_user_id)
+    user_id, is_new = await users.find_or_create("google", google_user_id)
     set_session_cookie(response, await sessions.create(user_id))
-    return {"user_id": user_id}
+    # Same shape as GET /me plus is_new, so the browser needs no extra /me call after sign-in.
+    user = await users.get(user_id)
+    return {
+        "user_id": user["id"],
+        "nickname": user["nickname"],
+        "avatar": user["avatar"],
+        "is_new": is_new,
+    }
 
 
 @router.post("/logout")

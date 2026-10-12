@@ -21,6 +21,17 @@ def test_same_google_account_is_same_user(sign_in):
     assert sign_in("alice").user_id != sign_in("bob").user_id
 
 
+def test_sign_in_returns_profile_and_is_new_only_once(guest):
+    first = guest.post("/auth/google", json={"id_token": "alice"}).json()
+    assert first["is_new"] is True
+    assert re.fullmatch(r"student\d{6}", first["nickname"])
+    assert first["avatar"] in AVATARS
+
+    second = guest.post("/auth/google", json={"id_token": "alice"}).json()
+    assert second["is_new"] is False
+    assert second["user_id"] == first["user_id"]
+
+
 def test_invalid_google_token_is_rejected(guest, monkeypatch):
     async def reject(token: str) -> str:
         raise google_auth.InvalidGoogleToken("bad")
