@@ -1,12 +1,13 @@
-import { NavLink, Route, Routes } from "react-router";
+import { Link, NavLink, Route, Routes, useNavigate } from "react-router";
 
 import { useAuth } from "./features/auth/AuthContext";
 import GoogleButton from "./features/auth/GoogleButton";
-import Avatar from "./shared/components/Avatar";
-import CoursesPage from "./features/courses/CoursesPage";
 import CourseChatPage from "./features/chat/CourseChatPage";
+import CoursesPage from "./features/courses/CoursesPage";
+import ProfilePage from "./features/profile/ProfilePage";
+import Avatar from "./shared/components/Avatar";
 
-// Temporary stand-in until each page gets its own file in src/pages/.
+// Temporary stand-in until each page gets its own feature folder.
 function Placeholder({ title }: { title: string }) {
   return <h1>{title}</h1>;
 }
@@ -14,15 +15,28 @@ function Placeholder({ title }: { title: string }) {
 /** The header's account area: Google's button for a guest, avatar + nickname when signed in. */
 function AccountArea() {
   const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
 
   // Show nothing until /me answers, so a signed-in user does not see "sign in" flash first.
   if (loading) return null;
-  if (!user) return <GoogleButton />;
+
+  if (!user) {
+    return (
+      <GoogleButton
+        onSignedIn={(result) => {
+          // A brand-new account goes straight to pick a nickname and avatar.
+          if (result.is_new) navigate("/profile?welcome=1");
+        }}
+      />
+    );
+  }
 
   return (
     <div>
-      <Avatar avatar={user.avatar} size={28} />
-      <span>{user.nickname}</span>
+      <Link to="/profile" aria-label="הפרופיל שלי">
+        <Avatar avatar={user.avatar} size={28} />
+        <span>{user.nickname}</span>
+      </Link>
       <button
         type="button"
         onClick={() => signOut().catch((error: unknown) => console.error("sign-out failed", error))}
@@ -53,6 +67,7 @@ export default function App() {
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<CourseChatPage />} />
           <Route path="/courses/:courseId/m/:messageId" element={<CourseChatPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/about" element={<Placeholder title="אודות" />} />
           <Route path="*" element={<Placeholder title="הדף לא נמצא" />} />
         </Routes>

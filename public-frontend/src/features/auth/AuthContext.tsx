@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
-import { getMe, logout, signInWithGoogle } from "../../shared/api/chat";
+import { getMe, logout, logoutAll, signInWithGoogle } from "../../shared/api/chat";
 import type { Me, SignInResult } from "../../shared/api/chat";
 
 interface Auth {
@@ -11,6 +11,7 @@ interface Auth {
   loading: boolean; // true until the first /me answer, so the header does not flash "sign in"
   signIn: (idToken: string) => Promise<SignInResult>;
   signOut: () => Promise<void>;
+  signOutAll: () => Promise<void>; // ends the sessions on every device
   updateUser: (changes: Partial<Me>) => void; // after a nickname or avatar change
 }
 
@@ -48,17 +49,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+    const signOutAll = useCallback(async () => {
+    await logoutAll();
+    setUser(null);
+  }, []);
+
   const updateUser = useCallback((changes: Partial<Me>) => {
     setUser((current) => (current ? { ...current, ...changes } : current));
   }, []);
 
   // A new object only when something changed, so components that use auth do not re-render
   // on every render of the provider.
-  const value = useMemo(
-    () => ({ user, loading, signIn, signOut, updateUser }),
-    [user, loading, signIn, signOut, updateUser],
+    const value = useMemo(
+    () => ({ user, loading, signIn, signOut, signOutAll, updateUser }),
+    [user, loading, signIn, signOut, signOutAll, updateUser],
   );
-
+  
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
