@@ -1,10 +1,36 @@
 import { NavLink, Route, Routes } from "react-router";
+
+import { useAuth } from "./auth/AuthContext";
+import GoogleButton from "./auth/GoogleButton";
+import Avatar from "./components/Avatar";
 import CoursesPage from "./pages/CoursesPage";
 import CourseChatPage from "./pages/CourseChatPage";
 
 // Temporary stand-in until each page gets its own file in src/pages/.
 function Placeholder({ title }: { title: string }) {
   return <h1>{title}</h1>;
+}
+
+/** The header's account area: Google's button for a guest, avatar + nickname when signed in. */
+function AccountArea() {
+  const { user, loading, signOut } = useAuth();
+
+  // Show nothing until /me answers, so a signed-in user does not see "sign in" flash first.
+  if (loading) return null;
+  if (!user) return <GoogleButton />;
+
+  return (
+    <div>
+      <Avatar avatar={user.avatar} size={28} />
+      <span>{user.nickname}</span>
+      <button
+        type="button"
+        onClick={() => signOut().catch((error: unknown) => console.error("sign-out failed", error))}
+      >
+        התנתקות
+      </button>
+    </div>
+  );
 }
 
 export default function App() {
@@ -18,6 +44,7 @@ export default function App() {
           <NavLink to="/courses">קורסים</NavLink>
           <NavLink to="/about">אודות</NavLink>
         </nav>
+        <AccountArea />
       </header>
 
       <main>

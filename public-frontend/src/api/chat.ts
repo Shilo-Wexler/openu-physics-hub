@@ -29,6 +29,11 @@ export interface Me {
   avatar: string; // a key from AVATARS in components/Avatar.tsx
 }
 
+// What sign-in returns: the same profile as GET /me, plus whether the account was just created.
+export interface SignInResult extends Me {
+  is_new: boolean;
+}
+
 // Fields every review and reply has.
 interface MessageFields {
   id: number;
@@ -93,7 +98,7 @@ export interface NewMessage {
 // ---- Auth and profile --------------------------------------------------
 
 export function signInWithGoogle(idToken: string) {
-  return request<{ user_id: string }>(`${BASE}/auth/google`, {
+  return request<SignInResult>(`${BASE}/auth/google`, {
     method: "POST",
     body: { id_token: idToken },
   });
