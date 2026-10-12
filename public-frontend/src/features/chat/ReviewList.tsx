@@ -2,9 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { listReviews, postMessage, type Review, type ReviewSort } from "../../shared/api/chat";
 import { useAuth } from "../auth/AuthContext";
-import MessageItem from "./MessageItem";
-import ReplyThread from "./ReplyThread";
-import ReviewComposer from "./ReviewComposer";
+import Composer from "./Composer";
+import ReviewCard from "./ReviewCard";
 import styles from "./ReviewList.module.css";
 
 const SORTS: { value: ReviewSort; label: string }[] = [
@@ -103,7 +102,12 @@ export default function ReviewList({ courseId, hiddenId = null }: Props) {
         mine={mine}
       />
 
-      <ReviewComposer onSend={handleSend} />
+      <Composer
+        sticky
+        placeholder="כתבו ביקורת על הקורס..."
+        label="ביקורת חדשה"
+        onSend={handleSend}
+      />
     </section>
   );
 }
@@ -193,28 +197,18 @@ function SortedReviews({
     return <p className={styles.status}>עוד אין ביקורות בקורס הזה. אפשר להיות הראשונים לכתוב.</p>;
   }
 
-  function renderReview(review: Review) {
-    return (
-      <MessageItem message={review} courseId={courseId}>
-        {review.reply_count > 0 && (
-          <ReplyThread courseId={courseId} reviewId={review.id} replyCount={review.reply_count} />
-        )}
-      </MessageItem>
-    );
-  }
-
   return (
     <>
       <ol className={styles.list}>
         {mine.map(({ review, sending }) => (
           <li key={review.id} className={styles.item}>
-            {renderReview(review)}
+            <ReviewCard review={review} courseId={courseId} />
             {sending && <p className={styles.status}>שולח...</p>}
           </li>
         ))}
         {reviews.map((review) => (
           <li key={review.id} className={styles.item}>
-            {renderReview(review)}
+            <ReviewCard review={review} courseId={courseId} />
           </li>
         ))}
       </ol>
