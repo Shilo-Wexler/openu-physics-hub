@@ -127,6 +127,7 @@ export default function MessageItem({
                   messageId={message.id}
                   onEdit={mine ? () => setEditing(true) : undefined}
                   onDelete={mine ? () => void remove() : undefined}
+                  reportable={!mine}
                 />
               )}
             </div>
