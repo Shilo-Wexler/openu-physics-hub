@@ -39,6 +39,8 @@ interface Props {
   highlighted?: boolean;
   /** Shows a reply button; called when the signed-in reader wants to answer this message. */
   onReply?: () => void;
+  /** Called once the server confirmed the reader deleted this message. */
+  onDeleted?: () => void;
   /** Shown under the message, e.g. the replies of a review. */
   children?: ReactNode;
 }
@@ -50,6 +52,7 @@ export default function MessageItem({
   compact = false,
   highlighted = false,
   onReply,
+  onDeleted,
   children,
 }: Props) {
   const { requireSignIn } = useAuth();
@@ -84,6 +87,7 @@ export default function MessageItem({
   }
 
   // Optimistic: the message goes at once, and comes back if the server refused.
+  // The parent hears about it only after the server agreed, so it never has to undo.
   async function remove() {
     setDeleteFailed(false);
     setRemoved(true);
@@ -93,7 +97,9 @@ export default function MessageItem({
       console.error(error);
       setRemoved(false);
       setDeleteFailed(true);
+      return;
     }
+    onDeleted?.();
   }
 
   const mine = saved && message.is_mine;

@@ -37,8 +37,9 @@ export default function ReplyThread({
   const [nextAfter, setNextAfter] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
-  // Replies this reader added here, so "show N replies" stays right without a reload.
-  const [added, setAdded] = useState(0);
+  // Replies this reader added minus those they deleted here, so "show N replies" stays right
+  // without a reload.
+  const [countChange, setCountChange] = useState(0);
 
   // Answering something always shows the thread.
   const isOpen = open || replyingTo !== null;
@@ -93,7 +94,7 @@ export default function ReplyThread({
       reply_to_content: quoted?.content ?? null,
     };
     setReplies((current) => [...(current ?? []), draft]);
-    setAdded((count) => count + 1);
+    setCountChange((count) => count + 1);
     try {
       const saved = await postMessage(courseId, content, replyingTo.id);
       setReplies((current) =>
@@ -104,9 +105,15 @@ export default function ReplyThread({
       onDoneReplying();
     } catch (error) {
       setReplies((current) => (current ?? []).filter((reply) => reply.id !== tempId));
-      setAdded((count) => count - 1);
+      setCountChange((count) => count - 1);
       throw error; // the composer shows the reason and gives the text back
     }
+  }
+
+  // The server already deleted it (MessageItem waits for that), so nothing here is undone.
+  function removeReply(id: number) {
+    setReplies((current) => (current ?? []).filter((reply) => reply.id !== id));
+    setCountChange((count) => count - 1);
   }
 
   function show() {
@@ -118,70 +125,73 @@ export default function ReplyThread({
     onDoneReplying();
   }
 
-  const total = replyCount + added;
-
-  if (!isOpen) {
-    if (total === 0) return null;
-    return (
-      <button className={styles.toggle} type="button" onClick={show}>
-        {total === 1 ? "הצג תגובה אחת" : `הצג ${total} תגובות`}
-      </button>
-    );
-  }
+  const total = replyCount + countChange;
 
   return (
-    <div className={styles.thread}>
-      {replies && replies.length > 0 && (
-        <ol className={styles.list}>
-          {replies.map((reply) => (
-            <li key={reply.id}>
-              <MessageItem
-                message={reply}
-                courseId={courseId}
-                compact
-                highlighted={reply.id === highlightId}
-                onReply={() => onReply(reply)}
-              />
-            </li>
-          ))}
-        </ol>
-      )}
-
-      {loading && <p className={styles.status}>טוען...</p>}
-      {failed && (
-        <button
-          className={styles.toggle}
-          type="button"
-          onClick={() => void load(nextAfter ?? undefined)}
-        >
-          הטעינה נכשלה, נסו שוב
+    <>
+      {!isOpen && total > 0 && (
+        <button className={styles.toggle} type="button" onClick={show}>
+          {total === 1 ? "הצג תגובה אחת" : `הצג ${total} תגובות`}
         </button>
       )}
 
-      <div className={styles.controls}>
-        {!loading && !failed && nextAfter !== null && (
-          <button className={styles.toggle} type="button" onClick={() => void load(nextAfter)}>
-            הצג עוד תגובות
+      {/* Hidden, not removed, when closed: the replies keep what the reader changed in them
+          (edits, likes), and reopening is instant. Inline style, because a display rule in
+          the CSS module would override the hidden attribute. */}
+      <div className={styles.thread} style={isOpen ? undefined : { display: "none" }}>
+        {replies && replies.length > 0 && (
+          <ol className={styles.list}>
+            {replies.map((reply) => (
+              <li key={reply.id}>
+                <MessageItem
+                  message={reply}
+                  courseId={courseId}
+                  compact
+                  highlighted={reply.id === highlightId}
+                  onReply={() => onReply(reply)}
+                  onDeleted={() => removeReply(reply.id)}
+                />
+              </li>
+            ))}
+          </ol>
+        )}
+
+        {loading && <p className={styles.status}>טוען...</p>}
+        {failed && (
+          <button
+            className={styles.toggle}
+            type="button"
+            onClick={() => void load(nextAfter ?? undefined)}
+          >
+            הטעינה נכשלה, נסו שוב
           </button>
         )}
-        {total > 0 && (
-          <button className={styles.toggle} type="button" onClick={hide}>
-            הסתר
-          </button>
+
+        <div className={styles.controls}>
+          {!loading && !failed && nextAfter !== null && (
+            <button className={styles.toggle} type="button" onClick={() => void load(nextAfter)}>
+              הצג עוד תגובות
+            </button>
+          )}
+          {total > 0 && (
+            <button className={styles.toggle} type="button" onClick={hide}>
+              הסתר
+            </button>
+          )}
+        </div>
+
+        {/* The box waits for the first page, so a new reply lands after the loaded ones. */}
+        {replyingTo && replies !== null && (
+          <Composer
+            placeholder="כתבו תגובה..."
+            label="תגובה חדשה"
+            replyingTo={replyingTo.deleted ? null : { nickname: replyingTo.nickname }}
+            onCancel={onDoneReplying}
+            onSend={send}
+            autoFocus
+          />
         )}
       </div>
-
-      {/* The box waits for the first page, so a new reply lands after the loaded ones. */}
-      {replyingTo && replies !== null && (
-        <Composer
-          placeholder="כתבו תגובה..."
-          label="תגובה חדשה"
-          replyingTo={replyingTo.deleted ? null : { nickname: replyingTo.nickname }}
-          onCancel={onDoneReplying}
-          onSend={send}
-          autoFocus
-        />
-      )}
-    </div>
+    </>
   );
 }
