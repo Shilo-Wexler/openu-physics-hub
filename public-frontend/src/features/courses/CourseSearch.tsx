@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router";
 
 import type { Course } from "../../shared/api/chat";
@@ -7,9 +7,14 @@ import styles from "./CourseSearch.module.css";
 
 interface Props {
   courses: Course[];
+  /**
+   * Picks a course instead of opening its page (e.g. in the inquiry form): results become
+   * buttons that call this. Without it, results are links to the course pages.
+   */
+  onSelect?: (course: Course) => void;
 }
 
-export default function CourseSearch({ courses }: Props) {
+export default function CourseSearch({ courses, onSelect }: Props) {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
 
@@ -17,42 +22,61 @@ export default function CourseSearch({ courses }: Props) {
   const search = useMemo(() => createCourseSearch(courses), [courses]);
   const results = search(query);
 
-  // Enter opens the best match, so the mouse is not needed at all.
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  function choose(course: Course) {
+    if (onSelect) onSelect(course);
+    else void navigate(`/courses/${course.id}`);
+  }
+
+  // Enter picks the best match, so the mouse is not needed at all. Not a <form>: the search
+  // can sit inside another form (the inquiry form), and forms cannot be nested.
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault(); // also keeps Enter from submitting a surrounding form
     const first = results[0];
-    if (first) {
-      void navigate(`/courses/${first.id}`);
-    }
+    if (first) choose(first);
   }
 
   return (
     <div className={styles.container}>
-      <form role="search" onSubmit={handleSubmit}>
+      <div role="search">
         <input
           className={styles.input}
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="חיפוש לפי שם או מספר קורס"
           aria-label="חיפוש קורס"
           autoComplete="off"
         />
-      </form>
+      </div>
 
       <p className={styles.count} aria-live="polite">
         {results.length === 0 ? "לא נמצאו קורסים" : `${results.length} קורסים`}
       </p>
 
       <ul className={styles.list}>
-        {results.map((course) => (
-          <li key={course.id}>
-            <Link className={styles.item} to={`/courses/${course.id}`}>
+        {results.map((course) => {
+          const label = (
+            <>
               <span className={styles.name}>{course.name}</span>
               <span className={styles.number}>{course.id}</span>
-            </Link>
-          </li>
-        ))}
+            </>
+          );
+          return (
+            <li key={course.id}>
+              {onSelect ? (
+                <button className={styles.item} type="button" onClick={() => onSelect(course)}>
+                  {label}
+                </button>
+              ) : (
+                <Link className={styles.item} to={`/courses/${course.id}`}>
+                  {label}
+                </Link>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

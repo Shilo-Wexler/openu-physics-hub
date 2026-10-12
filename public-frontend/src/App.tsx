@@ -8,6 +8,7 @@ import ChatHubPage from "./features/chat/ChatHubPage";
 import CourseChatPage from "./features/chat/CourseChatPage";
 import CoursesPage from "./features/courses/CoursesPage";
 import HomePage from "./features/home/HomePage";
+import InquiryPage from "./features/inquiry/InquiryPage";
 import NotFoundPage from "./features/not-found/NotFoundPage";
 import ProfilePage from "./features/profile/ProfilePage";
 import SignInDialog from "./features/auth/SignInDialog";
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<CourseChatPage />} />
           <Route path="/courses/:courseId/m/:messageId" element={<CourseChatPage />} />
+          <Route path="/inquiry" element={<InquiryPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="*" element={<NotFoundPage />} />
