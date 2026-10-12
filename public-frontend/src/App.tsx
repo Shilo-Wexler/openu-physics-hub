@@ -1,19 +1,17 @@
 import { Link, NavLink, Route, Routes, useNavigate } from "react-router";
 
 import { GENERAL_COURSE_ID } from "./shared/api/chat";
+import AboutPage from "./features/about/AboutPage";
 import { useAuth } from "./features/auth/AuthContext";
 import GoogleButton from "./features/auth/GoogleButton";
 import ChatHubPage from "./features/chat/ChatHubPage";
 import CourseChatPage from "./features/chat/CourseChatPage";
 import CoursesPage from "./features/courses/CoursesPage";
+import HomePage from "./features/home/HomePage";
+import NotFoundPage from "./features/not-found/NotFoundPage";
 import ProfilePage from "./features/profile/ProfilePage";
 import SignInDialog from "./features/auth/SignInDialog";
 import Avatar from "./shared/components/Avatar";
-
-// Temporary stand-in until each page gets its own feature folder.
-function Placeholder({ title }: { title: string }) {
-  return <h1>{title}</h1>;
-}
 
 /** The header's account area: Google's button for a guest, avatar + nickname when signed in. */
 function AccountArea() {
@@ -67,7 +65,7 @@ export default function App() {
 
       <main>
         <Routes>
-          <Route path="/" element={<Placeholder title="דף הבית" />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/chat" element={<ChatHubPage />} />
           <Route path="/chat/general" element={<CourseChatPage courseId={GENERAL_COURSE_ID} />} />
           <Route
@@ -78,8 +76,8 @@ export default function App() {
           <Route path="/courses/:courseId" element={<CourseChatPage />} />
           <Route path="/courses/:courseId/m/:messageId" element={<CourseChatPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/about" element={<Placeholder title="אודות" />} />
-          <Route path="*" element={<Placeholder title="הדף לא נמצא" />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
     </>
