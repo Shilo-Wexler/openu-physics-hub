@@ -5,6 +5,7 @@ import GoogleButton from "./features/auth/GoogleButton";
 import CourseChatPage from "./features/chat/CourseChatPage";
 import CoursesPage from "./features/courses/CoursesPage";
 import ProfilePage from "./features/profile/ProfilePage";
+import SignInDialog from "./features/auth/SignInDialog";
 import Avatar from "./shared/components/Avatar";
 
 // Temporary stand-in until each page gets its own feature folder.
@@ -60,6 +61,7 @@ export default function App() {
         </nav>
         <AccountArea />
       </header>
+      <SignInDialog />
 
       <main>
         <Routes>

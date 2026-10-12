@@ -1,0 +1,25 @@
+/* Sticks to the bottom of the screen; real colors come with the design stage. */
+.composer {
+  position: sticky;
+  bottom: 0;
+  background: Canvas;
+  padding: 8px 0;
+}
+
+.composer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.guest {
+  width: 100%;
+  text-align: start;
+}
