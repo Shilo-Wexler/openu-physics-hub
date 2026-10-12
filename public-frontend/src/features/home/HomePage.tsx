@@ -3,6 +3,11 @@ import { Link } from "react-router";
 // The areas of the site, one card each. A new area gets a card when it is built.
 const AREAS = [
   { to: "/chat", title: "צ'אט", text: "צ'אט כללי, וביקורות ודירוגים לכל קורס." },
+  {
+    to: "/inquiry",
+    title: "פנייה לוועדה",
+    text: "בקשה או תלונה לוועדת הסטודנטים, באופן אנונימי.",
+  },
   { to: "/about", title: "אודות", text: "מי אנחנו ולמה הקמנו את האתר." },
 ];
 
