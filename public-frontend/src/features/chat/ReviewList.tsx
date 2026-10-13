@@ -4,6 +4,7 @@ import { listReviews, postMessage, type Review, type ReviewSort } from "../../sh
 import SegmentedControl, { type SegmentOption } from "../../shared/components/SegmentedControl";
 import { useAuth } from "../auth/AuthContext";
 import Composer from "./Composer";
+import { useReplyBar } from "./replyBar";
 import ReviewCard from "./ReviewCard";
 import styles from "./ReviewList.module.css";
 
@@ -24,11 +25,12 @@ interface Props {
   hiddenId?: number | null;
 }
 
-/** The reviews of a course, with the sort choice above them and the writing box below. */
+/** The reviews of a course, with the sort choice above them and the writing bar below. */
 export default function ReviewList({ courseId, hiddenId = null }: Props) {
   const [sort, setSort] = useState<ReviewSort>("new");
   // Reviews posted here, shown on top in every sort until the page is left.
   const [mine, setMine] = useState<MyReview[]>([]);
+  const { target, setSlot } = useReplyBar();
 
   const { user, loading } = useAuth();
   const userId = user?.user_id ?? null;
@@ -94,12 +96,13 @@ export default function ReviewList({ courseId, hiddenId = null }: Props) {
         mine={mine}
       />
 
-      <Composer
-        sticky
-        placeholder="הוספת תגובה"
-        label="ביקורת חדשה"
-        onSend={handleSend}
-      />
+      {/* One bar at the bottom. While replying, the review box is hidden, not removed, so a
+          half-written review is still there afterwards. */}
+      <div className={styles.bar} hidden={target !== null}>
+        <Composer sticky placeholder="הוספת תגובה" label="ביקורת חדשה" onSend={handleSend} />
+      </div>
+      {/* The reply box of the thread being answered appears here (ReplyThread, via a portal). */}
+      <div className={styles.bar} ref={setSlot} />
     </section>
   );
 }

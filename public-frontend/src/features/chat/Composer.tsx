@@ -47,7 +47,10 @@ export default function Composer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (autoFocus) textareaRef.current?.focus();
+    // preventScroll: the box sits at the end of the list in the page, so a plain focus()
+    // would scroll the page down to it. The message being answered is kept in sight
+    // instead (keepInSight in MessageItem).
+    if (autoFocus) textareaRef.current?.focus({ preventScroll: true });
   }, [autoFocus, replyingTo]);
 
   // The box grows with the text, up to the CSS max-height (five lines), then scrolls.

@@ -52,3 +52,14 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* The bottom bar: the new-review box, or the reply box (sent here through a portal).
+   display: contents gives the wrappers no box of their own, so the sticky box inside
+   still sticks within the whole list and not only inside its wrapper. */
+.bar {
+  display: contents;
+}
+
+.bar[hidden] {
+  display: none;
+}

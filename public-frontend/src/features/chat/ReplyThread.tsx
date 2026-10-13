@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { listReplies, postMessage, type Reply, type Review } from "../../shared/api/chat";
 import { useAuth } from "../auth/AuthContext";
 import Composer from "./Composer";
 import MessageItem from "./MessageItem";
+import { useReplyBar } from "./replyBar";
 import styles from "./ReplyThread.module.css";
 
 interface Props {
@@ -20,7 +22,10 @@ interface Props {
   onDoneReplying: () => void;
 }
 
-/** The replies under one review: closed behind "show N replies" until the reader opens it. */
+/**
+ * The replies under one review: closed behind "show N replies" until the reader opens it.
+ * Its reply box is shown in the page's bottom bar (a portal), but its logic stays here.
+ */
 export default function ReplyThread({
   courseId,
   reviewId,
@@ -31,6 +36,7 @@ export default function ReplyThread({
   onDoneReplying,
 }: Props) {
   const { user } = useAuth();
+  const { slot } = useReplyBar();
   const [open, setOpen] = useState(highlightId !== null);
   // null until the first page arrives. Replies stay loaded after "hide", so reopening is instant.
   const [replies, setReplies] = useState<Reply[] | null>(null);
@@ -41,6 +47,19 @@ export default function ReplyThread({
   // without a reload.
   const [countChange, setCountChange] = useState(0);
 
+  // What is answered right now. A send that finishes later reads it to see if the reader moved on.
+  const currentTarget = useRef(replyingTo);
+  useEffect(() => {
+    currentTarget.current = replyingTo;
+  }, [replyingTo]);
+
+  // The same object while the target is the same, so the composer does not take the focus
+  // again (and reopen the phone keyboard) on every render.
+  const quote = useMemo(
+    () => (replyingTo && !replyingTo.deleted ? { nickname: replyingTo.nickname } : null),
+    [replyingTo],
+  );
+
   // Answering something always shows the thread.
   const isOpen = open || replyingTo !== null;
 
@@ -50,8 +69,12 @@ export default function ReplyThread({
     try {
       const page = await listReplies(reviewId, after);
       setReplies((current) => {
-        // The first page replaces, so loading it twice (React's dev mode does) adds nothing twice.
-        if (after === undefined) return page.replies;
+        if (after === undefined) {
+          // The first page replaces, so loading it twice (React's dev mode does) adds nothing
+          // twice. A reply sent before it arrived is kept, after the loaded ones.
+          const loaded = new Set(page.replies.map((reply) => reply.id));
+          return [...page.replies, ...(current ?? []).filter((reply) => !loaded.has(reply.id))];
+        }
         // A reply sent here can come back in a later page; skip what is already shown.
         const shown = new Set((current ?? []).map((reply) => reply.id));
         return [...(current ?? []), ...page.replies.filter((reply) => !shown.has(reply.id))];
@@ -73,9 +96,12 @@ export default function ReplyThread({
   }, [isOpen, replies, loading, failed]);
 
   async function send(content: string) {
-    if (!user || !replyingTo) return;
+    const target = replyingTo;
+    if (!user || !target) return;
+    // The thread stays open after the box closes, so the reader sees the reply they sent.
+    setOpen(true);
     // Answering a reply quotes it; answering the review itself needs no quote.
-    const quoted = replyingTo.id === reviewId ? null : (replyingTo as Reply);
+    const quoted = target.id === reviewId ? null : (target as Reply);
     const tempId = -Date.now();
     const draft: Reply = {
       id: tempId,
@@ -96,13 +122,15 @@ export default function ReplyThread({
     setReplies((current) => [...(current ?? []), draft]);
     setCountChange((count) => count + 1);
     try {
-      const saved = await postMessage(courseId, content, replyingTo.id);
+      const saved = await postMessage(courseId, content, target.id);
       setReplies((current) =>
         (current ?? []).map((reply) =>
           reply.id === tempId ? { ...reply, id: saved.id, created_at: saved.created_at } : reply,
         ),
       );
-      onDoneReplying();
+      // Only if the bar still answers the same message: the reader may have pressed
+      // "reply" on something else while this was sending.
+      if (currentTarget.current === target) onDoneReplying();
     } catch (error) {
       setReplies((current) => (current ?? []).filter((reply) => reply.id !== tempId));
       setCountChange((count) => count - 1);
@@ -116,10 +144,6 @@ export default function ReplyThread({
     setCountChange((count) => count - 1);
   }
 
-  function show() {
-    setOpen(true);
-  }
-
   function hide() {
     setOpen(false);
     onDoneReplying();
@@ -130,7 +154,7 @@ export default function ReplyThread({
   return (
     <>
       {!isOpen && total > 0 && (
-        <button className={styles.toggle} type="button" onClick={show}>
+        <button className={styles.toggle} type="button" onClick={() => setOpen(true)}>
           {total === 1 ? "הצג תגובה אחת" : `הצג ${total} תגובות`}
         </button>
       )}
@@ -174,24 +198,28 @@ export default function ReplyThread({
             </button>
           )}
           {total > 0 && (
-            <button className={styles.toggle} type="button" onClick={hide}>
+            <button className={styles.hide} type="button" onClick={hide}>
               הסתר
             </button>
           )}
         </div>
+      </div>
 
-        {/* The box waits for the first page, so a new reply lands after the loaded ones. */}
-        {replyingTo && replies !== null && (
+      {/* The reply box lives in the page's bottom bar, in place of the new-review box. */}
+      {replyingTo &&
+        slot &&
+        createPortal(
           <Composer
+            sticky
             placeholder="כתבו תגובה..."
             label="תגובה חדשה"
-            replyingTo={replyingTo.deleted ? null : { nickname: replyingTo.nickname }}
+            replyingTo={quote}
             onCancel={onDoneReplying}
             onSend={send}
             autoFocus
-          />
+          />,
+          slot,
         )}
-      </div>
     </>
   );
 }

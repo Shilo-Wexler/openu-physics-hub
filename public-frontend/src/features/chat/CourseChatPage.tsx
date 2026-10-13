@@ -11,6 +11,7 @@ import {
 import { ApiError } from "../../shared/api/client";
 import { useAuth } from "../auth/AuthContext";
 import RatingPanel from "./RatingPanel";
+import { ReplyBarProvider } from "./replyBar";
 import ReviewCard from "./ReviewCard";
 import ReviewList from "./ReviewList";
 import ShareButton from "./ShareButton";
@@ -122,8 +123,9 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
 
   const { course } = state;
   const general = course.id === GENERAL_COURSE_ID;
+  // One writing bar for the whole page: the shared review above the list answers through it too.
   return (
-    <>
+    <ReplyBarProvider>
       <header className={styles.header}>
         <div className={styles.heading}>
           {!general && <p className={styles.eyebrow}>קורס {course.id}</p>}
@@ -161,6 +163,6 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
         courseId={courseId}
         hiddenId={shared?.status === "found" ? shared.review.id : null}
       />
-    </>
+    </ReplyBarProvider>
   );
 }
