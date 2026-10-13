@@ -1,7 +1,11 @@
 """Sign-in, the user's own profile, nickname and avatar changes, and sign-out."""
 
 import re
+from urllib.parse import urlencode
 
+import pytest
+
+from app.routes.deps import SESSION_COOKIE
 from app.services import google_auth
 from app.services.users import AVATARS
 from conftest import Student
@@ -93,3 +97,58 @@ def test_session_cookie_is_sent_only_to_chat_api(guest, sign_in):
     # Logout must delete it with the same path, or the browser keeps the cookie.
     logout_response = sign_in("alice").post("/auth/logout")
     assert "path=/api/chat" in logout_response.headers["set-cookie"].lower()
+
+
+# Redirect sign-in: Google posts a form to this address with its CSRF value, which it also
+# set as a cookie on our site. The client is used directly (not Student) to send that cookie.
+REDIRECT_SIGN_IN = "/api/chat/auth/google/redirect"
+
+
+def redirect_sign_in(client, credential, form_csrf="csrf-1", cookie_csrf="csrf-1"):
+    """Posts what Google posts in redirect mode; cookie_csrf=None leaves the cookie out."""
+    client.cookies.clear()
+    if cookie_csrf is not None:
+        client.cookies.set("g_csrf_token", cookie_csrf)
+    return client.post(
+        REDIRECT_SIGN_IN,
+        content=urlencode({"credential": credential, "g_csrf_token": form_csrf}),
+        headers={"content-type": "application/x-www-form-urlencoded"},
+        follow_redirects=False,
+    )
+
+
+def test_redirect_sign_in_new_user_goes_to_welcome_and_is_signed_in(client):
+    response = redirect_sign_in(client, "carol")
+    assert response.status_code == 303
+    assert response.headers["location"] == "/auth/done?new=1"
+    session = Student(client, token=response.cookies[SESSION_COOKIE])
+    assert session.get("/me").status_code == 200
+
+
+def test_redirect_sign_in_returning_user(client):
+    redirect_sign_in(client, "carol")
+    response = redirect_sign_in(client, "carol")
+    assert response.status_code == 303
+    assert response.headers["location"] == "/auth/done"
+
+
+@pytest.mark.parametrize(
+    ("form_csrf", "cookie_csrf"),
+    [("csrf-1", None), ("csrf-1", "other"), ("", "csrf-1")],
+    ids=["no cookie", "cookie does not match", "no form value"],
+)
+def test_redirect_sign_in_without_matching_csrf_is_refused(client, form_csrf, cookie_csrf):
+    response = redirect_sign_in(client, "carol", form_csrf=form_csrf, cookie_csrf=cookie_csrf)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/auth/done?error=1"
+    assert SESSION_COOKIE not in response.cookies
+
+
+def test_redirect_sign_in_with_invalid_token_is_refused(client, monkeypatch):
+    async def reject(token: str) -> str:
+        raise google_auth.InvalidGoogleToken("bad")
+
+    monkeypatch.setattr(google_auth, "verify_id_token", reject)
+    response = redirect_sign_in(client, "carol")
+    assert response.headers["location"] == "/auth/done?error=1"
+    assert SESSION_COOKIE not in response.cookies

@@ -32,11 +32,6 @@ export interface Me {
   avatar: string; // a key from AVATARS in components/Avatar.tsx
 }
 
-// What sign-in returns: the same profile as GET /me, plus whether the account was just created.
-export interface SignInResult extends Me {
-  is_new: boolean;
-}
-
 // Fields every review and reply has.
 interface MessageFields {
   id: number;
@@ -99,13 +94,8 @@ export interface NewMessage {
 }
 
 // ---- Auth and profile --------------------------------------------------
-
-export function signInWithGoogle(idToken: string) {
-  return request<SignInResult>(`${BASE}/auth/google`, {
-    method: "POST",
-    body: { id_token: idToken },
-  });
-}
+// Sign-in itself is not a call from here: Google redirects the whole tab to the server
+// (see features/auth/GoogleButton.tsx), which then redirects back to /auth/done.
 
 export function logout() {
   return request<{ status: string }>(`${BASE}/auth/logout`, { method: "POST" });

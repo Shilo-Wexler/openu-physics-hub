@@ -1,7 +1,6 @@
 /** The sign-in dialog: opened by requireSignIn(), from the header's sign-in button or when a guest tries to write. */
 
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router";
 
 import { useAuth } from "./AuthContext";
 import GoogleButton from "./GoogleButton";
@@ -9,7 +8,6 @@ import styles from "./SignInDialog.module.css";
 
 export default function SignInDialog() {
   const { signInPromptOpen, closeSignInPrompt } = useAuth();
-  const navigate = useNavigate();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   // showModal() is the browser's own modal: focus stays inside, Esc closes it,
@@ -36,16 +34,10 @@ export default function SignInDialog() {
         קריאה פתוחה לכולם. כדי לכתוב, לעשות לייק או לדרג צריך להתחבר עם Google. אנחנו לא שומרים
         שם, אימייל או תמונה.
       </p>
-      {/* Mounted only while open, so it is the newest button and handles the sign-in. */}
-      {signInPromptOpen && (
-        <GoogleButton
-          onSignedIn={(result) => {
-            // Every sign-in goes through this dialog, so this is the one place that sends
-            // a brand-new account to pick a nickname and avatar.
-            if (result.is_new) navigate("/profile?welcome=1");
-          }}
-        />
-      )}
+      {/* Mounted only while open, so Google's script loads only when someone wants to sign in.
+          The tab then goes to Google, and /auth/done decides where to land (a new account goes
+          to the profile page). */}
+      {signInPromptOpen && <GoogleButton />}
       <button type="button" className={styles.later} onClick={closeSignInPrompt}>
         לא עכשיו
       </button>

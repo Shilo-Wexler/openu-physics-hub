@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router";
 import { GENERAL_COURSE_ID } from "./shared/api/chat";
 import AboutPage from "./features/about/AboutPage";
 import SignInDialog from "./features/auth/SignInDialog";
+import SignInDonePage from "./features/auth/SignInDonePage";
 import ChatHubPage from "./features/chat/ChatHubPage";
 import CourseChatPage from "./features/chat/CourseChatPage";
 import CoursesPage from "./features/courses/CoursesPage";
@@ -36,6 +37,8 @@ export default function App() {
           <Route path="/inquiry" element={<InquiryPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/about" element={<AboutPage />} />
+          {/* The server sends the tab here after Google sign-in. */}
+          <Route path="/auth/done" element={<SignInDonePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

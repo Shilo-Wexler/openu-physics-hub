@@ -1,0 +1,56 @@
+/* Failed sign-in: one line, one sentence and two buttons in the middle, like the 404 page. */
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-6);
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+}
+
+.text {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+/* Shared pill shape for both buttons. */
+.retry,
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-size);
+  padding: 0 var(--space-5);
+  border-radius: 999px;
+  font: inherit;
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* The main action: black, like the 404 "home" button. */
+.retry {
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* The quiet way out: outlined. */
+.back {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
