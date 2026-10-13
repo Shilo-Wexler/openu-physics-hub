@@ -1,9 +1,14 @@
 /* One review or reply, laid out like a Discord message: avatar, then a column with
-   the author line, the text and quiet actions under it. */
+   the author line, the text and quiet actions under it.
+   --swipe and --swipe-progress are set by useSwipeToReply while a finger drags the message;
+   they are reset here so a reply inside a swiped review does not inherit them. */
 .message {
+  position: relative;
   display: flex;
   gap: var(--space-3);
   padding-block: var(--space-3);
+  --swipe: 0px;
+  --swipe-progress: 0;
 }
 
 .compact {
@@ -18,6 +23,60 @@
   border-inline-start: 3px solid var(--color-text);
   border-radius: var(--radius-sm);
   background: var(--color-surface-muted);
+}
+
+/* The parts that follow the finger: the avatar and the message, not the thread under it.
+   `left` and not `transform`: a transform would become the frame for the menu's
+   position: fixed bottom sheet, and the sheet would open inside the message.
+   pan-y: up-and-down still scrolls the page; sideways moves come to the swipe code. */
+.swipeable {
+  position: relative;
+  left: var(--swipe);
+  flex: none; /* the avatar keeps its size in the row */
+  touch-action: pan-y pinch-zoom;
+  transition: left 200ms ease-out; /* slides back after letting go */
+}
+
+/* While the finger is down the message follows it exactly, with no delay. */
+.message[data-swiping] > .swipeable,
+.message[data-swiping] > .body > .swipeable {
+  transition: none;
+}
+
+/* The reply icon behind the avatar, revealed as the message slides away. It fades and
+   grows with the drag, and pops a little once letting go would start a reply. */
+.swipeIcon {
+  position: absolute;
+  inset-block-start: var(--space-3);
+  inset-inline-start: 0;
+  display: flex;
+  justify-content: center;
+  width: 36px;
+  color: var(--color-text-muted);
+  opacity: var(--swipe-progress);
+  transform: scale(calc(0.6 + 0.4 * var(--swipe-progress)));
+  transition: transform 150ms ease-out;
+  pointer-events: none;
+}
+
+.compact > .swipeIcon {
+  inset-block-start: var(--space-2);
+  width: 28px;
+}
+
+.message[data-swipe-ready] > .swipeIcon {
+  color: var(--color-text);
+  transform: scale(1.15);
+}
+
+.swipeIcon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* min-width: 0 lets long words wrap instead of pushing the layout wider. */
