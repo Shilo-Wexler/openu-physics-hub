@@ -1,34 +1,46 @@
+/** /: the front page: what the site is, and a link to each main area. */
+
 import { Link } from "react-router";
 
-// The areas of the site, one card each. A new area gets a card when it is built.
+import styles from "./HomePage.module.css";
+
+// The main areas, one row each. About is not here: it lives in the footer.
 const AREAS = [
-  { to: "/chat", title: "צ'אט", text: "צ'אט כללי, וביקורות ודירוגים לכל קורס." },
+  { to: "/chat/general", title: "צ'אט כללי", text: "שיחה פתוחה על הכול: לימודים, מבחנים ומה שביניהם." },
+  { to: "/courses", title: "צ'אט קורסים", text: "ביקורות ודירוגים לכל קורס, מבחירה בגלגלת." },
   {
     to: "/inquiry",
     title: "פנייה לוועדה",
     text: "בקשה או תלונה לוועדת הסטודנטים, באופן אנונימי.",
   },
-  { to: "/about", title: "אודות", text: "מי אנחנו ולמה הקמנו את האתר." },
 ];
 
-/** /: the site's front page, with a card for each area. */
 export default function HomePage() {
   return (
     <>
-      <h1>OpenUVoice</h1>
-      <p>סטודנטים לפיזיקה באו״פ.</p>
-      <p>
-        <small>לא אתר רשמי של האוניברסיטה הפתוחה.</small>
-      </p>
+      <section className={styles.hero}>
+        <p className={styles.eyebrow}>סטודנטים לפיזיקה · האוניברסיטה הפתוחה</p>
+        <h1 className={styles.title}>
+          מה באמת חושבים <strong>על הקורס.</strong>
+        </h1>
+        <p className={styles.lead}>
+          ביקורות ודירוגים אמיתיים, צ'אט פתוח, ופנייה אנונימית לוועדת הסטודנטים.
+        </p>
+      </section>
 
-      {/* Plain links for now; the cards get their look in the design stage. */}
       <nav aria-label="אזורי האתר">
-        <ul>
+        <ul className={styles.areas}>
           {AREAS.map((area) => (
             <li key={area.to}>
-              <Link to={area.to}>
-                <h2>{area.title}</h2>
-                <p>{area.text}</p>
+              <Link to={area.to} className={styles.area}>
+                <span className={styles.areaText}>
+                  <span className={styles.areaTitle}>{area.title}</span>
+                  <span className={styles.areaDescription}>{area.text}</span>
+                </span>
+                {/* Points left: "forward" in a right-to-left page. */}
+                <svg className={styles.arrow} viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
               </Link>
             </li>
           ))}

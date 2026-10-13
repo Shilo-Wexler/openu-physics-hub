@@ -1,0 +1,92 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block: var(--space-5) var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-light);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.lead {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* The black search bar. The whole bar shows the focus ring, not the input. */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 560px;
+  min-height: 54px;
+  margin-block-end: var(--space-3);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.search:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.searchIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.searchInput {
+  flex-grow: 1;
+  min-width: 0;
+  min-height: var(--tap-size);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  /* 16px or more: below that, iPhone zooms the page in on focus. */
+  font-size: var(--text-md);
+}
+
+.searchInput:focus {
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: inherit;
+  opacity: 0.6;
+}
+
+/* The wheel panel's full height (wheel 299px + hint + padding), held while loading. */
+.wheelSlot {
+  max-width: 560px;
+  min-height: 348px;
+}
+
+.message {
+  margin: 0;
+  padding-block: var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* Hidden on screen, still read by screen readers. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

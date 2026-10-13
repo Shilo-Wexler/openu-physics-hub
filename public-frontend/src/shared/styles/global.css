@@ -57,32 +57,10 @@
   line-height: 1.6;
   color: var(--color-text);
   background: var(--color-bg);
-  color-scheme: light dark;
+  /* Always light, whatever the device's dark mode setting: the browser's own parts
+     (scrollbars, the search field's clear button) stay light too. */
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
-}
-
-/* Dark mode follows the device setting: the same design, inverted. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0a0a0a;
-    --color-surface: #0a0a0a;
-    --color-surface-muted: #171717;
-    --color-text: #f5f5f5;
-    --color-text-muted: #a3a3a3;
-    --color-border: #232323;
-    --color-border-strong: #3a3a3a;
-    --color-primary: #f5f5f5;
-    --color-on-primary: #0a0a0a;
-    --color-primary-soft: #1c1c1c;
-    --color-star-empty: #3a3a3a;
-    --color-danger: #f97066;
-    --avatar-bg-1: #1f1f1f;
-    --avatar-bg-2: #1d2026;
-    --avatar-bg-3: #251f1c;
-    --avatar-bg-4: #1c221e;
-    --avatar-bg-5: #23211b;
-    --avatar-bg-6: #201f26;
-  }
 }
 
 *,

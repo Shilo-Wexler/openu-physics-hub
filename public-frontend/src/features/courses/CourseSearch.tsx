@@ -12,10 +12,12 @@ interface Props {
    * buttons that call this. Without it, results are links to the course pages.
    */
   onSelect?: (course: Course) => void;
+  /** Text to start with, e.g. what was typed in the home page's search box. */
+  initialQuery?: string;
 }
 
-export default function CourseSearch({ courses, onSelect }: Props) {
-  const [query, setQuery] = useState("");
+export default function CourseSearch({ courses, onSelect, initialQuery = "" }: Props) {
+  const [query, setQuery] = useState(initialQuery);
   const navigate = useNavigate();
 
   // The index is rebuilt only when the course list itself changes, not on every keystroke.
@@ -81,3 +83,4 @@ export default function CourseSearch({ courses, onSelect }: Props) {
     </div>
   );
 }
+ 
