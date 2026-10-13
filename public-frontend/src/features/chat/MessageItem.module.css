@@ -1,19 +1,23 @@
+/* One review or reply, laid out like a Discord message: avatar, then a column with
+   the author line, the text and quiet actions under it. */
 .message {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding-block: var(--space-3);
 }
 
 .compact {
-  padding-block: var(--space-1);
+  gap: var(--space-2);
+  padding-block: var(--space-2);
 }
 
-/* The message a shared link points at. */
+/* The message a shared link points at: a soft gray block with a dark bar on the start edge. */
 .highlighted {
   margin-inline: calc(-1 * var(--space-2));
-  padding-inline: var(--space-2);
-  background: var(--color-primary-soft);
-  border-radius: 8px;
+  padding-inline: calc(var(--space-2) - 3px) var(--space-2);
+  border-inline-start: 3px solid var(--color-text);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
 }
 
 /* min-width: 0 lets long words wrap instead of pushing the layout wider. */
@@ -24,36 +28,61 @@
 
 .meta {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  font-size: 0.85rem;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
+/* A long nickname is cut with "…" so the time and the menu stay on the line. */
 .nickname {
-  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
   color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* The quoted reply: a side bar on the start edge (the right, in RTL), as in WhatsApp. */
+/* Time and "edited", each after a middle dot. The "/ ''" part hides the dot from
+   screen readers; browsers without it use the first line and still show it. */
+.detail {
+  white-space: nowrap;
+}
+
+.detail::before {
+  content: "·";
+  content: "·" / "";
+  margin-inline-end: 6px;
+}
+
+/* The ⋯ menu sits at the far end of the line. The negative margins let its 44px
+   tap area overlap the padding around it instead of making the line taller. */
+.menu {
+  margin-block: -10px;
+  margin-inline: auto -10px;
+}
+
+/* The quoted message, as in WhatsApp: a dark bar on the start edge (the right, in RTL). */
 .quote {
   display: flex;
   flex-direction: column;
-  margin: var(--space-1) 0;
-  padding: var(--space-1) var(--space-2);
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  border-inline-start: 3px solid var(--color-primary);
-  background: var(--color-primary-soft);
+  margin: var(--space-1) 0 var(--space-2);
+  padding: 6px var(--space-2);
+  border-inline-start: 3px solid var(--color-text);
   border-radius: 4px;
+  background: var(--color-surface-muted);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .quoteAuthor {
-  font-weight: 600;
-  color: var(--color-primary);
+  font-weight: 700;
+  color: var(--color-text);
 }
 
-/* Long quotes are cut to two lines; the full text is in the original reply. */
+/* Long quotes are cut to two lines; the full text is in the original message. */
 .quoteText {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -64,21 +93,69 @@
 
 .deleted {
   margin: 0;
-  font-style: italic;
   color: var(--color-text-muted);
 }
 
 /* pre-wrap keeps the line breaks the writer typed; break-word wraps long links. */
 .content {
-  margin: 0;
+  margin: 2px 0 0;
+  font-size: var(--text-md);
+  line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
 
+.compact .content {
+  font-size: 0.9375rem;
+}
+
+.error {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+/* Like and reply: icons with no box around them. The start margin lines the first
+   icon up with the text above, since each button has inner padding. */
 .actions {
   display: flex;
-  gap: var(--space-3);
+  align-items: center;
+  gap: var(--space-1);
   margin-top: var(--space-1);
-  font-size: 0.85rem;
+  margin-inline-start: -10px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
+}
+
+/* A full 44px tap area for a finger, pulled in with negative margins so it looks small. */
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap-size);
+  margin-block: -6px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .action:hover {
+    background: var(--color-surface-muted);
+    color: var(--color-text);
+  }
+}
+
+.action svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }

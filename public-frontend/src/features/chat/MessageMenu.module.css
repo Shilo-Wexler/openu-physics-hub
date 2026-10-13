@@ -1,52 +1,213 @@
-/* The menu opens under its button, on the end edge (the left, in RTL). */
+/* The ⋯ menu of a message. On a phone the list is a sheet that slides up from the bottom
+   of the screen (as in WhatsApp and Discord); on a computer it is a small dropdown. */
 .menu {
   position: relative;
-  margin-inline-start: auto;
 }
 
+/* Same quiet 44px icon button as the like and reply buttons. */
 .trigger {
-  padding: 0 var(--space-2);
-  font: inherit;
-  font-size: 0.85rem;
-  line-height: 1.6;
-  color: var(--color-text-muted);
-  background: none;
-  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  padding: 0;
+  border: 0;
   border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 
-.trigger:hover {
-  background: var(--color-primary-soft);
+@media (hover: hover) {
+  .trigger:hover {
+    background: var(--color-surface-muted);
+    color: var(--color-text);
+  }
 }
 
-.items {
+.trigger svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+/* "Link copied" and the like: a small dark label beside the button, so nothing on the
+   line moves. Empty most of the time, and then not shown at all. */
+.notice {
   position: absolute;
-  inset-inline-end: 0;
-  top: 100%;
-  z-index: 10;
-  min-width: 8rem;
+  inset-inline-end: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-text);
+  color: var(--color-on-primary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.notice:empty {
+  display: none;
+}
+
+/* Phone: a dim layer over the page; a tap on it closes the sheet.
+   touch-action: none stops a drag on it from scrolling the page behind. */
+.backdrop {
+  position: fixed;
+  /* Past the screen's edges: after scrolling, iPhone browsers fold their bars away
+  and the screen grows taller than the area inset: 0 covers. */
+  inset: -50vh 0;
+  z-index: 100;
+  background: rgb(0 0 0 / 0.35);
+  touch-action: none;
+  animation: fade 160ms ease-out;
+}
+
+/* Phone: the sheet, over the bottom bar and clear of the iPhone home indicator. */
+.items {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 101;
   margin: 0;
-  padding: var(--space-1) 0;
-  list-style: none;
+  padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+  list-style: none;
+  animation: slide-up 200ms ease-out;
 }
 
 .item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   width: 100%;
-  padding: var(--space-1) var(--space-3);
-  font: inherit;
-  font-size: 0.9rem;
-  text-align: start;
+  min-height: 52px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--color-text);
-  background: none;
-  border: none;
+  font: inherit;
+  font-size: var(--text-md);
+  text-align: start;
   cursor: pointer;
 }
 
-.item:hover {
-  background: var(--color-primary-soft);
+.item:active {
+  background: var(--color-surface-muted);
+}
+
+.item svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Delete: red, so it never looks like the safe choice. */
+.danger {
+  color: var(--color-danger);
+}
+
+/* The confirm step: the question, then a bold confirm button. */
+.question {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.confirm {
+  justify-content: center;
+  margin-bottom: var(--space-1);
+  background: var(--color-text);
+  color: var(--color-on-primary);
+  font-weight: 700;
+}
+
+.confirm.danger {
+  background: var(--color-danger);
+}
+
+.confirm:active {
+  background: var(--color-text);
+  opacity: 0.85;
+}
+
+.confirm.danger:active {
+  background: var(--color-danger);
+}
+
+.cancel {
+  justify-content: center;
+}
+
+/* Computer: no dim layer, and the list is a small dropdown under the button,
+   on the end edge (the left, in RTL). */
+@media (min-width: 641px) {
+  .backdrop {
+    display: none;
+  }
+
+  .items {
+    position: absolute;
+    inset-inline: auto 0;
+    top: 100%;
+    bottom: auto;
+    z-index: 10;
+    min-width: 13rem;
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+    animation: none;
+  }
+
+  .item,
+  .question {
+    font-size: var(--text-sm);
+  }
+
+  .item {
+    min-height: 40px;
+  }
+
+  .item:hover {
+    background: var(--color-surface-muted);
+  }
+
+  .confirm:hover {
+    background: var(--color-text);
+    opacity: 0.85;
+  }
+
+  .confirm.danger:hover {
+    background: var(--color-danger);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .items {
+    animation: none;
+  }
 }

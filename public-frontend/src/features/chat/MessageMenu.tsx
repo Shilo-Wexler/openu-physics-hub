@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { reportMessage } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
@@ -29,8 +29,16 @@ const CONFIRM_LABELS: Record<Confirm, string> = {
   report: "כן, לדווח",
 };
 
-// How long a short notice ("link copied", "reported") stays on the button.
+// How long a short notice ("link copied", "reported") stays next to the button.
 const NOTICE_MS = 2000;
+
+// Line icons, 24x24, drawn with the item's text color.
+const ICONS = {
+  share: ["M12 3v13", "m7 8 5-5 5 5", "M5 14v6h14v-6"],
+  edit: ["M4 20h4L19 9l-4-4L4 16z", "m14 6 4 4"],
+  delete: ["M4 7h16", "M9 7V4h6v3", "M6 7l1 13h10l1-13"],
+  report: ["M5 21V4", "M5 4h12l-2 4 2 4H5"],
+};
 
 /** The ⋯ menu of a message: share and report, and edit or delete for the reader's own messages. */
 export default function MessageMenu({
@@ -46,13 +54,16 @@ export default function MessageMenu({
   const [confirming, setConfirming] = useState<Confirm | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLUListElement>(null);
 
   function close() {
     setOpen(false);
     setConfirming(null);
   }
 
-  // Close on a click outside the menu or on Escape, as menus usually do.
+  // Close on a click outside the menu or on Escape, as menus usually do. Escape also
+  // puts the focus back on ⋯, so a keyboard user is not dropped at the top of the page.
   useEffect(() => {
     if (!open) return;
     function dismiss() {
@@ -63,7 +74,9 @@ export default function MessageMenu({
       if (!root.current?.contains(event.target as Node)) dismiss();
     }
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") dismiss();
+      if (event.key !== "Escape") return;
+      dismiss();
+      trigger.current?.focus();
     }
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -72,6 +85,11 @@ export default function MessageMenu({
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
+
+  // The focus moves into the menu when it opens, and to the confirm button when it asks.
+  useEffect(() => {
+    if (open) list.current?.querySelector("button")?.focus();
+  }, [open, confirming]);
 
   useEffect(() => {
     if (notice === null) return;
@@ -126,7 +144,12 @@ export default function MessageMenu({
 
   return (
     <div className={styles.menu} ref={root}>
+      {/* Read out when it appears; empty (and hidden) the rest of the time. */}
+      <span className={styles.notice} role="status">
+        {notice ?? ""}
+      </span>
       <button
+        ref={trigger}
         className={styles.trigger}
         type="button"
         aria-label="אפשרויות"
@@ -134,79 +157,99 @@ export default function MessageMenu({
         aria-expanded={open}
         onClick={() => (open ? close() : setOpen(true))}
       >
-        {notice ?? "⋯"}
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="19" cy="12" r="1.8" />
+        </svg>
       </button>
       {open && (
-        <ul className={styles.items} role="menu">
-          {confirming ? (
-            <>
-              <li role="none">{QUESTIONS[confirming]}</li>
-              <li role="none">
-                <button
-                  className={styles.item}
-                  type="button"
-                  role="menuitem"
+        <>
+          {/* Phone only (CSS): dims the page; a tap on it closes the menu. */}
+          <div className={styles.backdrop} aria-hidden="true" onClick={close} />
+          <ul ref={list} className={styles.items} role="menu">
+            {confirming ? (
+              <>
+                <li role="none" className={styles.question}>
+                  {QUESTIONS[confirming]}
+                </li>
+                <Item
+                  className={[styles.confirm, confirming === "delete" && styles.danger]}
                   onClick={() => confirm(confirming)}
                 >
                   {CONFIRM_LABELS[confirming]}
-                </button>
-              </li>
-              <li role="none">
-                <button className={styles.item} type="button" role="menuitem" onClick={close}>
+                </Item>
+                <Item className={[styles.cancel]} onClick={close}>
                   ביטול
-                </button>
-              </li>
-            </>
-          ) : (
-            <>
-              <li role="none">
-                <button className={styles.item} type="button" role="menuitem" onClick={share}>
+                </Item>
+              </>
+            ) : (
+              <>
+                <Item icon={ICONS.share} onClick={() => void share()}>
                   שיתוף
-                </button>
-              </li>
-              {onEdit && (
-                <li role="none">
-                  <button
-                    className={styles.item}
-                    type="button"
-                    role="menuitem"
+                </Item>
+                {onEdit && (
+                  <Item
+                    icon={ICONS.edit}
                     onClick={() => {
                       close();
                       onEdit();
                     }}
                   >
                     עריכה
-                  </button>
-                </li>
-              )}
-              {onDelete && (
-                <li role="none">
-                  <button
-                    className={styles.item}
-                    type="button"
-                    role="menuitem"
+                  </Item>
+                )}
+                {reportable && (
+                  <Item icon={ICONS.report} onClick={askToReport}>
+                    דיווח
+                  </Item>
+                )}
+                {onDelete && (
+                  <Item
+                    icon={ICONS.delete}
+                    className={[styles.danger]}
                     onClick={() => setConfirming("delete")}
                   >
                     מחיקה
-                  </button>
-                </li>
-              )}
-              {reportable && (
-                <li role="none">
-                  <button
-                    className={styles.item}
-                    type="button"
-                    role="menuitem"
-                    onClick={askToReport}
-                  >
-                    דיווח
-                  </button>
-                </li>
-              )}
-            </>
-          )}
-        </ul>
+                  </Item>
+                )}
+              </>
+            )}
+          </ul>
+        </>
       )}
     </div>
+  );
+}
+
+interface ItemProps {
+  onClick: () => void;
+  /** The icon's path data; no icon for the confirm step. */
+  icon?: string[];
+  /** Extra classes; false and undefined entries are skipped. */
+  className?: (string | false | undefined)[];
+  children: ReactNode;
+}
+
+/** One row of the menu. */
+function Item({ onClick, icon, className = [], children }: ItemProps) {
+  return (
+    <li role="none">
+      <button
+        className={[styles.item, ...className].filter(Boolean).join(" ")}
+        type="button"
+        role="menuitem"
+        onClick={onClick}
+      >
+        {icon && (
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            {icon.map((path) => (
+              <path key={path} d={path} />
+            ))}
+          </svg>
+        )}
+        {children}
+      </button>
+    </li>
   );
 }

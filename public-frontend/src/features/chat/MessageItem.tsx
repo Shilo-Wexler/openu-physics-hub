@@ -121,24 +121,33 @@ export default function MessageItem({
             <div className={styles.meta}>
               <span className={styles.nickname}>{message.nickname}</span>
               <time
+                className={styles.detail}
                 dateTime={message.created_at}
                 title={fullDate.format(new Date(message.created_at))}
               >
                 {timeAgo(message.created_at)}
               </time>
-              {(edited?.edited_at ?? message.edited_at) && <span>(נערך)</span>}
+              {(edited?.edited_at ?? message.edited_at) && (
+                <span className={styles.detail}>נערך</span>
+              )}
               {saved && !editing && (
-                <MessageMenu
-                  courseId={courseId}
-                  messageId={message.id}
-                  onEdit={mine ? () => setEditing(true) : undefined}
-                  onDelete={mine ? () => void remove() : undefined}
-                  reportable={!mine}
-                />
+                <span className={styles.menu}>
+                  <MessageMenu
+                    courseId={courseId}
+                    messageId={message.id}
+                    onEdit={mine ? () => setEditing(true) : undefined}
+                    onDelete={mine ? () => void remove() : undefined}
+                    reportable={!mine}
+                  />
+                </span>
               )}
             </div>
 
-            {deleteFailed && <p role="alert">המחיקה נכשלה, נסו שוב</p>}
+            {deleteFailed && (
+              <p className={styles.error} role="alert">
+                המחיקה נכשלה, נסו שוב
+              </p>
+            )}
 
             {hasQuote && (
               <blockquote className={styles.quote}>
@@ -178,10 +187,14 @@ export default function MessageItem({
                     {onReply && (
                       <button
                         type="button"
+                        className={styles.action}
                         onClick={() => {
                           if (requireSignIn()) onReply();
                         }}
                       >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M4 5h16v11H9l-5 4z" />
+                        </svg>
                         הגב
                       </button>
                     )}

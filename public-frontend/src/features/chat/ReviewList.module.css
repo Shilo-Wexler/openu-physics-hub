@@ -1,25 +1,17 @@
-.tabs {
+/* "Reviews" on the start side, the sort switch (SegmentedControl) on the end side. */
+.header {
   display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-1);
 }
 
-.tab {
-  padding: var(--space-1) var(--space-3);
-  font: inherit;
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.active {
-  font-weight: 600;
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-  border-color: transparent;
+.title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
 }
 
 .list {
@@ -28,12 +20,35 @@
   list-style: none;
 }
 
+/* The previous order, faded while the chosen one loads; not clickable until it arrives. */
+.stale {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
 /* A thin line between reviews instead of a box around each one. */
 .item + .item {
   border-top: 1px solid var(--color-border);
 }
 
+/* A review on its way to the server: faded until it is saved, as in WhatsApp. */
+.sending {
+  opacity: 0.5;
+}
+
 .status {
+  margin: var(--space-5) 0;
+  font-size: var(--text-sm);
   text-align: center;
   color: var(--color-text-muted);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
