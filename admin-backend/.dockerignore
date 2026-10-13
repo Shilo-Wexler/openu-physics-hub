@@ -1,0 +1,5 @@
+# Allowlist: send only what the image needs, so .env, tests and caches never reach it.
+*
+!requirements.txt
+!app/
+**/__pycache__

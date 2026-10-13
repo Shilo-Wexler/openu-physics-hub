@@ -1,0 +1,67 @@
+/**
+ * Every error the console shows comes from here, so they all read the same way:
+ * one or two plain Hebrew sentences — what happened, and what to do now.
+ * The server's `detail` strings (English, stable) are mapped to Hebrew; unknown ones fall back by status.
+ */
+
+import { ApiError } from "../api/client";
+
+/** Known server details. A "status:detail" key wins over a plain "detail" key. */
+const BY_DETAIL: Record<string, string> = {
+  // admins
+  "already an admin": "המייל הזה כבר ברשימת המנהלים.",
+  "you cannot remove yourself": "אי אפשר להסיר את עצמך. מנהל ראשי אחר יכול לעשות את זה.",
+  "you cannot change your own roles": "אי אפשר לשנות את הדרגה של עצמך. מנהל ראשי אחר יכול לעשות את זה.",
+  "requires the admin role": "רק מנהל ראשי יכול להוסיף, לשנות או להסיר מנהלים.",
+  "404:not an admin": "המייל הזה כבר לא ברשימת המנהלים. רעננו את הדף.",
+  "403:not an admin": "אין לחשבון הזה הרשאת מנהל.",
+  "invalid email": "כתובת המייל לא תקינה.",
+  "invalid roles": "הדרגה שנבחרה לא תקינה.",
+  // requests
+  "request must be read before closing": "קודם צריך לפתוח את הפנייה, ורק אחר כך לסגור אותה.",
+  "a closed request cannot be marked unread": "פנייה סגורה אי אפשר לסמן כלא נקראה. קודם מחזירים אותה לטיפול.",
+  "request not found": "הפנייה לא נמצאה. ייתכן שמישהו אחר מחק אותה.",
+  // request blocks
+  "email is not blocked": "המייל הזה כבר לא חסום. רעננו את הדף.",
+  // chat
+  "message not found": "ההודעה לא נמצאה. ייתכן שכבר הוסרה.",
+  "user not found": "המשתמש לא נמצא בצ'אט.",
+  "chat moderation is not configured": "ניהול הצ'אט עוד לא מוגדר בשרת.",
+  "chat backend unavailable": "שרת הצ'אט לא זמין כרגע. נסו שוב בעוד רגע.",
+  "chat backend rejected the moderation token": "שרת הצ'אט דחה את החיבור. צריך לבדוק ש-MOD_API_TOKEN זהה בשני השרתים.",
+};
+
+/** Fallbacks by HTTP status (0 = the server was not reached). */
+const BY_STATUS: Record<number, string> = {
+  0: "אין חיבור לשרת. בדקו את החיבור ונסו שוב.",
+  401: "ההתחברות פגה. התחברו שוב.",
+  403: "אין לך הרשאה לפעולה הזו.",
+  404: "הפריט לא נמצא. ייתכן שמישהו אחר מחק אותו. רעננו את הדף.",
+  409: "אי אפשר לבצע את הפעולה במצב הנוכחי. רעננו את הדף ונסו שוב.",
+  422: "אחד השדות לא תקין. בדקו אותו ונסו שוב.",
+  429: "יותר מדי בקשות בזמן קצר. חכו רגע ונסו שוב.",
+  502: "שרת הצ'אט לא זמין כרגע. נסו שוב בעוד רגע.",
+  503: "השירות עוד לא מוגדר בשרת.",
+};
+
+const SERVER_ERROR = "משהו השתבש בשרת. נסו שוב בעוד רגע.";
+const UNKNOWN_ERROR = "משהו השתבש. נסו שוב.";
+
+/** The message for a failed action (save, delete, block...). */
+export function errorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) return UNKNOWN_ERROR;
+  return (
+    BY_DETAIL[`${error.status}:${error.message}`] ??
+    BY_DETAIL[error.message] ??
+    BY_STATUS[error.status] ??
+    SERVER_ERROR
+  );
+}
+
+/** The message for data that failed to load; `what` names it, e.g. "רשימת המנהלים". */
+export function loadErrorMessage(what: string, status: number | null, detail: string | null): string {
+  if (status === 0) return `אין חיבור לשרת, ולכן לא הצלחנו לטעון את ${what}. בדקו את החיבור ורעננו את הדף.`;
+  if (detail && BY_DETAIL[detail] && (status === 502 || status === 503)) return BY_DETAIL[detail]!;
+  if (status === 502) return BY_STATUS[502]!;
+  return `לא הצלחנו לטעון את ${what}. נסו לרענן את הדף.`;
+}
