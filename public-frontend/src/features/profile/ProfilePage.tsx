@@ -1,55 +1,107 @@
-/** /profile: the signed-in user's nickname and avatar. ?welcome=1 marks the first sign-in. */
+/** /profile: the signed-in user's nickname and avatar, and sign-out. ?welcome=1 marks the first sign-in. */
 
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 
+import Avatar from "../../shared/components/Avatar";
 import { useAuth } from "../auth/AuthContext";
 import AvatarPicker from "./AvatarPicker";
 import NicknameForm from "./NicknameForm";
+import styles from "./ProfilePage.module.css";
 
 export default function ProfilePage() {
-  const { user, loading, signOutAll } = useAuth();
+  const { user, loading, signOut, signOutAll, requireSignIn } = useAuth();
   const [searchParams] = useSearchParams();
   const welcome = searchParams.get("welcome") === "1";
-  const [signOutFailed, setSignOutFailed] = useState(false);
+  const [signOutError, setSignOutError] = useState(false);
 
   if (loading) return null;
 
   if (!user) {
     return (
-      <section>
-        <h1>הפרופיל שלי</h1>
-        <p>כדי לבחור כינוי ואווטאר צריך להתחבר, בכפתור שלמעלה.</p>
+      <section className={styles.guest}>
+        <Avatar avatar={null} size={72} />
+        <h1 className={styles.name}>הפרופיל שלי</h1>
+        <p className={styles.guestText}>כדי לבחור כינוי ואווטאר צריך להתחבר.</p>
+        <button type="button" className={styles.signIn} onClick={() => requireSignIn()}>
+          התחברות
+        </button>
       </section>
     );
   }
 
-  async function handleSignOutAll() {
-    if (!window.confirm("להתנתק מכל המכשירים, כולל זה?")) return;
-    setSignOutFailed(false);
+  // Both sign-outs share one error line: only one can be in progress at a time.
+  async function runSignOut(action: () => Promise<void>) {
+    setSignOutError(false);
     try {
-      await signOutAll();
+      await action();
     } catch (error) {
-      console.error("sign-out from all devices failed", error);
-      setSignOutFailed(true);
+      console.error("sign-out failed", error);
+      setSignOutError(true);
     }
   }
 
+  function handleSignOutAll() {
+    if (!window.confirm("להתנתק מכל המכשירים, כולל זה?")) return;
+    void runSignOut(signOutAll);
+  }
+
   return (
-    <section>
-      <h1>הפרופיל שלי</h1>
-      {welcome && <p>ברוכים הבאים! בחרו כינוי ואווטאר. אפשר לשנות אותם מתי שרוצים.</p>}
+    <div className={styles.page}>
+      {/* Who you are, large, as on the iPhone's account screen. Reads from `user`, so a
+          new avatar or nickname picked below shows here at once. */}
+      <header className={styles.identity}>
+        <Avatar avatar={user.avatar} size={88} />
+        <div className={styles.identityText}>
+          <p className={styles.eyebrow}>הפרופיל שלי</p>
+          <h1 className={styles.name}>{user.nickname}</h1>
+        </div>
+      </header>
 
-      <NicknameForm current={user.nickname} />
+      {welcome && (
+        <p className={styles.welcome}>
+          ברוכים הבאים! בחרו כינוי ואווטאר. אפשר לשנות אותם מתי שרוצים.
+        </p>
+      )}
 
-      <h2>אווטאר</h2>
-      <AvatarPicker current={user.avatar} />
+      {/* The form's own label is this part's title. */}
+      <section className={styles.section}>
+        <NicknameForm current={user.nickname} />
+      </section>
 
-      <h2>אבטחה</h2>
-      <button type="button" onClick={() => void handleSignOutAll()}>
-        התנתקות מכל המכשירים
-      </button>
-      {signOutFailed && <p role="alert">ההתנתקות נכשלה, נסו שוב</p>}
-    </section>
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>אווטאר</h2>
+        <AvatarPicker current={user.avatar} />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>חשבון</h2>
+        <ul className={styles.actions}>
+          <li>
+            <button
+              type="button"
+              className={styles.action}
+              onClick={() => void runSignOut(signOut)}
+            >
+              התנתקות
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={`${styles.action} ${styles.danger}`}
+              onClick={handleSignOutAll}
+            >
+              התנתקות מכל המכשירים
+            </button>
+          </li>
+        </ul>
+        {signOutError && (
+          <p className={styles.error} role="alert">
+            ההתנתקות נכשלה, נסו שוב
+          </p>
+        )}
+      </section>
+    </div>
   );
 }

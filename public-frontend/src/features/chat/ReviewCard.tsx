@@ -1,9 +1,9 @@
-/** One review and its thread. Knows which message the reader is answering, if any. */
+/** One review and its thread. Replies go through the page's one writing bar (replyBar.tsx). */
 
-import { useState } from "react";
-
-import type { Reply, Review } from "../../shared/api/chat";
+import type { Reply } from "../../shared/api/chat";
+import type { Review } from "../../shared/api/chat";
 import MessageItem from "./MessageItem";
+import { useReplyBar } from "./replyBar";
 import ReplyThread from "./ReplyThread";
 
 interface Props {
@@ -21,15 +21,26 @@ export default function ReviewCard({
   highlighted = false,
   highlightReplyId = null,
 }: Props) {
-  // The review itself or a reply in its thread; the reply box shows while this is set.
-  const [replyingTo, setReplyingTo] = useState<Review | Reply | null>(null);
+  const { target, startReply, stopReply } = useReplyBar();
+  // The message being answered, only when the open reply belongs to this review's thread.
+  const replyingTo = target?.reviewId === review.id ? target.message : null;
+
+  function replyTo(message: Review | Reply) {
+    startReply({ reviewId: review.id, message });
+  }
+
+  // Closes the reply only if it is in this thread: "hide" here must not close a reply
+  // the reader is writing under another review.
+  function stopHere() {
+    if (replyingTo !== null) stopReply();
+  }
 
   return (
     <MessageItem
       message={review}
       courseId={courseId}
       highlighted={highlighted}
-      onReply={() => setReplyingTo(review)}
+      onReply={() => replyTo(review)}
     >
       <ReplyThread
         courseId={courseId}
@@ -37,8 +48,8 @@ export default function ReviewCard({
         replyCount={review.reply_count}
         highlightId={highlightReplyId}
         replyingTo={replyingTo}
-        onReply={setReplyingTo}
-        onDoneReplying={() => setReplyingTo(null)}
+        onReply={replyTo}
+        onDoneReplying={stopHere}
       />
     </MessageItem>
   );

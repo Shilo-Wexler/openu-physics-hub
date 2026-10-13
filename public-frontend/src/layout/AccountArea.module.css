@@ -1,0 +1,50 @@
+/* Same size as the sign-in button, so nothing moves when /me answers. */
+.placeholder {
+  display: inline-block;
+  width: 88px;
+  height: var(--tap-size);
+}
+
+.signIn {
+  min-height: var(--tap-size);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.signIn:hover {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.account {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-size);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.account:hover .nickname {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.nickname {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+/* Phone: the avatar alone; the header is narrow. */
+@media (max-width: 640px) {
+  .nickname {
+    display: none;
+  }
+}

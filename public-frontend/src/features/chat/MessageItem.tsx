@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { deleteMessage, editMessage, type Reply, type Review } from "../../shared/api/chat";
+import { keepInSight } from "../../shared/browser/keyboard";
 import Avatar from "../../shared/components/Avatar";
 import { useAuth } from "../auth/AuthContext";
 import LikeButton from "./LikeButton";
 import MessageEditor from "./MessageEditor";
 import MessageMenu from "./MessageMenu";
+import { useReplyBar } from "./replyBar";
 import styles from "./MessageItem.module.css";
 
 const relativeTime = new Intl.RelativeTimeFormat("he", { numeric: "auto" });
@@ -56,7 +58,10 @@ export default function MessageItem({
   children,
 }: Props) {
   const { requireSignIn } = useAuth();
+  const { slot } = useReplyBar();
   const article = useRef<HTMLElement>(null);
+  // The end of this message itself (a review's article also holds its whole thread).
+  const actions = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (highlighted) article.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlighted]);
@@ -102,6 +107,15 @@ export default function MessageItem({
     onDeleted?.();
   }
 
+  function reply() {
+    if (!onReply || !requireSignIn()) return;
+    onReply();
+    // The keyboard and the reply bar take the bottom of the screen; the message being
+    // answered stays in sight above them. The slot itself has no box (display: contents),
+    // so the bar is its child, which appears only after this render.
+    if (actions.current) keepInSight(actions.current, () => slot?.firstElementChild);
+  }
+
   const mine = saved && message.is_mine;
 
   return (
@@ -121,24 +135,33 @@ export default function MessageItem({
             <div className={styles.meta}>
               <span className={styles.nickname}>{message.nickname}</span>
               <time
+                className={styles.detail}
                 dateTime={message.created_at}
                 title={fullDate.format(new Date(message.created_at))}
               >
                 {timeAgo(message.created_at)}
               </time>
-              {(edited?.edited_at ?? message.edited_at) && <span>(נערך)</span>}
+              {(edited?.edited_at ?? message.edited_at) && (
+                <span className={styles.detail}>נערך</span>
+              )}
               {saved && !editing && (
-                <MessageMenu
-                  courseId={courseId}
-                  messageId={message.id}
-                  onEdit={mine ? () => setEditing(true) : undefined}
-                  onDelete={mine ? () => void remove() : undefined}
-                  reportable={!mine}
-                />
+                <span className={styles.menu}>
+                  <MessageMenu
+                    courseId={courseId}
+                    messageId={message.id}
+                    onEdit={mine ? () => setEditing(true) : undefined}
+                    onDelete={mine ? () => void remove() : undefined}
+                    reportable={!mine}
+                  />
+                </span>
               )}
             </div>
 
-            {deleteFailed && <p role="alert">המחיקה נכשלה, נסו שוב</p>}
+            {deleteFailed && (
+              <p className={styles.error} role="alert">
+                המחיקה נכשלה, נסו שוב
+              </p>
+            )}
 
             {hasQuote && (
               <blockquote className={styles.quote}>
@@ -169,19 +192,17 @@ export default function MessageItem({
                 </p>
 
                 {saved && (
-                  <div className={styles.actions}>
+                  <div className={styles.actions} ref={actions}>
                     <LikeButton
                       messageId={message.id}
                       liked={message.liked_by_me}
                       count={message.like_count}
                     />
                     {onReply && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (requireSignIn()) onReply();
-                        }}
-                      >
+                      <button type="button" className={styles.action} onClick={reply}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M4 5h16v11H9l-5 4z" />
+                        </svg>
                         הגב
                       </button>
                     )}

@@ -1,0 +1,61 @@
+/* The ready-made avatars: six in a row on a phone, eight on a wider screen. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-2);
+}
+
+@media (min-width: 641px) {
+  .grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.option:active {
+  transform: scale(0.92);
+}
+
+/* The chosen one: a black ring with a thin white gap, drawn by box-shadow so it takes
+   no room and nothing moves; it grows for a moment when picked. */
+.option[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px var(--color-bg),
+    0 0 0 4px var(--color-text);
+  animation: pick 220ms ease;
+}
+
+@keyframes pick {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+
+  .option[aria-pressed="true"] {
+    animation: none;
+  }
+}
+
+.error {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}

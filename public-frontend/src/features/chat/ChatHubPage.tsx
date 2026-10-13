@@ -1,30 +1,30 @@
-import { Link } from "react-router";
+/** /chat: where the reader picks the general chat or the course chats. */
 
 import { GENERAL_COURSE_ID } from "../../shared/api/chat";
+import LinkRows, { type LinkRow } from "../../shared/components/LinkRows";
 import { coursePath } from "./share";
+import styles from "./ChatHubPage.module.css";
 
-/** /chat: where the reader picks the general chat or the course chats. */
+// The same rows and words as on the home page, so each chat reads the same everywhere.
+const CHATS: LinkRow[] = [
+  {
+    to: coursePath(GENERAL_COURSE_ID),
+    title: "צ'אט כללי",
+    text: "שיחה פתוחה על הכול: לימודים, מבחנים ומה שביניהם.",
+  },
+  { to: "/courses", title: "צ'אט קורסים", text: "ביקורות ודירוגים לכל קורס, מבחירה בגלגלת." },
+];
+
 export default function ChatHubPage() {
   return (
     <>
-      <h1>צ'אט</h1>
-      {/* Plain links for now; the cards get their look in the design stage. */}
-      <nav aria-label="בחירת צ'אט">
-        <ul>
-          <li>
-            <Link to={coursePath(GENERAL_COURSE_ID)}>
-              <h2>צ'אט כללי</h2>
-              <p>שיחה פתוחה על הכל: לימודים, מנהלה, שאלות כלליות.</p>
-            </Link>
-          </li>
-          <li>
-            <Link to="/courses">
-              <h2>צ'אט קורסים</h2>
-              <p>ביקורות ודירוגים לכל קורס. מחפשים לפי שם או מספר.</p>
-            </Link>
-          </li>
-        </ul>
-      </nav>
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>צ'אט</p>
+        <h1 className={styles.title}>לאן נכנסים?</h1>
+        <p className={styles.lead}>שיחה פתוחה עם כולם, או ביקורות ודירוגים של קורס מסוים.</p>
+      </header>
+
+      <LinkRows rows={CHATS} label="בחירת צ'אט" />
     </>
   );
 }

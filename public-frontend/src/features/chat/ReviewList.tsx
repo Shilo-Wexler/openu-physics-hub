@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { listReviews, postMessage, type Review, type ReviewSort } from "../../shared/api/chat";
+import SegmentedControl, { type SegmentOption } from "../../shared/components/SegmentedControl";
 import { useAuth } from "../auth/AuthContext";
 import Composer from "./Composer";
+import { useReplyBar } from "./replyBar";
 import ReviewCard from "./ReviewCard";
 import styles from "./ReviewList.module.css";
 
-const SORTS: { value: ReviewSort; label: string }[] = [
+const SORTS: SegmentOption<ReviewSort>[] = [
   { value: "new", label: "חדשות" },
   { value: "top", label: "מובילות" },
 ];
@@ -23,11 +25,12 @@ interface Props {
   hiddenId?: number | null;
 }
 
-/** The reviews of a course, with sort tabs above them and the writing box below. */
+/** The reviews of a course, with the sort choice above them and the writing bar below. */
 export default function ReviewList({ courseId, hiddenId = null }: Props) {
   const [sort, setSort] = useState<ReviewSort>("new");
   // Reviews posted here, shown on top in every sort until the page is left.
   const [mine, setMine] = useState<MyReview[]>([]);
+  const { target, setSlot } = useReplyBar();
 
   const { user, loading } = useAuth();
   const userId = user?.user_id ?? null;
@@ -78,36 +81,28 @@ export default function ReviewList({ courseId, hiddenId = null }: Props) {
 
   return (
     <section>
-      <div className={styles.tabs} role="tablist" aria-label="מיון ביקורות">
-        {SORTS.map(({ value, label }) => (
-          <button
-            key={value}
-            className={value === sort ? `${styles.tab} ${styles.active}` : styles.tab}
-            type="button"
-            role="tab"
-            aria-selected={value === sort}
-            onClick={() => setSort(value)}
-          >
-            {label}
-          </button>
-        ))}
+      <div className={styles.header}>
+        <h2 className={styles.title}>ביקורות</h2>
+        <SegmentedControl options={SORTS} value={sort} onChange={setSort} label="מיון ביקורות" />
       </div>
 
-      {/* key: another sort, or another signed-in user, mounts a fresh list. */}
+      {/* key: another signed-in user mounts a fresh list. Another sort does not: the list
+          stays and is replaced once the new order arrives, so the page does not jump. */}
       <SortedReviews
-        key={`${sort}-${viewer.generation}`}
+        key={viewer.generation}
         courseId={courseId}
         sort={sort}
         hiddenId={hiddenId}
         mine={mine}
       />
 
-      <Composer
-        sticky
-        placeholder="כתבו ביקורת על הקורס..."
-        label="ביקורת חדשה"
-        onSend={handleSend}
-      />
+      {/* One bar at the bottom. While replying, the review box is hidden, not removed, so a
+          half-written review is still there afterwards. */}
+      <div className={styles.bar} hidden={target !== null}>
+        <Composer sticky placeholder="הוספת תגובה" label="ביקורת חדשה" onSend={handleSend} />
+      </div>
+      {/* The reply box of the thread being answered appears here (ReplyThread, via a portal). */}
+      <div className={styles.bar} ref={setSlot} />
     </section>
   );
 }
@@ -115,7 +110,8 @@ export default function ReviewList({ courseId, hiddenId = null }: Props) {
 type State =
   | { status: "loading" }
   | { status: "error" }
-  | { status: "ready"; reviews: Review[]; nextBefore: number | null };
+  // sort: the order these reviews are in, which lags behind the chosen one while it loads.
+  | { status: "ready"; sort: ReviewSort; reviews: Review[]; nextBefore: number | null };
 
 function SortedReviews({
   courseId,
@@ -135,7 +131,7 @@ function SortedReviews({
     controller.current = current;
     listReviews(courseId, { sort }, current.signal)
       .then((page) =>
-        setState({ status: "ready", reviews: page.messages, nextBefore: page.next_before }),
+        setState({ status: "ready", sort, reviews: page.messages, nextBefore: page.next_before }),
       )
       .catch((error: unknown) => {
         if (current.signal.aborted) return;
@@ -145,7 +141,10 @@ function SortedReviews({
     return () => current.abort();
   }, [courseId, sort]);
 
-  const nextBefore = state.status === "ready" ? state.nextBefore : null;
+  // The previous order, still shown while the chosen one loads.
+  const stale = state.status === "ready" && state.sort !== sort;
+  // No paging through the old order: the next page comes from the new one.
+  const nextBefore = state.status === "ready" && !stale ? state.nextBefore : null;
 
   const loadMore = useCallback(async () => {
     if (nextBefore === null) return;
@@ -154,11 +153,11 @@ function SortedReviews({
     try {
       const page = await listReviews(courseId, { sort, before: nextBefore }, signal);
       setState((current) => {
-        if (current.status !== "ready") return current;
+        if (current.status !== "ready" || current.sort !== sort) return current;
         // With sort=top a review can move to a later page while likes change; skip repeats.
         const shown = new Set(current.reviews.map((review) => review.id));
         return {
-          status: "ready",
+          ...current,
           reviews: [...current.reviews, ...page.messages.filter((review) => !shown.has(review.id))],
           nextBefore: page.next_before,
         };
@@ -166,7 +165,8 @@ function SortedReviews({
     } catch (error) {
       if (!signal.aborted) console.error(error);
     } finally {
-      if (!signal.aborted) setLoadingMore(false);
+      // Also when aborted: the list stays when the sort changes, so this must not stay stuck on.
+      setLoadingMore(false);
     }
   }, [courseId, sort, nextBefore]);
 
@@ -199,11 +199,14 @@ function SortedReviews({
 
   return (
     <>
-      <ol className={styles.list}>
+      <ol className={stale ? `${styles.list} ${styles.stale}` : styles.list} aria-busy={stale}>
         {mine.map(({ review, sending }) => (
-          <li key={review.id} className={styles.item}>
+          <li key={review.id} className={sending ? `${styles.item} ${styles.sending}` : styles.item}>
             <ReviewCard review={review} courseId={courseId} />
-            {sending && <p className={styles.status}>שולח...</p>}
+            {/* The fading shows it to the eye; this says it to a screen reader. */}
+            <span className={styles.visuallyHidden} role="status">
+              {sending ? "שולח" : ""}
+            </span>
           </li>
         ))}
         {reviews.map((review) => (

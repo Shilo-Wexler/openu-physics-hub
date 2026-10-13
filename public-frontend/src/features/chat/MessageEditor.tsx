@@ -1,11 +1,10 @@
 /** Edits a message in place, inside the message itself (as in Discord). */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 
 import { ApiError } from "../../shared/api/client";
-// The same look as the writing box: a full-width text box with the buttons under it.
-import styles from "./Composer.module.css";
+import styles from "./MessageEditor.module.css";
 
 // Same limit as MAX_LENGTH in chat-backend/app/services/messages.py.
 const MAX_LENGTH = 4000;
@@ -31,6 +30,15 @@ export default function MessageEditor({ initial, onSave, onCancel }: Props) {
     box.focus();
     box.setSelectionRange(box.value.length, box.value.length);
   }, []);
+
+  // The box grows with the text, up to the CSS max-height (ten lines), then scrolls.
+  // A layout effect runs before the browser paints, so the box never flickers at the old size.
+  useLayoutEffect(() => {
+    const box = textareaRef.current;
+    if (!box) return;
+    box.style.height = "auto";
+    box.style.height = `${box.scrollHeight}px`;
+  }, [value]);
 
   const content = value.trim();
   const canSave = content !== "" && content !== initial.trim() && !saving;
@@ -64,10 +72,15 @@ export default function MessageEditor({ initial, onSave, onCancel }: Props) {
   }
 
   return (
-    <form className={styles.composer} onSubmit={handleSubmit}>
-      {error && <p role="alert">{error}</p>}
+    <form className={styles.editor} onSubmit={handleSubmit}>
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
       <textarea
         ref={textareaRef}
+        className={styles.input}
         value={value}
         onChange={(event) => {
           setValue(event.target.value);
@@ -81,10 +94,14 @@ export default function MessageEditor({ initial, onSave, onCancel }: Props) {
         disabled={saving}
       />
       <div className={styles.footer}>
-        <button type="button" onClick={onCancel} disabled={saving}>
+        {/* aria-hidden: a screen reader already hears the buttons; the keys are a shortcut. */}
+        <span className={styles.hint} aria-hidden="true">
+          Esc לביטול · Ctrl+Enter לשמירה
+        </span>
+        <button type="button" className={styles.cancel} onClick={onCancel} disabled={saving}>
           ביטול
         </button>
-        <button type="submit" disabled={!canSave}>
+        <button type="submit" className={styles.save} disabled={!canSave}>
           {saving ? "שומר..." : "שמירה"}
         </button>
       </div>

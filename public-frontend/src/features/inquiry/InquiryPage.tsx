@@ -4,8 +4,10 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { GENERAL_COURSE_ID, listCourses, type Course } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
+import SegmentedControl, { type SegmentOption } from "../../shared/components/SegmentedControl";
 import CourseSearch from "../courses/CourseSearch";
 import { INQUIRY_TYPES, MAX_INQUIRY_LENGTH, sendInquiry, type InquiryType } from "./api";
+import styles from "./InquiryPage.module.css";
 
 const TYPE_LABELS: Record<InquiryType, string> = {
   exams: "בחינות ומטלות",
@@ -24,8 +26,14 @@ const HONEYPOT_STYLE = { position: "absolute", left: "-10000px", width: 1, heigh
 // What the inquiry is about: the whole program, or one course picked with the search.
 type Scope = "general" | "course";
 
+const SCOPES: SegmentOption<Scope>[] = [
+  { value: "general", label: "כללית" },
+  { value: "course", label: "קורס מסוים" },
+];
+
 export default function InquiryPage() {
-  const [scope, setScope] = useState<Scope | null>(null);
+  // General by default: most inquiries are, and it saves a step.
+  const [scope, setScope] = useState<Scope>("general");
   const [course, setCourse] = useState<Course | null>(null);
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [coursesFailed, setCoursesFailed] = useState(false);
@@ -80,7 +88,7 @@ export default function InquiryPage() {
   }
 
   function startOver() {
-    setScope(null);
+    setScope("general");
     setCourse(null);
     setType("");
     setContent("");
@@ -89,100 +97,100 @@ export default function InquiryPage() {
 
   if (sent) {
     return (
-      <>
-        <h1>הפנייה נשלחה</h1>
-        <p>תודה. הפנייה הגיעה לוועדת הסטודנטים.</p>
-        <button type="button" onClick={startOver}>
+      <section className={styles.done}>
+        <span className={styles.check} aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+        </span>
+        <h1 className={styles.title}>הפנייה נשלחה</h1>
+        <p className={styles.lead}>תודה. הפנייה הגיעה לוועדת הסטודנטים.</p>
+        <button type="button" className={styles.again} onClick={startOver}>
           שליחת פנייה נוספת
         </button>
-      </>
+      </section>
     );
   }
 
   return (
-    <>
-      <h1>פנייה לוועדת הסטודנטים</h1>
-      <p>הפנייה אנונימית: לא צריך להתחבר, ולא נשמר שום פרט מזהה.</p>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>פנייה לוועדה</p>
+        <h1 className={styles.title}>מה תרצו להעביר לוועדת הסטודנטים?</h1>
+        <p className={styles.lead}>הפנייה אנונימית: לא צריך להתחבר, ולא נשמר שום פרט מזהה.</p>
+      </header>
 
-      <form onSubmit={handleSubmit}>
-        <fieldset>
-          <legend>על מה הפנייה?</legend>
-          <label>
-            <input
-              type="radio"
-              name="scope"
-              checked={scope === "general"}
-              onChange={() => setScope("general")}
-              required
-            />{" "}
-            פנייה כללית
-          </label>{" "}
-          <label>
-            <input
-              type="radio"
-              name="scope"
-              checked={scope === "course"}
-              onChange={() => setScope("course")}
-            />{" "}
-            קורס מסוים
-          </label>
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <div className={styles.field}>
+          {/* Seen only: the switch below carries the same words as its own label. */}
+          <span className={styles.fieldTitle} aria-hidden="true">
+            על מה הפנייה?
+          </span>
+          <SegmentedControl options={SCOPES} value={scope} onChange={setScope} label="על מה הפנייה" />
+
+          {scope === "course" &&
+            (course ? (
+              <div className={styles.selected}>
+                <span className={styles.selectedName}>
+                  <span className={styles.selectedNumber}>{course.id}</span> · {course.name}
+                </span>
+                <button type="button" className={styles.change} onClick={() => setCourse(null)}>
+                  שינוי
+                </button>
+              </div>
+            ) : coursesFailed ? (
+              <p className={styles.status}>
+                רשימת הקורסים לא נטענה. נסו לרענן את הדף, או לשלוח פנייה כללית.
+              </p>
+            ) : courses === null ? (
+              <p className={styles.status}>טוען קורסים...</p>
+            ) : (
+              <CourseSearch courses={courses} onSelect={setCourse} />
+            ))}
+        </div>
+
+        {/* Real radio buttons under pill labels: the keyboard, screen readers and `required`
+            work as they do for any radio group. */}
+        <fieldset className={styles.field}>
+          <legend className={styles.fieldTitle}>סוג הפנייה</legend>
+          <div className={styles.types}>
+            {INQUIRY_TYPES.map((value) => (
+              <label key={value} className={styles.type}>
+                <input
+                  className={styles.typeInput}
+                  type="radio"
+                  name="type"
+                  value={value}
+                  checked={type === value}
+                  onChange={() => setType(value)}
+                  required
+                />
+                <span className={styles.typeLabel}>{TYPE_LABELS[value]}</span>
+              </label>
+            ))}
+          </div>
         </fieldset>
 
-        {scope === "course" &&
-          (course ? (
-            <p>
-              הקורס: {course.id} · {course.name}{" "}
-              <button type="button" onClick={() => setCourse(null)}>
-                שינוי
-              </button>
-            </p>
-          ) : coursesFailed ? (
-            <p>רשימת הקורסים לא נטענה. נסו לרענן את הדף, או לשלוח פנייה כללית.</p>
-          ) : courses === null ? (
-            <p>טוען קורסים...</p>
-          ) : (
-            <CourseSearch courses={courses} onSelect={setCourse} />
-          ))}
-
-        <p>
-          <label>
-            סוג הפנייה{" "}
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as InquiryType)}
-              required
-            >
-              <option value="" disabled>
-                בחרו סוג
-              </option>
-              {INQUIRY_TYPES.map((value) => (
-                <option key={value} value={value}>
-                  {TYPE_LABELS[value]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </p>
-
-        <p>
-          <label>
+        <div className={styles.field}>
+          <label className={styles.fieldTitle} htmlFor="inquiry-content">
             הפנייה
-            <br />
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              maxLength={MAX_INQUIRY_LENGTH}
-              rows={6}
-              dir="auto"
-              required
-            />
           </label>
+          <textarea
+            id="inquiry-content"
+            className={styles.textarea}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            maxLength={MAX_INQUIRY_LENGTH}
+            rows={6}
+            dir="auto"
+            required
+          />
           {content.length >= SHOW_COUNTER_FROM && (
-            <small>
+            <span className={styles.counter}>
               {content.length}/{MAX_INQUIRY_LENGTH}
-            </small>
+            </span>
           )}
-        </p>
+        </div>
 
         {/* Honeypot: hidden from people and screen readers; a bot that fills it is dropped. */}
         <div style={HONEYPOT_STYLE} aria-hidden="true">
@@ -199,12 +207,16 @@ export default function InquiryPage() {
           </label>
         </div>
 
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={!ready}>
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" className={styles.submit} disabled={!ready}>
           {sending ? "שולח..." : "שליחה"}
         </button>
       </form>
-    </>
+    </div>
   );
 }
 

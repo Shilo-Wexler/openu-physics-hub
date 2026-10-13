@@ -1,0 +1,61 @@
+.dialog {
+  width: min(400px, calc(100% - 2 * var(--space-3)));
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: center;
+}
+
+/* Only while open: a display value on the closed dialog would override the
+   browser's hidden state and show it on the page. */
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+}
+
+.text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.later {
+  min-height: var(--tap-size);
+  padding-inline: var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.later:hover {
+  color: var(--color-text);
+}
+
+/* Phone: a sheet that slides up from the bottom, like native apps. */
+@media (max-width: 640px) {
+  .dialog {
+    width: 100%;
+    max-width: 100%;
+    margin-block-end: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    /* Keeps the buttons above the iPhone home bar. */
+    padding-block-end: calc(var(--space-4) + env(safe-area-inset-bottom));
+  }
+}

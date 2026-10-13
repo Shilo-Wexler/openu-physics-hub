@@ -11,6 +11,7 @@ import {
 import { ApiError } from "../../shared/api/client";
 import { useAuth } from "../auth/AuthContext";
 import RatingPanel from "./RatingPanel";
+import { ReplyBarProvider } from "./replyBar";
 import ReviewCard from "./ReviewCard";
 import ReviewList from "./ReviewList";
 import ShareButton from "./ShareButton";
@@ -44,7 +45,7 @@ export default function CourseChatPage(props: PageProps) {
   const courseId = props.courseId ?? Number(params.courseId);
   const messageId = params.messageId === undefined ? null : Number(params.messageId);
   if (!Number.isInteger(courseId) || courseId < 0) {
-    return <p>הקורס לא נמצא.</p>;
+    return <p className={styles.message}>הקורס לא נמצא.</p>;
   }
   // /courses/0 typed by hand: the general chat lives at its own address.
   if (props.courseId === undefined && courseId === GENERAL_COURSE_ID) {
@@ -112,24 +113,26 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
     return <Navigate to={messagePath(shared.course_id, messageId)} replace />;
   }
 
-  if (state.status === "loading" || shared?.status === "loading") return <p>טוען...</p>;
-  if (state.status === "not-found") return <p>הקורס לא נמצא.</p>;
-  if (state.status === "error") return <p>לא הצלחנו לטעון את הקורס. נסו לרענן את הדף.</p>;
+  if (state.status === "loading" || shared?.status === "loading") {
+    return <p className={styles.message}>טוען...</p>;
+  }
+  if (state.status === "not-found") return <p className={styles.message}>הקורס לא נמצא.</p>;
+  if (state.status === "error") {
+    return <p className={styles.message}>לא הצלחנו לטעון את הקורס. נסו לרענן את הדף.</p>;
+  }
 
   const { course } = state;
   const general = course.id === GENERAL_COURSE_ID;
+  // One writing bar for the whole page: the shared review above the list answers through it too.
   return (
-    <>
-      <div className={styles.header}>
-        {general ? (
-          <h1>צ'אט כללי</h1>
-        ) : (
-          <h1>
-            {course.name} <small>({course.id})</small>
-          </h1>
-        )}
+    <ReplyBarProvider>
+      <header className={styles.header}>
+        <div className={styles.heading}>
+          {!general && <p className={styles.eyebrow}>קורס {course.id}</p>}
+          <h1 className={styles.title}>{general ? "צ'אט כללי" : course.name}</h1>
+        </div>
         <ShareButton url={courseUrl(course.id)} />
-      </div>
+      </header>
       {/* The general chat is not a course, so it has nothing to rate.
           key: once the course reloads for a new viewer, a fresh panel starts from their rating. */}
       {!general && (
@@ -160,6 +163,6 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
         courseId={courseId}
         hiddenId={shared?.status === "found" ? shared.review.id : null}
       />
-    </>
+    </ReplyBarProvider>
   );
 }

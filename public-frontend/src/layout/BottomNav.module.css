@@ -1,0 +1,62 @@
+.bar {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Keeps the tabs above the iPhone home bar. */
+  padding-block-end: env(safe-area-inset-bottom);
+  background: var(--color-surface);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 56px;
+  font-size: 0.6875rem; /* 11px: tab labels, like native apps */
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.current {
+  color: var(--color-text);
+  font-weight: var(--weight-bold);
+}
+
+.icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.current .icon {
+  stroke-width: 2.2;
+}
+
+/* Keyboard open (shared/browser/keyboard.ts): out of the way while typing, like WhatsApp. */
+:global(html[data-keyboard="open"]) .bar {
+  display: none;
+}
+
+/* Computer: the header shows the sections instead. */
+@media (min-width: 641px) {
+  .bar {
+    display: none;
+  }
+}
+
+/* Backup for browsers keyboard.ts cannot read: while typing on a phone, the bar steps aside. */
+@media (max-width: 640px) {
+  :global(html:where(:has(textarea:focus, input[type="search"]:focus))) .bar {
+    display: none;
+  }
+}

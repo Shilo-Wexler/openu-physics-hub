@@ -10,16 +10,17 @@
 
 .controls {
   display: flex;
+  align-items: center;
   gap: var(--space-3);
 }
 
-/* A text button with a short line before it, as in TikTok's "view replies". */
+/* "Show N replies": a short line before the text and a small arrow after it, as in TikTok. */
 .toggle {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-1);
-  padding: var(--space-1) 0;
+  min-height: 44px;
+  padding: 0;
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
@@ -27,16 +28,48 @@
   background: none;
   border: none;
   cursor: pointer;
+  transition: color 150ms ease;
 }
 
 .toggle::before {
   content: "";
   width: 24px;
   border-top: 1px solid currentColor;
+  opacity: 0.6;
+}
+
+/* A chevron drawn from two borders of a turned square, so no icon is needed. */
+.toggle::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
 }
 
 .toggle:hover {
   color: var(--color-text);
+}
+
+/* "Hide": quieter than the buttons that show more, so it does not compete with them. */
+.hide {
+  min-height: 44px;
+  padding: 0;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  opacity: 0.75;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.hide:hover {
+  opacity: 1;
 }
 
 .status {

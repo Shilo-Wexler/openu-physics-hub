@@ -1,10 +1,57 @@
-/* The shared review sits above the tabs, set apart from the list under it. */
-.shared {
-  margin-bottom: var(--space-3);
-  padding-bottom: var(--space-2);
-  border-bottom: 2px solid var(--color-border);
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-4) var(--space-1);
 }
 
-.notice {
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: var(--weight-light);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  /* Long course names wrap instead of pushing the share button off screen. */
+  overflow-wrap: anywhere;
+}
+
+/* Loading, not found, and load errors. */
+.message {
+  margin: 0;
+  padding-block: var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* "The shared message no longer exists". */
+.notice {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* The review a shared link points to, above the rest. */
+.shared {
+  margin-block-end: var(--space-3);
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--color-text);
 }

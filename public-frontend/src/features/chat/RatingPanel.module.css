@@ -1,0 +1,243 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 560px;
+  padding-block: var(--space-3) var(--space-4);
+}
+
+.noRatings {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* The two averages side by side. */
+.averages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.average {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.averageLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.averageValue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.averageNumber {
+  font-size: 1.375rem;
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shared by the three states: a rounded outline box. */
+.collapsed,
+.saved,
+.box {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+}
+
+.collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  padding-inline: var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.collapsed:hover {
+  border-color: var(--color-text);
+}
+
+.chevron {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.saved {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.boxTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.summaryText {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* The open box gets the dark outline: it is the one being edited. */
+.box {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1) var(--space-1) var(--space-3) var(--space-3);
+  border-color: var(--color-text);
+}
+
+.box:focus {
+  outline: none;
+}
+
+.boxHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pickerLabel {
+  width: 3.5rem;
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+}
+
+.stars {
+  display: flex;
+}
+
+/* 40 x 44: the star is drawn at 28px, the rest is tap area. */
+.star {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: var(--tap-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.star svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+  transition: transform 120ms ease;
+}
+
+.starOn svg {
+  fill: var(--color-primary);
+}
+
+.star:active svg {
+  transform: scale(0.88);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.primary,
+.secondary {
+  min-height: 42px;
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.primary:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.secondary {
+  flex-shrink: 0;
+  border: 1px solid var(--color-text);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.textButton {
+  min-height: 42px;
+  padding-inline: var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.error {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star svg {
+    transition: none;
+  }
+}

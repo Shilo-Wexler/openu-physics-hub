@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { changeAvatar } from "../../shared/api/chat";
 import Avatar, { AVATARS } from "../../shared/components/Avatar";
 import { useAuth } from "../auth/AuthContext";
+import styles from "./AvatarPicker.module.css";
 
 interface Props {
   current: string;
@@ -35,20 +36,26 @@ export default function AvatarPicker({ current }: Props) {
 
   return (
     <div>
-      <div role="group" aria-label="בחירת אווטאר">
-        {AVATARS.map((avatar) => (
+      <div className={styles.grid} role="group" aria-label="בחירת אווטאר">
+        {AVATARS.map((avatar, index) => (
           <button
             key={avatar}
             type="button"
+            className={styles.option}
             onClick={() => void pick(avatar)}
             aria-pressed={avatar === current}
-            aria-label={avatar}
+            aria-label={`אווטאר ${index + 1} מתוך ${AVATARS.length}`}
           >
-            <Avatar avatar={avatar} size={48} />
+            {/* 44, not 48: six in a row with the ring around one still fit a narrow phone. */}
+            <Avatar avatar={avatar} size={44} />
           </button>
         ))}
       </div>
-      {failed && <p role="alert">שמירת האווטאר נכשלה, נסו שוב</p>}
+      {failed && (
+        <p className={styles.error} role="alert">
+          שמירת האווטאר נכשלה, נסו שוב
+        </p>
+      )}
     </div>
   );
 }

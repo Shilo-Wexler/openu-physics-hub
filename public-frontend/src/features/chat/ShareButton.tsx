@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import { shareLink } from "./share";
 import styles from "./ShareButton.module.css";
 
-// How long "link copied" stays on the button.
+// How long "link copied" stays next to the button.
 const COPIED_MS = 2000;
 
-/** A "share" button for a whole page, e.g. a course. */
+/** A "share" icon button for a whole page, e.g. a course. */
 export default function ShareButton({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -25,8 +25,18 @@ export default function ShareButton({ url }: { url: string }) {
   }
 
   return (
-    <button className={styles.button} type="button" onClick={share}>
-      {copied ? "הקישור הועתק" : "שיתוף"}
-    </button>
+    <span className={styles.wrapper}>
+      {/* Read out when it appears; empty the rest of the time. */}
+      <span className={styles.copied} role="status">
+        {copied ? "הקישור הועתק" : ""}
+      </span>
+      <button className={styles.button} type="button" aria-label="שיתוף" onClick={share}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v13" />
+          <path d="m7 8 5-5 5 5" />
+          <path d="M5 14v6h14v-6" />
+        </svg>
+      </button>
+    </span>
   );
 }
