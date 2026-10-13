@@ -1,0 +1,38 @@
+.stars {
+  --star-gap: 2px;
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: calc(5 * var(--star-size) + 4 * var(--star-gap));
+  height: var(--star-size);
+  vertical-align: middle;
+}
+
+.row {
+  display: flex;
+  gap: var(--star-gap);
+  /* The full width even inside the clipped fill, so the black stars sit exactly on the gray ones. */
+  width: calc(5 * var(--star-size) + 4 * var(--star-gap));
+}
+
+.row svg {
+  width: var(--star-size);
+  height: var(--star-size);
+  flex-shrink: 0;
+}
+
+.empty {
+  fill: var(--color-star-empty);
+}
+
+/* Starts at the start side (the right, in RTL) and is cut to the average's width. */
+.fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  overflow: hidden;
+}
+
+.full {
+  fill: var(--color-primary);
+}

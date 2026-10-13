@@ -1,9 +1,9 @@
 /**
- * The box for writing a message: a new review (sticky at the bottom of the screen)
+ * The box for writing a message: a new review (a bar stuck to the bottom of the screen)
  * or a reply inside a thread (with a "replying to" bar).
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 
 import { ApiError } from "../../shared/api/client";
@@ -18,7 +18,8 @@ const SHOW_COUNTER_FROM = 3500;
 interface Props {
   /** Adds the message (optimistically) and resolves when the server saved it. */
   onSend: (content: string) => Promise<void>;
-  placeholder: string;
+  /** Grey text inside the empty box. Optional: the course page's box has none. */
+  placeholder?: string;
   /** Read by screen readers, since the box has no visible label. */
   label: string;
   /** Stays at the bottom of the screen while the list scrolls (the new-review box). */
@@ -49,18 +50,34 @@ export default function Composer({
     if (autoFocus) textareaRef.current?.focus();
   }, [autoFocus, replyingTo]);
 
+  // The box grows with the text, up to the CSS max-height (five lines), then scrolls.
+  // A layout effect runs before the browser paints, so the box never flickers at the old size.
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
   const className = sticky ? `${styles.composer} ${styles.sticky}` : styles.composer;
 
   if (!user) {
     // A guest sees what looks like the box; clicking it opens the sign-in dialog.
     return (
       <div className={className}>
-        <button type="button" className={styles.guest} onClick={() => requireSignIn()}>
+        <button
+          type="button"
+          className={styles.guest}
+          aria-label={label}
+          onClick={() => requireSignIn()}
+        >
           {placeholder}
         </button>
       </div>
     );
   }
+
+  const hasText = value.trim() !== "";
 
   async function send() {
     const content = value.trim();
@@ -74,6 +91,12 @@ export default function Composer({
       setValue((current) => (current === "" ? content : current));
       setError(errorMessage(sendError));
     }
+  }
+
+  function clear() {
+    setValue("");
+    setError(null);
+    textareaRef.current?.focus();
   }
 
   function handleSubmit(event: FormEvent) {
@@ -93,38 +116,73 @@ export default function Composer({
     <form className={className} onSubmit={handleSubmit}>
       {replyingTo && (
         <div className={styles.replyingTo}>
-          <span>מגיבים ל-{replyingTo.nickname}</span>
+          <span className={styles.replyingText}>
+            מגיבים ל-<strong>{replyingTo.nickname}</strong>
+          </span>
           {onCancel && (
-            <button type="button" onClick={onCancel} aria-label="ביטול תגובה">
-              ✕
+            <button
+              type="button"
+              className={styles.cancel}
+              onClick={onCancel}
+              aria-label="ביטול תגובה"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
             </button>
           )}
         </div>
       )}
-      {error && <p role="alert">{error}</p>}
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(event) => {
-          setValue(event.target.value);
-          setError(null);
-        }}
-        onKeyDown={handleKeyDown}
-        maxLength={MAX_LENGTH}
-        rows={sticky ? 3 : 2}
-        dir="auto"
-        placeholder={placeholder}
-        aria-label={label}
-      />
-      <div className={styles.footer}>
-        {value.length >= SHOW_COUNTER_FROM && (
-          <span>
-            {value.length}/{MAX_LENGTH}
-          </span>
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
+      {value.length >= SHOW_COUNTER_FROM && (
+        <span className={styles.counter}>
+          {value.length}/{MAX_LENGTH}
+        </span>
+      )}
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <textarea
+            ref={textareaRef}
+            className={styles.input}
+            value={value}
+            onChange={(event) => {
+              setValue(event.target.value);
+              setError(null);
+            }}
+            onKeyDown={handleKeyDown}
+            maxLength={MAX_LENGTH}
+            rows={1}
+            dir="auto"
+            placeholder={placeholder}
+            aria-label={label}
+          />
+          {value !== "" && (
+            <button
+              type="button"
+              className={styles.clear}
+              aria-label="ניקוי הטקסט"
+              // Keeps the focus (and the phone keyboard) in the box while the button is pressed.
+              onPointerDown={(event) => event.preventDefault()}
+              onClick={clear}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 7l10 10M17 7 7 17" />
+              </svg>
+            </button>
+          )}
+        </div>
+        {/* Appears only with text, so an empty box stays clean. */}
+        {hasText && (
+          <button type="submit" className={styles.send} aria-label="פרסום">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 19V5M6 11l6-6 6 6" />
+            </svg>
+          </button>
         )}
-        <button type="submit" disabled={value.trim() === ""}>
-          פרסום
-        </button>
       </div>
     </form>
   );

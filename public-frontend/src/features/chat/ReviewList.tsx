@@ -104,7 +104,7 @@ export default function ReviewList({ courseId, hiddenId = null }: Props) {
 
       <Composer
         sticky
-        placeholder="כתבו ביקורת על הקורס..."
+        placeholder="הוספת תגובה"
         label="ביקורת חדשה"
         onSend={handleSend}
       />
