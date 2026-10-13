@@ -14,6 +14,9 @@
   --color-primary-soft: #f2f2f2;
   --color-star-empty: #dcdcdc;
   --color-danger: #b42318; /* errors only; the one non-gray color */
+  /* Links to other sites: the familiar link blue, the one color outside black and white. */
+  --color-link: #0b57d0;
+
 
   /* Avatar backgrounds; Avatar.tsx picks one by the avatar's place in its list.
      Near-neutral tints, so the colorful emoji stand out and the page stays calm. */
