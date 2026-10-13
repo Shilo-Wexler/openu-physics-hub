@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 
+import Avatar from "../../shared/components/Avatar";
 import { useAuth } from "../auth/AuthContext";
 import AvatarPicker from "./AvatarPicker";
 import NicknameForm from "./NicknameForm";
+import styles from "./ProfilePage.module.css";
 
 export default function ProfilePage() {
   const { user, loading, signOut, signOutAll, requireSignIn } = useAuth();
@@ -17,10 +19,11 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <section>
-        <h1>הפרופיל שלי</h1>
-        <p>כדי לבחור כינוי ואווטאר צריך להתחבר.</p>
-        <button type="button" onClick={() => requireSignIn()}>
+      <section className={styles.guest}>
+        <Avatar avatar={null} size={72} />
+        <h1 className={styles.name}>הפרופיל שלי</h1>
+        <p className={styles.guestText}>כדי לבחור כינוי ואווטאר צריך להתחבר.</p>
+        <button type="button" className={styles.signIn} onClick={() => requireSignIn()}>
           התחברות
         </button>
       </section>
@@ -44,23 +47,61 @@ export default function ProfilePage() {
   }
 
   return (
-    <section>
-      <h1>הפרופיל שלי</h1>
-      {welcome && <p>ברוכים הבאים! בחרו כינוי ואווטאר. אפשר לשנות אותם מתי שרוצים.</p>}
+    <div className={styles.page}>
+      {/* Who you are, large, as on the iPhone's account screen. Reads from `user`, so a
+          new avatar or nickname picked below shows here at once. */}
+      <header className={styles.identity}>
+        <Avatar avatar={user.avatar} size={88} />
+        <div className={styles.identityText}>
+          <p className={styles.eyebrow}>הפרופיל שלי</p>
+          <h1 className={styles.name}>{user.nickname}</h1>
+        </div>
+      </header>
 
-      <NicknameForm current={user.nickname} />
+      {welcome && (
+        <p className={styles.welcome}>
+          ברוכים הבאים! בחרו כינוי ואווטאר. אפשר לשנות אותם מתי שרוצים.
+        </p>
+      )}
 
-      <h2>אווטאר</h2>
-      <AvatarPicker current={user.avatar} />
+      {/* The form's own label is this part's title. */}
+      <section className={styles.section}>
+        <NicknameForm current={user.nickname} />
+      </section>
 
-      <h2>חשבון</h2>
-      <button type="button" onClick={() => void runSignOut(signOut)}>
-        התנתקות
-      </button>
-      <button type="button" onClick={handleSignOutAll}>
-        התנתקות מכל המכשירים
-      </button>
-      {signOutError && <p role="alert">ההתנתקות נכשלה, נסו שוב</p>}
-    </section>
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>אווטאר</h2>
+        <AvatarPicker current={user.avatar} />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>חשבון</h2>
+        <ul className={styles.actions}>
+          <li>
+            <button
+              type="button"
+              className={styles.action}
+              onClick={() => void runSignOut(signOut)}
+            >
+              התנתקות
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={`${styles.action} ${styles.danger}`}
+              onClick={handleSignOutAll}
+            >
+              התנתקות מכל המכשירים
+            </button>
+          </li>
+        </ul>
+        {signOutError && (
+          <p className={styles.error} role="alert">
+            ההתנתקות נכשלה, נסו שוב
+          </p>
+        )}
+      </section>
+    </div>
   );
 }
