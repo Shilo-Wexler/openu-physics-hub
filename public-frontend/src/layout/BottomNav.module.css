@@ -53,3 +53,10 @@
     display: none;
   }
 }
+
+/* Backup for browsers keyboard.ts cannot read: while typing on a phone, the bar steps aside. */
+@media (max-width: 640px) {
+  :global(html:where(:has(textarea:focus, input[type="search"]:focus))) .bar {
+    display: none;
+  }
+}

@@ -191,3 +191,10 @@
   text-align: start;
   cursor: pointer;
 }
+
+/* The bottom bar hides while typing (BottomNav.module.css), so nothing is left to sit above. */
+@media (max-width: 640px) {
+  :global(html:where(:has(textarea:focus))) .sticky {
+    bottom: 0;
+  }
+}
