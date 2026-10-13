@@ -1,22 +1,35 @@
-/** Google's own "Sign in with Google" button. Google's script loads only when a button is shown. */
+/**
+ * Google's own "Sign in with Google" button, in redirect mode: the whole tab goes to Google
+ * and comes back through the server to /auth/done. No popup, because popups leave a white
+ * screen in some phone browsers (iPhone Chrome). Google's script loads only when a button is shown.
+ */
 
 import { useEffect, useRef, useState } from "react";
 
-import type { SignInResult } from "../../shared/api/chat";
-import { useAuth } from "./AuthContext";
+import { saveReturnPath } from "./signInReturn";
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 const SCRIPT_URL = "https://accounts.google.com/gsi/client";
+// Google posts the sign-in here; the server checks it and redirects to /auth/done.
+const LOGIN_PATH = "/api/chat/auth/google/redirect";
+
+// The small part of Google Identity Services this file uses.
+interface ButtonOptions {
+  type: "standard";
+  theme: "outline";
+  size: "medium";
+  shape: "pill";
+  text: "signin";
+  locale: string;
+  click_listener: () => void;
+}
 
 // The small part of Google Identity Services this file uses.
 interface GoogleIdentity {
   accounts: {
     id: {
-      initialize: (options: {
-        client_id: string;
-        callback: (response: { credential: string }) => void;
-      }) => void;
-      renderButton: (parent: HTMLElement, options: Record<string, string | number>) => void;
+      initialize: (options: { client_id: string; ux_mode: "redirect"; login_uri: string }) => void;
+      renderButton: (parent: HTMLElement, options: ButtonOptions) => void;
     };
   };
 }
@@ -26,11 +39,6 @@ declare global {
     google?: GoogleIdentity;
   }
 }
-
-// Google calls one callback for the whole page. Several buttons can be on screen at once
-// (the header and the sign-in dialog): the newest one handles it, and when it goes away
-// the one before it takes over again.
-const credentialHandlers: ((idToken: string) => void)[] = [];
 
 // The script loads and initializes once per page, however many times a button mounts.
 let googlePromise: Promise<GoogleIdentity> | null = null;
@@ -52,7 +60,9 @@ function loadGoogle(): Promise<GoogleIdentity> {
       }
       google.accounts.id.initialize({
         client_id: CLIENT_ID,
-        callback: (response) => credentialHandlers.at(-1)?.(response.credential),
+        ux_mode: "redirect",
+        // Same origin as the page, so it works on localhost, the dev tunnel and production alike.
+        login_uri: `${window.location.origin}${LOGIN_PATH}`,
       });
       resolve(google);
     };
@@ -65,35 +75,12 @@ function loadGoogle(): Promise<GoogleIdentity> {
   return googlePromise;
 }
 
-interface Props {
-  /** Called after a successful sign-in; result.is_new is true on the account's first sign-in. */
-  onSignedIn?: (result: SignInResult) => void;
-}
-
-export default function GoogleButton({ onSignedIn }: Props) {
-  const { signIn } = useAuth();
+export default function GoogleButton() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
 
-  // The latest onSignedIn, so the handler below never calls an old one.
-  const onSignedInRef = useRef(onSignedIn);
-  useEffect(() => {
-    onSignedInRef.current = onSignedIn;
-  }, [onSignedIn]);
-
   useEffect(() => {
     let active = true;
-
-    const handleCredential = async (idToken: string) => {
-      try {
-        const result = await signIn(idToken);
-        onSignedInRef.current?.(result);
-      } catch (error) {
-        console.error("sign-in failed", error);
-        if (active) setFailed(true);
-      }
-    };
-    credentialHandlers.push(handleCredential);
 
     loadGoogle()
       .then((google) => {
@@ -105,6 +92,8 @@ export default function GoogleButton({ onSignedIn }: Props) {
           shape: "pill",
           text: "signin",
           locale: "he",
+          // Runs on click, just before the tab leaves for Google.
+          click_listener: saveReturnPath,
         });
       })
       .catch((error: unknown) => {
@@ -114,15 +103,13 @@ export default function GoogleButton({ onSignedIn }: Props) {
 
     return () => {
       active = false;
-      const index = credentialHandlers.indexOf(handleCredential);
-      if (index !== -1) credentialHandlers.splice(index, 1);
     };
-  }, [signIn]);
+  }, []);
 
   return (
     <div>
       <div ref={containerRef} />
-      {failed && <p role="alert">ההתחברות נכשלה, נסו שוב</p>}
+      {failed && <p role="alert">לא הצלחנו לטעון את ההתחברות עם גוגל, נסו לרענן</p>}
     </div>
   );
 }
