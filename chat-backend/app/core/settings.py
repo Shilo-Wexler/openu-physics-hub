@@ -44,3 +44,11 @@ SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "400"))
 
 # Seconds a readiness check may wait for the DB before reporting not ready.
 READY_TIMEOUT = float(os.environ.get("READY_TIMEOUT", "2"))
+
+# "dev" turns on developer conveniences such as the API docs. Unset means production,
+# so a server that was never configured gets the safe behaviour. Same values as the
+# admin backend.
+ENV = os.environ.get("ENV", "prod")
+if ENV not in ("dev", "prod"):
+    raise RuntimeError('ENV must be "dev" or "prod"')
+IS_DEV = ENV == "dev"
