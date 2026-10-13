@@ -1,4 +1,4 @@
-/** /profile: the signed-in user's nickname and avatar. ?welcome=1 marks the first sign-in. */
+/** /profile: the signed-in user's nickname and avatar, and sign-out. ?welcome=1 marks the first sign-in. */
 
 import { useState } from "react";
 import { useSearchParams } from "react-router";
@@ -8,10 +8,10 @@ import AvatarPicker from "./AvatarPicker";
 import NicknameForm from "./NicknameForm";
 
 export default function ProfilePage() {
-  const { user, loading, signOutAll } = useAuth();
+  const { user, loading, signOut, signOutAll, requireSignIn } = useAuth();
   const [searchParams] = useSearchParams();
   const welcome = searchParams.get("welcome") === "1";
-  const [signOutFailed, setSignOutFailed] = useState(false);
+  const [signOutError, setSignOutError] = useState(false);
 
   if (loading) return null;
 
@@ -19,20 +19,28 @@ export default function ProfilePage() {
     return (
       <section>
         <h1>הפרופיל שלי</h1>
-        <p>כדי לבחור כינוי ואווטאר צריך להתחבר, בכפתור שלמעלה.</p>
+        <p>כדי לבחור כינוי ואווטאר צריך להתחבר.</p>
+        <button type="button" onClick={() => requireSignIn()}>
+          התחברות
+        </button>
       </section>
     );
   }
 
-  async function handleSignOutAll() {
-    if (!window.confirm("להתנתק מכל המכשירים, כולל זה?")) return;
-    setSignOutFailed(false);
+  // Both sign-outs share one error line: only one can be in progress at a time.
+  async function runSignOut(action: () => Promise<void>) {
+    setSignOutError(false);
     try {
-      await signOutAll();
+      await action();
     } catch (error) {
-      console.error("sign-out from all devices failed", error);
-      setSignOutFailed(true);
+      console.error("sign-out failed", error);
+      setSignOutError(true);
     }
+  }
+
+  function handleSignOutAll() {
+    if (!window.confirm("להתנתק מכל המכשירים, כולל זה?")) return;
+    void runSignOut(signOutAll);
   }
 
   return (
@@ -45,11 +53,14 @@ export default function ProfilePage() {
       <h2>אווטאר</h2>
       <AvatarPicker current={user.avatar} />
 
-      <h2>אבטחה</h2>
-      <button type="button" onClick={() => void handleSignOutAll()}>
+      <h2>חשבון</h2>
+      <button type="button" onClick={() => void runSignOut(signOut)}>
+        התנתקות
+      </button>
+      <button type="button" onClick={handleSignOutAll}>
         התנתקות מכל המכשירים
       </button>
-      {signOutFailed && <p role="alert">ההתנתקות נכשלה, נסו שוב</p>}
+      {signOutError && <p role="alert">ההתנתקות נכשלה, נסו שוב</p>}
     </section>
   );
 }

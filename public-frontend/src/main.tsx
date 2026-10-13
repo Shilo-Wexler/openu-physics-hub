@@ -2,6 +2,10 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 
+// Self-hosted Heebo (variable weights): bundled by Vite and served from our
+// own domain, so no request goes to a third-party font server.
+import "@fontsource-variable/heebo";
+
 import App from "./App";
 import { AuthProvider } from "./features/auth/AuthContext";
 import "./shared/styles/global.css";

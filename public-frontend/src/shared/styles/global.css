@@ -1,52 +1,87 @@
-/* Design tokens: every color and size the site uses is defined once here. */
+/* Design tokens: every color and size the site uses is defined once here.
+   Look: black and white, thin dividers instead of cards (design "2b"). */
 :root {
-  --color-bg: #f7f8fa;
+  /* Colors */
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-text: #1c1e21;
-  --color-text-muted: #5f6368;
-  --color-border: #e1e4e8;
-  --color-primary: #2563eb;
-  --color-primary-soft: #e8efff;
+  --color-surface-muted: #f5f5f5; /* quotes, inputs, hover */
+  --color-text: #0a0a0a;
+  --color-text-muted: #6b6b6b;
+  --color-border: #ececec; /* dividers */
+  --color-border-strong: #d6d6d6; /* inputs, secondary buttons */
+  --color-primary: #0a0a0a; /* main buttons, active states, filled stars */
+  --color-on-primary: #ffffff; /* text on a primary background */
+  --color-primary-soft: #f2f2f2;
+  --color-star-empty: #dcdcdc;
+  --color-danger: #b42318; /* errors only; the one non-gray color */
 
-  /* Avatar backgrounds; Avatar.tsx picks one by the avatar's place in its list. */
-  --avatar-bg-1: #dbeafe;
-  --avatar-bg-2: #ede9fe;
-  --avatar-bg-3: #fce7f3;
-  --avatar-bg-4: #dcfce7;
-  --avatar-bg-5: #fef3c7;
-  --avatar-bg-6: #e0f2fe;
+  /* Avatar backgrounds; Avatar.tsx picks one by the avatar's place in its list.
+     Near-neutral tints, so the colorful emoji stand out and the page stays calm. */
+  --avatar-bg-1: #f1f1f1;
+  --avatar-bg-2: #eef0f3;
+  --avatar-bg-3: #f3efec;
+  --avatar-bg-4: #edf1ee;
+  --avatar-bg-5: #f2f0ea;
+  --avatar-bg-6: #efeef3;
 
-  --radius: 10px;
+  /* Typography */
+  --font-sans:
+    "Heebo Variable", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --weight-light: 300; /* big titles */
+  --weight-regular: 400;
+  --weight-medium: 500; /* names, buttons */
+  --weight-bold: 700; /* small labels, the logo */
+  --text-xs: 0.75rem; /* 12px: times, footer */
+  --text-sm: 0.875rem; /* 14px: replies, secondary text */
+  --text-md: 1rem; /* 16px: body */
+  --text-lg: 1.25rem; /* 20px */
+  --text-xl: 2rem; /* 32px: page titles on a phone */
+  --text-2xl: 3rem; /* 48px: page titles on a computer */
+
+  /* Shape and spacing */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 16px;
   --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+  --tap-size: 44px; /* minimum touch target */
   --content-width: 960px;
+  --bottom-nav-height: 56px; /* BottomNav's tab height, phone only */
 
-  /* System fonts: no download, so text shows immediately. */
-  font-family:
-    system-ui, -apple-system, "Segoe UI", Arial, "Noto Sans Hebrew", sans-serif;
-  line-height: 1.5;
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: 1.6;
   color: var(--color-text);
   background: var(--color-bg);
   color-scheme: light dark;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Dark mode follows the device setting: the same design, inverted. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #121417;
-    --color-surface: #1c1f24;
-    --color-text: #e8eaed;
-    --color-text-muted: #9aa0a6;
-    --color-border: #2f343b;
-    --color-primary: #6b9bff;
-    --color-primary-soft: #1f2a40;
-    --avatar-bg-1: #1e3a5f;
-    --avatar-bg-2: #3b2f5c;
-    --avatar-bg-3: #4a2640;
-    --avatar-bg-4: #1f4030;
-    --avatar-bg-5: #4a3b1a;
-    --avatar-bg-6: #1c3d52;
+    --color-bg: #0a0a0a;
+    --color-surface: #0a0a0a;
+    --color-surface-muted: #171717;
+    --color-text: #f5f5f5;
+    --color-text-muted: #a3a3a3;
+    --color-border: #232323;
+    --color-border-strong: #3a3a3a;
+    --color-primary: #f5f5f5;
+    --color-on-primary: #0a0a0a;
+    --color-primary-soft: #1c1c1c;
+    --color-star-empty: #3a3a3a;
+    --color-danger: #f97066;
+    --avatar-bg-1: #1f1f1f;
+    --avatar-bg-2: #1d2026;
+    --avatar-bg-3: #251f1c;
+    --avatar-bg-4: #1c221e;
+    --avatar-bg-5: #23211b;
+    --avatar-bg-6: #201f26;
   }
 }
 
@@ -61,35 +96,17 @@ body {
   min-height: 100vh;
 }
 
-header {
-  background: var(--color-surface);
-  border-block-end: 1px solid var(--color-border);
+/* Phone: room at the bottom, so the fixed bottom bar never covers the page's end. */
+@media (max-width: 640px) {
+  body {
+    padding-block-end: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+  }
 }
 
-nav {
-  display: flex;
-  gap: var(--space-2);
-  max-width: var(--content-width);
-  margin-inline: auto;
-  padding: var(--space-2) var(--space-3);
-}
-
-nav a {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-nav a:hover {
-  color: var(--color-text);
-}
-
-/* NavLink adds the "active" class to the link of the current page. */
-nav a.active {
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-  font-weight: 600;
+/* One visible focus ring for keyboard users, everywhere. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 main {
