@@ -15,6 +15,9 @@ export default defineConfig({
     // browser sees one origin, the same as behind the Ingress in production.
     proxy: {
       "/api/chat": "http://localhost:8000",
+      // admin-backend: the only two routes the public site uses.
+      "/api/inquiries": "http://localhost:8001",
+      "/api/announcements": "http://localhost:8001",
     },
   },
 });

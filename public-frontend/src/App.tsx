@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router";
 
 import { GENERAL_COURSE_ID } from "./shared/api/chat";
 import AboutPage from "./features/about/AboutPage";
+import AnnouncementsPage from "./features/announcements/AnnouncementsPage";
 import SignInDialog from "./features/auth/SignInDialog";
 import SignInDonePage from "./features/auth/SignInDonePage";
 import ChatHubPage from "./features/chat/ChatHubPage";
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<CourseChatPage />} />
           <Route path="/courses/:courseId/m/:messageId" element={<CourseChatPage />} />
+          <Route path="/announcements" element={<AnnouncementsPage />} />
           <Route path="/inquiry" element={<InquiryPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/about" element={<AboutPage />} />
