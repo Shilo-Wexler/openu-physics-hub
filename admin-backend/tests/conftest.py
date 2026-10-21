@@ -1,5 +1,5 @@
 """Shared test setup: a throwaway database, one app client, a fake Google, a test Cloudflare Access key,
-and request helpers."""
+a fake Turnstile, and request helpers."""
 
 import csv
 import os
@@ -37,10 +37,13 @@ os.environ["CF_ACCESS_AUD"] = ACCESS_AUD
 os.environ["CHAT_API_URL"] = "http://chat.test"
 os.environ["MOD_API_TOKEN"] = "test-" + "x" * 32
 os.environ.pop("MOD_API_TOKEN_FILE", None)
+# Cloudflare Turnstile is never called for real: tests replace app.turnstile._send.
+os.environ["TURNSTILE_SECRET"] = "test-turnstile-secret"
+os.environ.pop("TURNSTILE_SECRET_FILE", None)
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app import auth  # noqa: E402
+from app import auth, turnstile  # noqa: E402
 from app.main import app  # noqa: E402
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -53,6 +56,9 @@ STUDENT_EMAIL = "student@test.com"
 # Stands in for Cloudflare's signing key. Tests sign real RS256 tokens with it.
 ACCESS_KEY_ID = "test-key"
 ACCESS_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+# The only Turnstile token the fake Cloudflare accepts.
+TURNSTILE_OK = "turnstile-ok"
 
 
 def bearer(token: str) -> dict:
@@ -90,6 +96,28 @@ class _FakeJwks:
         if jwt.get_unverified_header(token).get("kid") != ACCESS_KEY_ID:
             raise PyJWKClientError("unknown key id")
         return SimpleNamespace(key=ACCESS_KEY.public_key())
+
+
+class _FakeTurnstile:
+    """Stands in for Cloudflare's siteverify call (turnstile._send). Accepts TURNSTILE_OK only.
+
+    calls: every (secret, token) it was asked about, so tests can check it was (or was not) called.
+    error: when set, raised instead of answering, like a network failure.
+    error_codes: what a rejection reports, e.g. ["invalid-input-secret"] for a wrong secret.
+    """
+
+    def __init__(self):
+        self.calls: list[tuple[str, str]] = []
+        self.error: Exception | None = None
+        self.error_codes: list[str] = ["invalid-input-response"]
+
+    def __call__(self, secret: str, token: str) -> dict:
+        self.calls.append((secret, token))
+        if self.error is not None:
+            raise self.error
+        if token == TURNSTILE_OK:
+            return {"success": True, "error-codes": []}
+        return {"success": False, "error-codes": self.error_codes}
 
 
 def courses_from_csv() -> list[tuple[int, str]]:
@@ -156,15 +184,44 @@ def _fake_verify(token, request, audience, clock_skew_in_seconds=0):
     return {"email": token, "email_verified": True, "name": "Test User"}
 
 
+@pytest.fixture
+def fake_turnstile(monkeypatch):
+    """The fake Cloudflare Turnstile of the current test. Ask for it to change its answer or read its calls."""
+    fake = _FakeTurnstile()
+    monkeypatch.setattr(turnstile, "_send", fake)
+    return fake
+
+
 @pytest.fixture(autouse=True)
-def _fresh_data(client, monkeypatch):
-    """Each test starts with no requests, no blocks, no announcements, one admin, a fake Google and the
-    test Cloudflare key."""
-    run_sql("truncate requests, blocked_emails, admins, moderation_actions, announcements restart identity")
+def _fresh_data(client, monkeypatch, fake_turnstile):
+    """Each test starts with no requests, no inquiries, no blocks, no announcements, one admin, a fake Google,
+    a fake Turnstile and the test Cloudflare key."""
+    run_sql(
+        "truncate requests, inquiries, blocked_emails, admins, moderation_actions, announcements restart identity"
+    )
     run_sql("insert into admins (email) values (%s)", (ADMIN_EMAIL,))
     monkeypatch.setattr(auth.id_token, "verify_oauth2_token", _fake_verify)
     monkeypatch.setattr(auth, "_jwks_client", _FakeJwks())
     monkeypatch.setattr(auth, "DEV_AUTH_EMAIL", None)
+
+
+@pytest.fixture
+def inquire(client):
+    """inquire(content="...") posts through POST /api/inquiries, like the public form; any field can be
+    overridden. The default passes every check and is saved."""
+
+    def _inquire(**overrides):
+        payload = {
+            "course_id": 0,
+            "type": "exams",
+            "content": "Test inquiry",
+            "website": "",
+            "turnstile_token": TURNSTILE_OK,
+        }
+        payload.update(overrides)
+        return client.post("/api/inquiries", json=payload)
+
+    return _inquire
 
 
 @pytest.fixture
