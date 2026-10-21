@@ -1,17 +1,26 @@
 import { useCallback, useState } from "react";
 
-import { clearIdentity, identityFromToken, loadIdentity, saveIdentity, type Area, type Identity } from "./identity";
+import {
+  CLOUDFLARE_LOGOUT_URL,
+  DEV_SIGN_IN,
+  clearIdentity,
+  devIdentity,
+  loadIdentity,
+  saveIdentity,
+  type Area,
+  type Identity,
+} from "./identity";
 
-/** The signed-in identity of one area, plus signIn(token) and signOut(). */
+/** The signed-in identity of one area, plus signIn(email) (dev only) and signOut(). */
 export function useIdentity(area: Area) {
   const [identity, setIdentity] = useState<Identity | null>(() => loadIdentity(area));
   const [error, setError] = useState<string | null>(null);
 
   const signIn = useCallback(
-    (token: string) => {
-      const next = identityFromToken(token);
+    (email: string) => {
+      const next = devIdentity(email);
       if (!next) {
-        setError("ההתחברות נכשלה, כי לא התקבלה כתובת מייל מהחשבון. נסו שוב.");
+        setError("ההתחברות נכשלה, כי כתובת המייל לא תקינה. נסו שוב.");
         return;
       }
       setError(null);
@@ -22,6 +31,11 @@ export function useIdentity(area: Area) {
   );
 
   const signOut = useCallback(() => {
+    if (!DEV_SIGN_IN) {
+      // Only Cloudflare can end its own session (its cookie is not readable here).
+      window.location.assign(CLOUDFLARE_LOGOUT_URL);
+      return;
+    }
     clearIdentity(area);
     setIdentity(null);
   }, [area]);
