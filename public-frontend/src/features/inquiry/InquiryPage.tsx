@@ -6,7 +6,8 @@ import { GENERAL_COURSE_ID, listCourses, type Course } from "../../shared/api/ch
 import { ApiError } from "../../shared/api/client";
 import SegmentedControl, { type SegmentOption } from "../../shared/components/SegmentedControl";
 import CourseSearch from "../courses/CourseSearch";
-import { INQUIRY_TYPES, MAX_INQUIRY_LENGTH, sendInquiry, type InquiryType } from "./api";
+import { INQUIRY_TYPES, MAX_INQUIRY_LENGTH, TURNSTILE_ERRORS, sendInquiry, type InquiryType } from "./api";
+import TurnstileWidget from "./TurnstileWidget";
 import styles from "./InquiryPage.module.css";
 
 const TYPE_LABELS: Record<InquiryType, string> = {
@@ -16,6 +17,9 @@ const TYPE_LABELS: Record<InquiryType, string> = {
   admin: "מנהלה ותוכנית לימודים",
   other: "אחר",
 };
+
+// Public by design (it is in the page anyway); the matching secret lives only on the server.
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 // The counter appears only near the limit, as in the chat's writing box.
 const SHOW_COUNTER_FROM = MAX_INQUIRY_LENGTH - 300;
@@ -53,6 +57,12 @@ export default function InquiryPage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Turnstile: the current token (single use), whether the check could not run, and the widget's
+  // key. A new key remounts the widget, which fetches a fresh token.
+  const [token, setToken] = useState<string | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
+  const [widgetKey, setWidgetKey] = useState(0);
+
   // The courses come from the chat backend (the same shared/courses.csv). Loaded only once the
   // reader says the inquiry is about a course, so a general inquiry costs no extra request.
   const needCourses = scope === "course" && courses === null && !coursesFailed;
@@ -71,12 +81,18 @@ export default function InquiryPage() {
 
   const courseId = scope === "general" ? GENERAL_COURSE_ID : (course?.id ?? null);
   const text = content.trim();
-  const ready = courseId !== null && type !== "" && text !== "" && !sending;
+  const filled = courseId !== null && type !== "" && text !== "";
+  const ready = filled && token !== null && !sending;
+
+  function handleToken(newToken: string | null) {
+    setToken(newToken);
+    if (newToken) setCheckFailed(false);
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    // TypeScript follows the checks inside `ready`: below, courseId is a number and type an
-    // InquiryType.
+    // TypeScript follows the checks inside `ready`: below, courseId is a number, type an
+    // InquiryType and token a string.
     if (!ready) return;
     setSending(true);
     setError(null);
@@ -86,11 +102,14 @@ export default function InquiryPage() {
         type,
         content: text,
         website,
-        turnstile_token: null,
+        turnstile_token: token,
       });
       setSent(true);
     } catch (sendError) {
       setError(errorMessage(sendError));
+      // The token was used up by this attempt either way: get a fresh one for the next.
+      setToken(null);
+      setWidgetKey((key) => key + 1);
     } finally {
       setSending(false);
     }
@@ -101,6 +120,7 @@ export default function InquiryPage() {
     setCourse(null);
     setType("");
     setContent("");
+    setToken(null);
     setSent(false);
   }
 
@@ -216,6 +236,30 @@ export default function InquiryPage() {
           </label>
         </div>
 
+        {/* Usually invisible; shows a checkbox only when Cloudflare is unsure. */}
+        {TURNSTILE_SITE_KEY && (
+          <TurnstileWidget
+            key={widgetKey}
+            siteKey={TURNSTILE_SITE_KEY}
+            onToken={handleToken}
+            onFail={() => setCheckFailed(true)}
+          />
+        )}
+
+        {!TURNSTILE_SITE_KEY ? (
+          <p className={styles.error} role="alert">
+            טופס הפניות לא זמין כרגע. נסו שוב מאוחר יותר.
+          </p>
+        ) : checkFailed ? (
+          <p className={styles.error} role="alert">
+            לא הצלחנו לוודא שהשליחה מאדם. רעננו את הדף ונסו שוב.
+          </p>
+        ) : (
+          filled &&
+          token === null &&
+          !sending && <p className={styles.status}>מאמתים את השליחה...</p>
+        )}
+
         {error && (
           <p className={styles.error} role="alert">
             {error}
@@ -232,6 +276,10 @@ export default function InquiryPage() {
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 429) return "נשלחו הרבה פניות בזמן קצר. נסו שוב מאוחר יותר.";
+    if (error.status === 503) return "השירות לא זמין כרגע. נסו שוב בעוד כמה דקות.";
+    if (error.status === 422 && TURNSTILE_ERRORS.includes(error.message)) {
+      return "האימות נכשל. נסו לשלוח שוב.";
+    }
     if (error.status === 422) return "אחד השדות לא תקין. בדקו ונסו שוב.";
   }
   return "השליחה נכשלה, נסו שוב";
