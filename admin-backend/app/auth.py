@@ -1,20 +1,31 @@
-"""Google ID token verification and the admin check."""
+"""Console sign-in (Cloudflare Access JWT), the old student Google ID token check, and the admin check."""
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from fastapi import Depends, HTTPException, status
+import jwt
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
+from jwt.exceptions import InvalidTokenError, PyJWKClientConnectionError, PyJWKClientError
 from psycopg import Connection
 
-from .config import DEV_AUTH_EMAIL, GOOGLE_CLIENT_ID
+from .config import CF_ACCESS_AUD, CF_ACCESS_TEAM_DOMAIN, DEV_AUTH_EMAIL, GOOGLE_CLIENT_ID
 from .db import get_conn
 
 _transport = google_requests.Request()
-# Adds the "Authorize" button in /docs. auto_error=False so we return our own 401.
+# Adds the "Authorize" button in /docs (for the dev tokens). auto_error=False so we return our own 401.
 _bearer = HTTPBearer(auto_error=False)
+
+ACCESS_HEADER = "Cf-Access-Jwt-Assertion"
+CLOCK_SKEW_SECONDS = 10
+# Cloudflare's public signing keys. PyJWKClient caches them, so they are not downloaded on every request.
+_jwks_client = (
+    jwt.PyJWKClient(f"https://{CF_ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs", cache_keys=True)
+    if CF_ACCESS_TEAM_DOMAIN
+    else None
+)
 
 
 @dataclass
@@ -39,7 +50,7 @@ def _dev_user(token: str) -> GoogleUser | None:
     return None
 
 
-# SHARED: used by the admin check (require_admin) and by the STUDENT-SIDE submission.
+# STUDENT-SIDE: the old POST /api/requests. The console no longer signs in with Google.
 def verify_google_token(token: str) -> GoogleUser:
     """Checks signature, audience, issuer and expiry. Returns the verified, lowercased email."""
     dev = _dev_user(token)
@@ -47,7 +58,7 @@ def verify_google_token(token: str) -> GoogleUser:
         return dev
     try:
         claims = id_token.verify_oauth2_token(
-            token, _transport, GOOGLE_CLIENT_ID, clock_skew_in_seconds=10
+            token, _transport, GOOGLE_CLIENT_ID, clock_skew_in_seconds=CLOCK_SKEW_SECONDS
         )
     except ValueError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired token")
@@ -56,14 +67,43 @@ def verify_google_token(token: str) -> GoogleUser:
     return GoogleUser(email=claims["email"].strip().lower(), name=claims.get("name"))
 
 
+def verify_access_token(token: str) -> GoogleUser:
+    """Checks the Cloudflare Access JWT: signature, audience, issuer and expiry. Returns the lowercased email.
+    Verified here too (not only trusted), so a request that reaches us without Cloudflare cannot forge it."""
+    if _jwks_client is None or CF_ACCESS_AUD is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "cloudflare access is not configured")
+    try:
+        key = _jwks_client.get_signing_key_from_jwt(token).key
+        claims = jwt.decode(
+            token,
+            key,
+            algorithms=["RS256"],
+            audience=CF_ACCESS_AUD,
+            issuer=f"https://{CF_ACCESS_TEAM_DOMAIN}",
+            leeway=CLOCK_SKEW_SECONDS,
+            options={"require": ["exp", "iat", "aud", "iss", "email"]},
+        )
+    except PyJWKClientConnectionError:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "sign-in keys unavailable")
+    except (PyJWKClientError, InvalidTokenError):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired token")
+    email = str(claims["email"]).strip().lower()
+    if "@" not in email:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired token")
+    return GoogleUser(email=email, name=None)
+
+
 def require_admin(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    access_token: str | None = Header(None, alias=ACCESS_HEADER),
     conn: Connection = Depends(get_conn),
 ) -> GoogleUser:
-    """Expects 'Authorization: Bearer <google id token>' from an email listed in admins."""
-    if credentials is None or not credentials.credentials:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing bearer token")
-    user = verify_google_token(credentials.credentials)
+    """Expects the Cloudflare Access header from an email listed in admins (or a dev token in dev)."""
+    user = _dev_user(credentials.credentials) if credentials and credentials.credentials else None
+    if user is None:
+        if not access_token:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing access token")
+        user = verify_access_token(access_token)
     row = conn.execute("select roles from admins where email = %s", (user.email,)).fetchone()
     if row is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not an admin")

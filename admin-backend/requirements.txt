@@ -6,3 +6,4 @@ google-auth==2.*
 requests==2.*
 python-dotenv==1.*
 Pillow==12.*
+PyJWT[crypto]==2.*

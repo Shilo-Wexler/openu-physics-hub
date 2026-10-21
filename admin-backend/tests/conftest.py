@@ -1,12 +1,18 @@
-"""Shared test setup: a throwaway database, one app client, a fake Google, and request helpers."""
+"""Shared test setup: a throwaway database, one app client, a fake Google, a test Cloudflare Access key,
+and request helpers."""
 
 import csv
 import os
+import time
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import urlparse
 
+import jwt
 import psycopg
 import pytest
+from cryptography.hazmat.primitives.asymmetric import rsa
+from jwt.exceptions import PyJWKClientError
 
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "")
 if not TEST_DATABASE_URL:
@@ -15,12 +21,18 @@ if not TEST_DATABASE_URL:
 if not urlparse(TEST_DATABASE_URL).path.endswith("_test"):
     pytest.exit("TEST_DATABASE_URL must point to a database whose name ends with _test", returncode=2)
 
+ACCESS_TEAM_DOMAIN = "test.cloudflareaccess.com"
+ACCESS_AUD = "test-aud"
+
 # Settings are read when the app is imported, so they are set before the imports below.
-# DEV_AUTH_EMAIL is set to empty (not removed) so a local .env cannot turn the dev bypass on.
+# ENV and DEV_AUTH_EMAIL are set (not removed) so a local .env cannot turn dev mode on.
+os.environ["ENV"] = "prod"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["GOOGLE_CLIENT_ID"] = "test-client"
 os.environ["ALLOWED_ORIGINS"] = "http://localhost:5173"
 os.environ["DEV_AUTH_EMAIL"] = ""
+os.environ["CF_ACCESS_TEAM_DOMAIN"] = ACCESS_TEAM_DOMAIN
+os.environ["CF_ACCESS_AUD"] = ACCESS_AUD
 # The chat backend is never called for real: tests replace app.chat_client._send.
 os.environ["CHAT_API_URL"] = "http://chat.test"
 os.environ["MOD_API_TOKEN"] = "test-" + "x" * 32
@@ -38,12 +50,46 @@ COURSES_CSV = BACKEND_DIR.parent / "shared" / "courses.csv"
 ADMIN_EMAIL = "admin@test.com"
 STUDENT_EMAIL = "student@test.com"
 
+# Stands in for Cloudflare's signing key. Tests sign real RS256 tokens with it.
+ACCESS_KEY_ID = "test-key"
+ACCESS_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
 
 def bearer(token: str) -> dict:
+    """STUDENT-SIDE Google token, or a dev token ("dev", "dev:<email>")."""
     return {"Authorization": f"Bearer {token}"}
 
 
-ADMIN = bearer(ADMIN_EMAIL)
+def access_token(email: str, key=ACCESS_KEY, **overrides) -> str:
+    """A Cloudflare Access JWT for this email, signed with the test key. Any claim can be overridden."""
+    now = int(time.time())
+    claims = {
+        "email": email,
+        "aud": [ACCESS_AUD],
+        "iss": f"https://{ACCESS_TEAM_DOMAIN}",
+        "iat": now,
+        "exp": now + 3600,
+        "sub": "test-user-id",
+    }
+    claims.update(overrides)
+    return jwt.encode(claims, key, algorithm="RS256", headers={"kid": ACCESS_KEY_ID})
+
+
+def access(email: str) -> dict:
+    """Headers for a console request as this email, the way Cloudflare Access adds them."""
+    return {auth.ACCESS_HEADER: access_token(email)}
+
+
+ADMIN = access(ADMIN_EMAIL)
+
+
+class _FakeJwks:
+    """Stands in for Cloudflare's key endpoint only. Signature and claims are still verified for real."""
+
+    def get_signing_key_from_jwt(self, token: str):
+        if jwt.get_unverified_header(token).get("kid") != ACCESS_KEY_ID:
+            raise PyJWKClientError("unknown key id")
+        return SimpleNamespace(key=ACCESS_KEY.public_key())
 
 
 def courses_from_csv() -> list[tuple[int, str]]:
@@ -112,10 +158,12 @@ def _fake_verify(token, request, audience, clock_skew_in_seconds=0):
 
 @pytest.fixture(autouse=True)
 def _fresh_data(client, monkeypatch):
-    """Each test starts with no requests, no blocks, no announcements, one admin, and a fake Google."""
+    """Each test starts with no requests, no blocks, no announcements, one admin, a fake Google and the
+    test Cloudflare key."""
     run_sql("truncate requests, blocked_emails, admins, moderation_actions, announcements restart identity")
     run_sql("insert into admins (email) values (%s)", (ADMIN_EMAIL,))
     monkeypatch.setattr(auth.id_token, "verify_oauth2_token", _fake_verify)
+    monkeypatch.setattr(auth, "_jwks_client", _FakeJwks())
     monkeypatch.setattr(auth, "DEV_AUTH_EMAIL", None)
 
 

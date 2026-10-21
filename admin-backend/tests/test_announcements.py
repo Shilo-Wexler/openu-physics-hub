@@ -7,7 +7,7 @@ from PIL import Image
 
 from app.images import MAX_SIDE
 from app.routes.announcements import PUBLIC_PAGE_SIZE
-from conftest import ADMIN_EMAIL, bearer, run_sql
+from conftest import ADMIN_EMAIL, access, run_sql
 
 
 def image_bytes(width: int = 3000, height: int = 2000, fmt: str = "JPEG") -> bytes:
@@ -356,9 +356,9 @@ def test_console_needs_the_announcements_role(client):
     )
     url = "/api/admin/announcements"
     assert client.get(url).status_code == 401
-    assert client.get(url, headers=bearer("stranger@test.com")).status_code == 403
-    assert client.get(url, headers=bearer("mod@test.com")).json() == {"detail": "requires the announcements role"}
+    assert client.get(url, headers=access("stranger@test.com")).status_code == 403
+    assert client.get(url, headers=access("mod@test.com")).json() == {"detail": "requires the announcements role"}
 
-    response = client.post(url, json={"title": "x"}, headers=bearer("ann@test.com"))
+    response = client.post(url, json={"title": "x"}, headers=access("ann@test.com"))
     assert response.status_code == 201
     assert response.json()["author_email"] == "ann@test.com"
