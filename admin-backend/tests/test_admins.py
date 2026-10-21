@@ -5,7 +5,7 @@
 
 import pytest
 
-from conftest import ADMIN_EMAIL, STUDENT_EMAIL, bearer, run_sql
+from conftest import ADMIN_EMAIL, STUDENT_EMAIL, access, run_sql
 
 NEW = "new.admin@test.com"
 STAFF = "staff@test.com"
@@ -18,7 +18,7 @@ def staff(client):
     run_sql("insert into admins (email, roles, added_by) values (%s, %s, %s)", (STAFF, STANDARD, ADMIN_EMAIL))
 
     def _call(method, path, **kwargs):
-        return client.request(method, f"/api/admin{path}", headers=bearer(STAFF), **kwargs)
+        return client.request(method, f"/api/admin{path}", headers=access(STAFF), **kwargs)
 
     return _call
 
@@ -113,14 +113,14 @@ def test_invalid_roles_are_rejected(admin, roles):
 
 
 def test_added_admin_gets_access_at_once(admin, client):
-    assert client.get("/api/admin/me", headers=bearer(NEW)).status_code == 403
+    assert client.get("/api/admin/me", headers=access(NEW)).status_code == 403
     admin("POST", "/admins", json={"email": NEW})
-    assert client.get("/api/admin/me", headers=bearer(NEW)).status_code == 200
+    assert client.get("/api/admin/me", headers=access(NEW)).status_code == 200
 
 
 def test_a_full_admin_added_in_the_console_can_add_another(admin, client):
     admin("POST", "/admins", json={"email": NEW, "roles": ["admin"]})
-    response = client.post("/api/admin/admins", headers=bearer(NEW), json={"email": "third@test.com"})
+    response = client.post("/api/admin/admins", headers=access(NEW), json={"email": "third@test.com"})
     assert (response.status_code, response.json()["added_by"]) == (201, NEW)
 
 
@@ -146,11 +146,11 @@ def test_invalid_email_is_rejected(admin, bad):
 
 def test_promote_and_demote(admin, client):
     admin("POST", "/admins", json={"email": NEW})
-    assert client.post("/api/admin/admins", headers=bearer(NEW), json={"email": "x@test.com"}).status_code == 403
+    assert client.post("/api/admin/admins", headers=access(NEW), json={"email": "x@test.com"}).status_code == 403
     assert admin("PUT", f"/admins/{NEW}/roles", json={"roles": ["admin"]}).json()["roles"] == ["admin"]
-    assert client.post("/api/admin/admins", headers=bearer(NEW), json={"email": "x@test.com"}).status_code == 201
+    assert client.post("/api/admin/admins", headers=access(NEW), json={"email": "x@test.com"}).status_code == 201
     assert admin("PUT", f"/admins/{NEW.upper()}/roles", json={"roles": STANDARD}).json()["roles"] == STANDARD
-    assert client.delete("/api/admin/admins/x@test.com", headers=bearer(NEW)).status_code == 403
+    assert client.delete("/api/admin/admins/x@test.com", headers=access(NEW)).status_code == 403
 
 
 def test_cannot_change_your_own_roles(admin):
@@ -174,7 +174,7 @@ def test_remove_takes_access_away_at_once(admin, client):
     admin("POST", "/admins", json={"email": NEW})
     assert admin("DELETE", f"/admins/{NEW}").status_code == 204
     assert NEW not in admins(admin)
-    assert client.get("/api/admin/me", headers=bearer(NEW)).status_code == 403
+    assert client.get("/api/admin/me", headers=access(NEW)).status_code == 403
 
 
 def test_remove_is_case_insensitive(admin):
@@ -194,6 +194,6 @@ def test_remove_unknown(admin):
 
 @pytest.mark.parametrize("method, path", [("GET", "/admins"), ("POST", "/admins"), ("DELETE", f"/admins/{ADMIN_EMAIL}")])
 def test_non_admin_cannot_manage_admins(client, method, path):
-    response = client.request(method, f"/api/admin{path}", headers=bearer(STUDENT_EMAIL), json={"email": NEW})
+    response = client.request(method, f"/api/admin{path}", headers=access(STUDENT_EMAIL), json={"email": NEW})
     assert response.status_code == 403
     assert run_sql("select email from admins") == [(ADMIN_EMAIL,)]

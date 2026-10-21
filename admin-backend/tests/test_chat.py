@@ -4,7 +4,7 @@ import pytest
 import requests
 
 from app import chat_client
-from conftest import ADMIN_EMAIL, STUDENT_EMAIL, bearer, run_sql
+from conftest import ADMIN_EMAIL, STUDENT_EMAIL, access, run_sql
 
 USER = "282a1af8-19c7-44ad-ab32-a3f800c83450"
 REPORTED = [{"message_id": 197, "course_name": "מכניקה", "content": "ספאם", "author_id": USER, "report_count": 2}]
@@ -149,7 +149,7 @@ def test_bad_user_id(admin, chat):
     assert chat.calls == []
 
 
-@pytest.mark.parametrize("headers, status", [({}, 401), (bearer(STUDENT_EMAIL), 403)])
+@pytest.mark.parametrize("headers, status", [({}, 401), (access(STUDENT_EMAIL), 403)])
 def test_needs_admin(client, chat, headers, status):
     assert client.post("/api/admin/chat/messages/1/remove", headers=headers).status_code == status
     assert chat.calls == []

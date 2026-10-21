@@ -2,7 +2,7 @@
 
 import pytest
 
-from conftest import ADMIN_EMAIL, STUDENT_EMAIL, bearer, courses_from_csv, run_sql
+from conftest import ADMIN_EMAIL, STUDENT_EMAIL, access, bearer, courses_from_csv, run_sql
 
 MISSING = 999999
 
@@ -14,8 +14,8 @@ MISSING = 999999
     [
         ({}, 401),                                         # no token
         ({"Authorization": "Basic abc"}, 401),             # wrong scheme
-        (bearer("not-a-token"), 401),                      # Google rejects the token
-        (bearer(STUDENT_EMAIL), 403),                      # valid, but not an admin
+        ({"Cf-Access-Jwt-Assertion": "not-a-token"}, 401),                      # not a valid JWT
+        (access(STUDENT_EMAIL), 403),                      # valid, but not an admin
     ],
 )
 def test_access(client, headers, status):
@@ -32,8 +32,8 @@ def test_dev_bypass_only_when_enabled(client, monkeypatch):
 
 
 def test_me(admin, client):
-    assert admin("GET", "/me").json() == {"email": ADMIN_EMAIL, "name": "Test User", "roles": ["admin"]}
-    assert client.get("/api/admin/me", headers=bearer(STUDENT_EMAIL)).status_code == 403
+    assert admin("GET", "/me").json() == {"email": ADMIN_EMAIL, "name": None, "roles": ["admin"]}
+    assert client.get("/api/admin/me", headers=access(STUDENT_EMAIL)).status_code == 403
 
 
 # ---------- Lists and single request ----------
@@ -193,7 +193,7 @@ def test_block_twice_updates_reason(admin):
 
 
 def test_hebrew_response_has_utf8_charset(client):
-    response = client.get("/api/admin/courses", headers=bearer(ADMIN_EMAIL))
+    response = client.get("/api/admin/courses", headers=access(ADMIN_EMAIL))
     assert "charset=utf-8" in response.headers["content-type"]
     assert "כללי" in [c["name"] for c in response.json()]
 

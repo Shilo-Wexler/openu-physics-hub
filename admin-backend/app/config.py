@@ -33,13 +33,34 @@ def _dev_auth_email(env: str) -> str | None:
     return email
 
 
+def _required_in_prod(name: str, env: str) -> str | None:
+    """Required when ENV=prod. In dev it may be missing, and then the feature that needs it is off."""
+    value = os.environ.get(name, "").strip() or None
+    if value is None and env == "prod":
+        raise RuntimeError(f"Missing required environment variable: {name} (required when ENV=prod)")
+    return value
+
+
+def _team_domain(value: str | None) -> str | None:
+    """Accepts "team.cloudflareaccess.com" with or without https:// and a trailing slash."""
+    if value is None:
+        return None
+    return value.removeprefix("https://").rstrip("/")
+
+
 ENV = _environment()
 DATABASE_URL = _required("DATABASE_URL")
 GOOGLE_CLIENT_ID = _required("GOOGLE_CLIENT_ID")
 ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 
+# Console sign-in: Cloudflare Access sits in front of the console and adds a signed JWT to every request.
+# Team domain: Zero Trust dashboard -> Settings -> Custom pages, e.g. "openuvoice.cloudflareaccess.com".
+# AUD: the Access application's "Application Audience (AUD) Tag".
+CF_ACCESS_TEAM_DOMAIN = _team_domain(_required_in_prod("CF_ACCESS_TEAM_DOMAIN", ENV))
+CF_ACCESS_AUD = _required_in_prod("CF_ACCESS_AUD", ENV)
+
 # DEV ONLY. When set, the bearer token "dev" acts as this email and "dev:<email>" as any email,
-# without Google. Lets you test endpoints from /docs. Only allowed when ENV=dev.
+# without Cloudflare. Lets you test endpoints from /docs. Only allowed when ENV=dev.
 DEV_AUTH_EMAIL = _dev_auth_email(ENV)
 
 
