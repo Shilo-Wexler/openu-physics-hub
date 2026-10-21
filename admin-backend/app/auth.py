@@ -1,5 +1,6 @@
 """Google ID token verification and the admin check."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from fastapi import Depends, HTTPException, status
@@ -75,3 +76,15 @@ def require_full_admin(user: GoogleUser = Depends(require_admin)) -> GoogleUser:
     if not user.is_full_admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "requires the admin role")
     return user
+
+
+def require_role(role: str) -> Callable[..., GoogleUser]:
+    """A dependency for one area of the console: an admin with that role, or a full admin
+    (who may do everything). Usage: user: GoogleUser = Depends(require_role("announcements"))."""
+
+    def check(user: GoogleUser = Depends(require_admin)) -> GoogleUser:
+        if not user.is_full_admin and role not in user.roles:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, f"requires the {role} role")
+        return user
+
+    return check

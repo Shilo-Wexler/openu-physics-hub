@@ -7,6 +7,7 @@ import SignIn from "../../auth/SignIn";
 import { useIdentity } from "../../auth/useIdentity";
 import { LEVEL_LABEL, levelOf } from "../../lib/levels";
 import AdminsTab from "./AdminsTab";
+import AnnouncementsTab from "./AnnouncementsTab";
 import BlockedTab from "./BlockedTab";
 import ChatTab from "./ChatTab";
 import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./context";
@@ -94,13 +95,15 @@ export default function AdminPage() {
   return <AdminConsole identity={identity} roles={roles} onSignOut={signOut} onAuthError={onAuthError} />;
 }
 
-type Tab = "requests" | "stats" | "blocked" | "chat" | "admins";
+type Tab = "requests" | "stats" | "blocked" | "chat" | "announcements" | "admins";
 
-const TABS: { id: Tab; label: string }[] = [
+// role: the tab is shown only to admins with that role (or "admin"). The server checks it again.
+const TABS: { id: Tab; label: string; role?: string }[] = [
   { id: "requests", label: "פניות" },
   { id: "stats", label: "סטטיסטיקה" },
   { id: "blocked", label: "חסימות פניות" },
   { id: "chat", label: "ניהול הצ'אט" },
+  { id: "announcements", label: "הכרזות", role: "announcements" },
   { id: "admins", label: "מנהלים" },
 ];
 
@@ -115,6 +118,11 @@ function AdminConsole({ identity, roles, onSignOut, onAuthError }: ConsoleProps)
   const [tab, setTab] = useState<Tab>("requests");
   const [version, setVersion] = useState(0);
   const changed = useCallback(() => setVersion((v) => v + 1), []);
+
+  const tabs = useMemo(
+    () => TABS.filter((t) => !t.role || roles.includes("admin") || roles.includes(t.role)),
+    [roles],
+  );
 
   const context = useMemo<AdminContextValue>(
     () => ({
@@ -143,7 +151,7 @@ function AdminConsole({ identity, roles, onSignOut, onAuthError }: ConsoleProps)
       <SummaryBar />
 
       <div className="tabs" role="tablist">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             role="tab"
@@ -160,6 +168,7 @@ function AdminConsole({ identity, roles, onSignOut, onAuthError }: ConsoleProps)
       {tab === "stats" && <StatsTab />}
       {tab === "blocked" && <BlockedTab />}
       {tab === "chat" && <ChatTab />}
+      {tab === "announcements" && <AnnouncementsTab />}
       {tab === "admins" && <AdminsTab />}
     </AdminContext.Provider>
   );

@@ -46,3 +46,18 @@ class NewAdmin(BaseModel):
     @classmethod
     def _dedupe(cls, roles: list[str]) -> list[str]:
         return sorted(set(roles))
+
+
+# Announcements: lengths match db/migrations/005_announcements.sql.
+
+class AnnouncementIn(BaseModel):
+    """Creating or editing an announcement: always the whole text, so the console sends what it shows.
+    Publishing, pinning and the image each have their own route (/api/admin/announcements/{id}/...)."""
+
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+    # Plain text; may be empty (an announcement can be a title and an image).
+    body: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)] = ""
+
+
+# What an image upload must say about the picture, for screen readers (?alt= on the upload).
+ImageAlt = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]

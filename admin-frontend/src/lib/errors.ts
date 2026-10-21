@@ -29,6 +29,18 @@ const BY_DETAIL: Record<string, string> = {
   "chat moderation is not configured": "ניהול הצ'אט עוד לא מוגדר בשרת.",
   "chat backend unavailable": "שרת הצ'אט לא זמין כרגע. נסו שוב בעוד רגע.",
   "chat backend rejected the moderation token": "שרת הצ'אט דחה את החיבור. צריך לבדוק ש-MOD_API_TOKEN זהה בשני השרתים.",
+  // announcements
+  "requires the announcements role": "אין לך הרשאה לנהל הכרזות.",
+  "announcement not found": "ההכרזה לא נמצאה. ייתכן שמישהו אחר מחק אותה. רעננו את הדף.",
+  "announcement is not published": "אפשר לנעוץ לדף הבית רק הכרזה מפורסמת. רעננו את הדף.",
+  "invalid title": "הכותרת לא תקינה: צריך בין 1 ל-200 תווים.",
+  "missing title": "צריך כותרת.",
+  "invalid body": "הטקסט ארוך מדי: עד 5000 תווים.",
+  "invalid alt": "תיאור התמונה לא תקין: צריך בין 1 ל-300 תווים.",
+  "missing alt": "צריך תיאור קצר לתמונה.",
+  "image too large": "התמונה גדולה מדי. אפשר עד 10MB.",
+  "unsupported image type": "אפשר להעלות רק תמונות JPEG, PNG או WebP.",
+  "not an image": "הקובץ שנבחר אינו תמונה.",
 };
 
 /** Fallbacks by HTTP status (0 = the server was not reached). */
