@@ -20,8 +20,17 @@ const TYPE_LABELS: Record<InquiryType, string> = {
 // The counter appears only near the limit, as in the chat's writing box.
 const SHOW_COUNTER_FROM = MAX_INQUIRY_LENGTH - 300;
 
-// Moved off screen rather than display:none, which some bots check for before filling a field.
-const HONEYPOT_STYLE = { position: "absolute", left: "-10000px", width: 1, height: 1 } as const;
+// Shrunk to one clipped pixel rather than display:none, which some bots check for before filling
+// a field. Not moved off screen: in a right-to-left page, an element far to the left widens the
+// page, and a phone can then be dragged sideways into the empty space.
+const HONEYPOT_STYLE = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+} as const;
 
 // What the inquiry is about: the whole program, or one course picked with the search.
 type Scope = "general" | "course";
