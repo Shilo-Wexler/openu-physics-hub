@@ -1,4 +1,4 @@
-"""Input models. Lengths match the DB checks in db/migrations/001_init.sql."""
+"""Input models. Lengths match the DB checks in db/migrations/ (001_init.sql and later files)."""
 
 from typing import Annotated, Literal
 
@@ -61,3 +61,23 @@ class AnnouncementIn(BaseModel):
 
 # What an image upload must say about the picture, for screen readers (?alt= on the upload).
 ImageAlt = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
+
+
+# Inquiries: lengths and values match db/migrations/006_inquiries.sql.
+
+InquiryType = Literal["exams", "staff", "accessibility", "admin", "other"]
+
+
+class NewInquiry(BaseModel):
+    """The body of POST /api/inquiries, sent by the public site's anonymous form."""
+
+    # The course's number from shared/courses.csv; 0 is the general row (כללי). Stored as course_number.
+    course_id: int = Field(ge=0)
+    type: InquiryType
+    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
+    # Honeypot: a hidden field a person never fills. Not stored; the route drops the inquiry when it is set.
+    website: Annotated[str, StringConstraints(max_length=2000)] = ""
+    # Optional here only so the honeypot check runs first; the route rejects a missing token with 422.
+    # Cloudflare tokens are at most 2048 characters, so a longer one is rejected without a network call.
+    turnstile_token: Annotated[str, StringConstraints(max_length=2048)] | None = None
+    
