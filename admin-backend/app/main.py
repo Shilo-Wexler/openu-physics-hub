@@ -72,6 +72,7 @@ app.add_middleware(
 
 app.include_router(public.router)
 app.include_router(inquiries.router)
+app.include_router(inquiries.admin_router)
 app.include_router(admin.router)
 app.include_router(chat.router)
 app.include_router(announcements.router)

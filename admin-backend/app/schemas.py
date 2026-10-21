@@ -66,6 +66,7 @@ ImageAlt = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1,
 # Inquiries: lengths and values match db/migrations/006_inquiries.sql.
 
 InquiryType = Literal["exams", "staff", "accessibility", "admin", "other"]
+InquiryStatus = Literal["new", "in_progress", "closed"]
 
 
 class NewInquiry(BaseModel):
@@ -80,4 +81,12 @@ class NewInquiry(BaseModel):
     # Optional here only so the honeypot check runs first; the route rejects a missing token with 422.
     # Cloudflare tokens are at most 2048 characters, so a longer one is rejected without a network call.
     turnstile_token: Annotated[str, StringConstraints(max_length=2048)] | None = None
+
+
+class InquiryUpdate(BaseModel):
+    """The body of POST /api/admin/inquiries/{id}. Send only what changes: a field left out stays as it is.
+    internal_note "" or null clears the note. At least one field is required (the route checks)."""
+
+    status: InquiryStatus | None = None
+    internal_note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] | None = None
     
