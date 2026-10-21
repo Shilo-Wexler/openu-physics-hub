@@ -50,7 +50,7 @@ export function createAnnouncement(token: string, input: AnnouncementInput) {
   return request<AdminAnnouncement>(BASE, { token, method: "POST", body: input });
 }
 
-/** POST, not PUT: the backend's CORS setup allows only GET, POST and DELETE. */
+/** Replaces the title, text and image fields (POST /{id}). */
 export function updateAnnouncement(token: string, id: number, input: AnnouncementInput) {
   return request<AdminAnnouncement>(`${BASE}/${id}`, { token, method: "POST", body: input });
 }
