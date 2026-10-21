@@ -16,7 +16,10 @@ type Params = Record<string, string | number | boolean | undefined>;
 
 interface RequestOptions {
   method?: Method;
+  /** Sent as JSON. */
   body?: unknown;
+  /** Sent as the raw request body with its own Content-Type (an image upload). Use instead of body. */
+  file?: Blob;
   /** Google ID token (or a dev token), sent as "Authorization: Bearer ...". */
   token?: string;
   params?: Params;
@@ -24,7 +27,22 @@ interface RequestOptions {
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, token, params, signal } = options;
+  const response = await send(path, options);
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return (await response.json()) as T;
+}
+
+/** For a file that needs the sign-in token (an image an img tag cannot fetch by itself). */
+export async function requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const response = await send(path, options);
+  return response.blob();
+}
+
+/** Sends the request and returns the response; any failure becomes an ApiError. */
+async function send(path: string, options: RequestOptions): Promise<Response> {
+  const { method = "GET", body, file, token, params, signal } = options;
 
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params ?? {})) {
@@ -33,10 +51,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     }
   }
   const queryString = query.toString();
-  const url = queryString ? `${path}?${queryString}` : path;
+  const url = queryString ? `${path}${path.includes("?") ? "&" : "?"}${queryString}` : path;
 
   const headers: Record<string, string> = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (file) headers["Content-Type"] = file.type || "application/octet-stream";
+  else if (body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   let response: Response;
@@ -44,7 +63,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     response = await fetch(url, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: file ?? (body === undefined ? undefined : JSON.stringify(body)),
       signal,
     });
   } catch (error) {
@@ -58,10 +77,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   if (!response.ok) {
     throw new ApiError(response.status, await errorDetail(response));
   }
-  if (response.status === 204) {
-    return undefined as T;
-  }
-  return (await response.json()) as T;
+  return response;
 }
 
 /** FastAPI sends {"detail": "..."}; anything else falls back to the status text. */

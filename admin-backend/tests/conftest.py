@@ -112,8 +112,8 @@ def _fake_verify(token, request, audience, clock_skew_in_seconds=0):
 
 @pytest.fixture(autouse=True)
 def _fresh_data(client, monkeypatch):
-    """Each test starts with no requests, no blocks, one admin, and a fake Google."""
-    run_sql("truncate requests, blocked_emails, admins, moderation_actions restart identity")
+    """Each test starts with no requests, no blocks, no announcements, one admin, and a fake Google."""
+    run_sql("truncate requests, blocked_emails, admins, moderation_actions, announcements restart identity")
     run_sql("insert into admins (email) values (%s)", (ADMIN_EMAIL,))
     monkeypatch.setattr(auth.id_token, "verify_oauth2_token", _fake_verify)
     monkeypatch.setattr(auth, "DEV_AUTH_EMAIL", None)
