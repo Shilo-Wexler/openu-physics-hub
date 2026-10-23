@@ -12,7 +12,9 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 # Wide enough for a sharp image on a phone or a laptop; larger only costs loading time.
 MAX_SIDE = 1600
 # Only common photo and screenshot formats. Never SVG: it is a document that can carry scripts.
-ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
+# MPO is a JPEG with more pictures inside: recent iPhones store their photos that way (the second
+# picture is an HDR "gain map"). Only the first, the photo itself, is kept.
+ALLOWED_FORMATS = {"JPEG", "MPO", "PNG", "WEBP"}
 # A small file can decode to a huge picture ("decompression bomb"), so the decoded size is capped too.
 MAX_PIXELS = 40_000_000
 WEBP_QUALITY = 82
@@ -48,3 +50,4 @@ def prepare_image(data: bytes) -> StoredImage:
             return StoredImage(out.getvalue(), image.width, image.height)
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as error:
         raise InvalidImage("not an image") from error
+    

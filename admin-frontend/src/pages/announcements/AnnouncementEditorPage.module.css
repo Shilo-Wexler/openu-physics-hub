@@ -1,0 +1,122 @@
+.status {
+  padding: var(--space-4) 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.heading {
+  margin: 0 0 var(--space-3);
+}
+
+.section {
+  margin-block-end: var(--space-4);
+}
+
+/* Like a Group's title, so the fields match the groups under them. */
+.label {
+  display: block;
+  margin: 0 0 var(--space-1);
+  padding-inline: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* A field to type in: a border and a placeholder say so. */
+.field {
+  display: block;
+  width: 100%;
+  min-height: var(--tap-size);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  /* 16px or more, or Safari on iPhone zooms the page in when the field gets focus. */
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.text {
+  min-height: 132px;
+  resize: vertical;
+}
+
+.field::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* dir="auto" turns an empty field left-to-right (no letters to judge by), which flips the Hebrew
+   placeholder. While it shows, the field is right-to-left; typed text then picks its own direction. */
+.field:placeholder-shown {
+  direction: rtl;
+}
+
+.field:focus {
+  border-color: var(--color-primary);
+}
+
+.field:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 0;
+}
+
+.hint {
+  margin: var(--space-1) 0 0;
+  padding-inline: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The whole picture, never cropped, at most 40% of the screen high; an empty box while it loads. */
+.preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 120px;
+  max-height: 40vh;
+  border-radius: var(--radius);
+  background: var(--color-surface-muted);
+  object-fit: contain;
+}
+
+/* The real file input, out of sight: the "add image" row opens it. Not display: none, which some
+   phone browsers refuse to open from code. */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.check {
+  color: var(--color-primary);
+  font-weight: var(--weight-bold);
+}
+
+/* The one action of the screen: full width, blue, grey until something changed. */
+.save {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  margin-block-end: var(--space-4);
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.save:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.save:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
