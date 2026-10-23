@@ -132,7 +132,7 @@ function Details({ action: a }: { action: ModerationAction }) {
   );
 }
 
-/** The undo row when it can be undone; otherwise why not, with a link to the related action. */
+/** The undo row when it can be undone; otherwise who undid it, or why it can't be. */
 function UndoGroup({ action: a, onUndo }: { action: ModerationAction; onUndo: () => void }) {
   if (a.can_undo) {
     return (
@@ -144,8 +144,9 @@ function UndoGroup({ action: a, onUndo }: { action: ModerationAction; onUndo: ()
 
   if (a.undone_by !== null) {
     return (
-      <Group footer="הפעולה כבר בוטלה, ואפשר לבטל פעולה פעם אחת בלבד.">
-        <Row label="הפעולה שביטלה אותה" to={`/chat/log/${a.undone_by}`} />
+      <Group title="בוטלה" footer="אפשר לבטל פעולה פעם אחת בלבד.">
+        <Row label="על ידי" value={<bdi dir="ltr">{a.undone_by_email}</bdi>} />
+        {a.undone_at && <Row label="מתי" value={formatDateTime(a.undone_at)} />}
       </Group>
     );
   }

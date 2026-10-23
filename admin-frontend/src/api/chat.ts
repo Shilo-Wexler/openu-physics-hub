@@ -74,8 +74,10 @@ export interface ModerationAction {
   created_at: string;
   /** Set on an undo: the action it undid. */
   undoes: number | null;
-  /** Set when this action was undone: the undo's id. */
+  /** Set when this action was undone: the undo's id, who undid it and when. The log does not list undos. */
   undone_by: number | null;
+  undone_by_email: string | null;
+  undone_at: string | null;
   /** Only the latest action on its message or user, not undone yet. */
   can_undo: boolean;
   /** null for a user action, or when the chat backend could not be reached. */

@@ -3,6 +3,7 @@
 Every action that changes something is logged here with the admin's email, after the chat
 backend confirmed it, because the chat side does not know which admin acted. The log can undo
 an action: the opposite action is sent to the chat backend and logged too, pointing at the one it undid.
+The log lists only the actions themselves; an undo shows on the action it undid (who and when), not as a row.
 """
 
 from typing import Literal
@@ -22,15 +23,19 @@ router = APIRouter(prefix="/api/admin/chat", tags=["chat moderation"], dependenc
 # reopen and restore are only ever undos (of dismiss and remove).
 Action = Literal["dismiss", "remove", "block", "unblock", "reopen", "restore"]
 
+# What the log lists and filters by: everything but the undos.
+Logged = Literal["dismiss", "remove", "block", "unblock"]
+
 # What undoes each action. reopen and restore are not undone in turn: they put the message back
 # in the reported list, where it is decided again.
 INVERSE: dict[str, Action] = {"dismiss": "reopen", "remove": "restore", "block": "unblock", "unblock": "block"}
 
-# One action with what the log shows about it. undone_by: the undo of it, if any. can_undo: it can be
-# undone, which is only while it is the latest action on its message or user and not undone yet.
+# One action with what the log shows about it. undone_by, undone_by_email, undone_at: the undo of it,
+# if any. can_undo: it can be undone, which is only while it is the latest action on its message or
+# user and not undone yet.
 _SELECT = """
     select a.id, a.admin_email, a.action, a.message_id, a.user_id, a.created_at, a.undoes,
-           u.id as undone_by,
+           u.id as undone_by, u.admin_email as undone_by_email, u.created_at as undone_at,
            (a.action in ('dismiss', 'remove', 'block', 'unblock')
             and u.id is null
             and not exists (
@@ -140,15 +145,17 @@ def unblock(user_id: UUID, admin: GoogleUser = Depends(require_admin), conn: Con
 
 @router.get("/actions")
 def actions(
-    action: Action | None = None,
+    action: Logged | None = None,
     limit: int = Query(50, ge=1, le=MAX_PAGE_SIZE),
     conn: Connection = Depends(get_conn),
 ):
-    """Moderation actions done from the console, newest first, with the chat backend's details."""
+    """Moderation actions done from the console, newest first, with the chat backend's details.
+    Undos are left out: each shows on the action it undid."""
     rows = conn.execute(
         _SELECT
         + """
-        where (%(action)s::text is null or a.action = %(action)s::text)
+        where a.undoes is null
+          and (%(action)s::text is null or a.action = %(action)s::text)
         order by a.created_at desc, a.id desc
         limit %(limit)s
         """,

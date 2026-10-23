@@ -55,6 +55,7 @@ Loaded from `shared/courses.csv`, plus `0,כללי`. A course that an inquiry po
 | `unblock` | `block` | |
 
 - `reopen` and `restore` are not undone in turn: they put the message back in the reported list, where it is decided again.
+- The log (`GET /api/admin/chat/actions`) leaves the undos out. An undone action carries `undone_by`, `undone_by_email` and `undone_at` instead.
 - `409` when it can't be undone: not the latest, undone already, or the chat backend has nothing to undo (the message changed since, or its author deleted it).
 
 ## Announcements (`announcements`)
