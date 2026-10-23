@@ -1,6 +1,6 @@
 /** /profile: the signed-in user's nickname and avatar, and sign-out. ?welcome=1 marks the first sign-in. */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 
 import Avatar from "../../shared/components/Avatar";
@@ -14,6 +14,14 @@ export default function ProfilePage() {
   const [searchParams] = useSearchParams();
   const welcome = searchParams.get("welcome") === "1";
   const [signOutError, setSignOutError] = useState(false);
+  // "Sign out everywhere" was picked once: the row now asks to confirm it, as the chat's ⋯ menu does.
+  const [confirmingAll, setConfirmingAll] = useState(false);
+  const confirmButton = useRef<HTMLButtonElement>(null);
+
+  // The focus moves to the confirm button when the question appears, as in the chat's menu.
+  useEffect(() => {
+    if (confirmingAll) confirmButton.current?.focus();
+  }, [confirmingAll]);
 
   if (loading) return null;
 
@@ -41,8 +49,8 @@ export default function ProfilePage() {
     }
   }
 
-  function handleSignOutAll() {
-    if (!window.confirm("להתנתק מכל המכשירים, כולל זה?")) return;
+  function signOutEverywhere() {
+    setConfirmingAll(false);
     void runSignOut(signOutAll);
   }
 
@@ -87,13 +95,33 @@ export default function ProfilePage() {
             </button>
           </li>
           <li>
-            <button
-              type="button"
-              className={`${styles.action} ${styles.danger}`}
-              onClick={handleSignOutAll}
-            >
-              התנתקות מכל המכשירים
-            </button>
+            {confirmingAll ? (
+              // The question in place of the row: nothing covers the page, on a phone or a computer.
+              <div className={styles.confirmBox} role="group" aria-labelledby="sign-out-all-question">
+                <p id="sign-out-all-question" className={styles.question}>
+                  להתנתק מכל המכשירים, כולל זה?
+                </p>
+                <button
+                  ref={confirmButton}
+                  type="button"
+                  className={styles.confirm}
+                  onClick={signOutEverywhere}
+                >
+                  כן, להתנתק מכולם
+                </button>
+                <button type="button" className={styles.cancel} onClick={() => setConfirmingAll(false)}>
+                  ביטול
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={`${styles.action} ${styles.danger}`}
+                onClick={() => setConfirmingAll(true)}
+              >
+                התנתקות מכל המכשירים
+              </button>
+            )}
           </li>
         </ul>
         {signOutError && (
