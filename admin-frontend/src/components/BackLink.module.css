@@ -1,0 +1,31 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: var(--tap-size);
+  margin-inline-start: -6px;
+  color: var(--color-primary);
+  font-size: var(--text-md);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.back:active {
+  opacity: 0.5;
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.chevron {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Navigate, Route, Routes } from "react-router";
+import { Navigate, Outlet, Route, Routes } from "react-router";
 
 import { ApiError, isAbort, isAuthError } from "../../api/client";
 import { getInquiryCounts } from "../../api/inquiries";
@@ -10,12 +10,13 @@ import { useIdentity } from "../../auth/useIdentity";
 import BottomNav from "../../layout/BottomNav";
 import ConsoleHeader from "../../layout/ConsoleHeader";
 import { allowed, sectionsFor, type Section } from "../../layout/sections";
+import InquiriesPage from "../inquiries/InquiriesPage";
+import InquiryDetailPage from "../inquiries/InquiryDetailPage";
 import MorePage from "../more/MorePage";
 import AdminsTab from "./AdminsTab";
 import AnnouncementsTab from "./AnnouncementsTab";
 import ChatTab from "./ChatTab";
 import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./context";
-import InquiriesTab from "./InquiriesTab";
 
 type Access = "checking" | "ok" | "forbidden" | "error";
 
@@ -190,14 +191,18 @@ function ConsoleShell({ sections, onSignOut }: { sections: Section[]; onSignOut:
       <main>
         <Routes>
           <Route index element={<Navigate to={home} replace />} />
+          {/* One guard for every inquiries screen; Outlet is where the matching screen below renders. */}
           <Route
             path="inquiries"
             element={
               <Guard role="inquiries">
-                <InquiriesTab />
+                <Outlet />
               </Guard>
             }
-          />
+          >
+            <Route index element={<InquiriesPage />} />
+            <Route path=":id" element={<InquiryDetailPage />} />
+          </Route>
           <Route path="chat" element={<ChatTab />} />
           <Route
             path="announcements"

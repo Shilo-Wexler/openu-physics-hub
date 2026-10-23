@@ -1,0 +1,35 @@
+.search {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  margin-block-end: var(--space-3);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  /* 16px or more, or Safari on iPhone zooms the page in when the box gets focus. */
+  font-size: 16px;
+  appearance: none;
+}
+
+.search::placeholder {
+  color: var(--color-text-muted);
+}
+
+.search:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 0;
+}
+
+.status {
+  padding: var(--space-4) 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.check {
+  color: var(--color-primary);
+  font-weight: var(--weight-bold);
+}
