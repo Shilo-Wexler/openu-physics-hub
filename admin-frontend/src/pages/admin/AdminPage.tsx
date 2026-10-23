@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ApiError, isAbort, isAuthError } from "../../api/client";
-import { getMe, getSummary } from "../../api/requests";
+import { getInquiryCounts } from "../../api/inquiries";
+import { getMe } from "../../api/requests";
 import { DEV_SIGN_IN, type Identity } from "../../auth/identity";
 import SignIn from "../../auth/SignIn";
 import { useIdentity } from "../../auth/useIdentity";
 import { LEVEL_LABEL, levelOf } from "../../lib/levels";
 import AdminsTab from "./AdminsTab";
 import AnnouncementsTab from "./AnnouncementsTab";
-import BlockedTab from "./BlockedTab";
 import ChatTab from "./ChatTab";
 import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./context";
-import RequestsTab from "./RequestsTab";
-import StatsTab from "./StatsTab";
+import InquiriesTab from "./InquiriesTab";
 
 type Access = "checking" | "ok" | "forbidden" | "error";
 
@@ -119,17 +118,19 @@ export default function AdminPage() {
   );
 }
 
-type Tab = "requests" | "stats" | "blocked" | "chat" | "announcements" | "admins";
+type Tab = "inquiries" | "chat" | "announcements" | "admins";
 
 // role: the tab is shown only to admins with that role (or "admin"). The server checks it again.
 const TABS: { id: Tab; label: string; role?: string }[] = [
-  { id: "requests", label: "פניות" },
-  { id: "stats", label: "סטטיסטיקה" },
-  { id: "blocked", label: "חסימות פניות" },
+  { id: "inquiries", label: "פניות", role: "inquiries" },
   { id: "chat", label: "ניהול הצ'אט" },
   { id: "announcements", label: "הכרזות", role: "announcements" },
   { id: "admins", label: "מנהלים" },
 ];
+
+function allowed(roles: string[], role?: string): boolean {
+  return !role || roles.includes("admin") || roles.includes(role);
+}
 
 interface ConsoleProps {
   identity: Identity;
@@ -141,14 +142,12 @@ interface ConsoleProps {
 }
 
 function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: ConsoleProps) {
-  const [tab, setTab] = useState<Tab>("requests");
+  const tabs = useMemo(() => TABS.filter((t) => allowed(roles, t.role)), [roles]);
+  // The first tab this admin may see: inquiries for most, the chat for a moderator-only admin.
+  const [tab, setTab] = useState<Tab>(() => tabs[0]?.id ?? "chat");
   const [version, setVersion] = useState(0);
   const changed = useCallback(() => setVersion((v) => v + 1), []);
-
-  const tabs = useMemo(
-    () => TABS.filter((t) => !t.role || roles.includes("admin") || roles.includes(t.role)),
-    [roles],
-  );
+  const seesInquiries = allowed(roles, "inquiries");
 
   const context = useMemo<AdminContextValue>(
     () => ({
@@ -174,7 +173,7 @@ function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: Consol
         </span>
       </div>
 
-      <SummaryBar />
+      {seesInquiries && <SummaryBar />}
 
       <div className="tabs" role="tablist">
         {tabs.map((t) => (
@@ -190,9 +189,7 @@ function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: Consol
         ))}
       </div>
 
-      {tab === "requests" && <RequestsTab />}
-      {tab === "stats" && <StatsTab />}
-      {tab === "blocked" && <BlockedTab />}
+      {tab === "inquiries" && <InquiriesTab />}
       {tab === "chat" && <ChatTab />}
       {tab === "announcements" && <AnnouncementsTab />}
       {tab === "admins" && <AdminsTab />}
@@ -200,14 +197,16 @@ function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: Consol
   );
 }
 
+/** The inquiry counters above the tabs. Reloads after every change (version). */
 function SummaryBar() {
   const { token, version } = useAdmin();
-  const { data } = useLoad((signal) => getSummary(token, signal), [token, version]);
+  const { data } = useLoad((signal) => getInquiryCounts(token, signal), [token, version]);
+  const total = data ? data.new + data.in_progress + data.closed : undefined;
   const counters = [
-    { label: "לא נקראו", value: data?.unread, highlight: true },
+    { label: "חדשות", value: data?.new, highlight: true },
     { label: "בטיפול", value: data?.in_progress },
-    { label: "נסגרו", value: data?.closed },
-    { label: "סה\"כ", value: data?.total },
+    { label: "סגורות", value: data?.closed },
+    { label: "סה\"כ", value: total },
   ];
   return (
     <div className="counters">
