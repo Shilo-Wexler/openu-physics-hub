@@ -48,13 +48,9 @@ def test_standard_admin_can_see_the_list(staff):
 @pytest.mark.parametrize(
     "method, path",
     [
-        ("GET", "/summary"),
-        ("GET", "/requests"),
-        ("GET", "/requests/unread"),
-        ("GET", "/stats/by-course"),
-        ("GET", "/stats/weekly"),
-        ("GET", "/stats/top-senders"),
-        ("GET", "/blocked"),
+        ("GET", "/inquiries"),
+        ("GET", "/inquiries/counts"),
+        ("GET", "/announcements"),
         ("GET", "/courses"),
         ("GET", "/chat/actions"),
     ],
@@ -63,13 +59,11 @@ def test_standard_admin_has_access_to_everything_else(staff, method, path):
     assert staff(method, path).status_code == 200
 
 
-def test_standard_admin_can_handle_requests_and_blocks(staff, add_request):
-    request_id = add_request()
-    assert staff("POST", f"/requests/{request_id}/read").status_code == 200
-    assert staff("POST", f"/requests/{request_id}/close").status_code == 200
-    assert staff("POST", f"/requests/{request_id}/reopen").status_code == 200
-    assert staff("POST", "/blocked", json={"email": "spam@test.com"}).status_code == 201
-    assert staff("DELETE", f"/requests/{request_id}").status_code == 204
+def test_standard_admin_can_handle_inquiries(staff, add_inquiry):
+    inquiry_id = add_inquiry()
+    response = staff("POST", f"/inquiries/{inquiry_id}", json={"status": "in_progress", "internal_note": "on it"})
+    assert response.status_code == 200
+    assert (response.json()["handled_by"], response.json()["internal_note"]) == (STAFF, "on it")
 
 
 # ---------- ...but cannot manage admins ----------
@@ -197,3 +191,4 @@ def test_non_admin_cannot_manage_admins(client, method, path):
     response = client.request(method, f"/api/admin{path}", headers=access(STUDENT_EMAIL), json={"email": NEW})
     assert response.status_code == 403
     assert run_sql("select email from admins") == [(ADMIN_EMAIL,)]
+    

@@ -17,14 +17,14 @@ test.describe("layout", () => {
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex");
   });
 
-  test("there are five tabs, and the requests tab is selected first", async ({ page, api, open }) => {
+  test("there are four tabs, and the inquiries tab is selected first", async ({ page, api, open }) => {
     void api;
     await open();
-    await expect(page.getByRole("tab")).toHaveText(["פניות", "סטטיסטיקה", "חסימות פניות", "ניהול הצ'אט", "מנהלים"]);
+    await expect(page.getByRole("tab")).toHaveText(["פניות", "ניהול הצ'אט", "הכרזות", "מנהלים"]);
     await expect(page.getByRole("tab", { name: "פניות", exact: true })).toHaveAttribute("aria-selected", "true");
   });
 
-  for (const name of ["סטטיסטיקה", "חסימות פניות", "ניהול הצ'אט", "מנהלים"] as const) {
+  for (const name of ["ניהול הצ'אט", "הכרזות", "מנהלים"] as const) {
     test(`switching to "${name}" selects that tab only`, async ({ page, api, open }) => {
       void api;
       await open();
@@ -36,7 +36,7 @@ test.describe("layout", () => {
   test("counters stay visible on every tab", async ({ page, api, open }) => {
     void api;
     await open();
-    for (const name of ["סטטיסטיקה", "חסימות פניות", "ניהול הצ'אט", "מנהלים", "פניות"] as const) {
+    for (const name of ["ניהול הצ'אט", "הכרזות", "מנהלים", "פניות"] as const) {
       await tab(page, name);
       await expect(page.locator(".counters")).toBeVisible();
     }
@@ -50,9 +50,9 @@ test.describe("layout", () => {
     expect(columns).toBe(2);
   });
 
-  test("on a wide screen the request panel sits beside the list", async ({ page, api, open }) => {
+  test("on a wide screen the inquiry panel sits beside the list", async ({ page, api, open }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
-    api.addRequest();
+    api.addInquiry();
     await open();
     await page.locator(".requests-table tbody tr").first().click();
     await expect(page.locator(".requests-layout.with-detail")).toBeVisible();
@@ -67,16 +67,5 @@ test.describe("layout", () => {
     await page.emulateMedia({ colorScheme: "dark" });
     const dark = await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor);
     expect(dark).not.toBe(light);
-  });
-
-  test("no request goes to Google when already signed in", async ({ page, api, open }) => {
-    void api;
-    const google: string[] = [];
-    page.on("request", (r) => {
-      if (r.url().includes("accounts.google.com")) google.push(r.url());
-    });
-    await open();
-    await expect(page.locator(".counters")).toBeVisible();
-    expect(google).toHaveLength(0);
   });
 });

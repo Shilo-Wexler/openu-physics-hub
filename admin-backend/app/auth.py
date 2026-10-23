@@ -1,4 +1,4 @@
-"""Console sign-in (Cloudflare Access JWT), the old student Google ID token check, and the admin check."""
+"""Console sign-in (Cloudflare Access JWT) and the admin and role checks."""
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -6,15 +6,12 @@ from dataclasses import dataclass, field
 import jwt
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token
 from jwt.exceptions import InvalidTokenError, PyJWKClientConnectionError, PyJWKClientError
 from psycopg import Connection
 
-from .config import CF_ACCESS_AUD, CF_ACCESS_TEAM_DOMAIN, DEV_AUTH_EMAIL, GOOGLE_CLIENT_ID
+from .config import CF_ACCESS_AUD, CF_ACCESS_TEAM_DOMAIN, DEV_AUTH_EMAIL
 from .db import get_conn
 
-_transport = google_requests.Request()
 # Adds the "Authorize" button in /docs (for the dev tokens). auto_error=False so we return our own 401.
 _bearer = HTTPBearer(auto_error=False)
 
@@ -48,23 +45,6 @@ def _dev_user(token: str) -> GoogleUser | None:
     if token.startswith("dev:") and "@" in token:
         return GoogleUser(email=token[4:].strip().lower(), name="Dev User")
     return None
-
-
-# STUDENT-SIDE: the old POST /api/requests. The console no longer signs in with Google.
-def verify_google_token(token: str) -> GoogleUser:
-    """Checks signature, audience, issuer and expiry. Returns the verified, lowercased email."""
-    dev = _dev_user(token)
-    if dev is not None:
-        return dev
-    try:
-        claims = id_token.verify_oauth2_token(
-            token, _transport, GOOGLE_CLIENT_ID, clock_skew_in_seconds=CLOCK_SKEW_SECONDS
-        )
-    except ValueError:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired token")
-    if not claims.get("email") or not claims.get("email_verified"):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "email not verified")
-    return GoogleUser(email=claims["email"].strip().lower(), name=claims.get("name"))
 
 
 def verify_access_token(token: str) -> GoogleUser:

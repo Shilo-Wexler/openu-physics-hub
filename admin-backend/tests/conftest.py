@@ -1,5 +1,5 @@
-"""Shared test setup: a throwaway database, one app client, a fake Google, a test Cloudflare Access key,
-a fake Turnstile, and request helpers."""
+"""Shared test setup: a throwaway database, one app client, a test Cloudflare Access key,
+a fake Turnstile, and data helpers."""
 
 import csv
 import os
@@ -28,7 +28,6 @@ ACCESS_AUD = "test-aud"
 # ENV and DEV_AUTH_EMAIL are set (not removed) so a local .env cannot turn dev mode on.
 os.environ["ENV"] = "prod"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-os.environ["GOOGLE_CLIENT_ID"] = "test-client"
 os.environ["ALLOWED_ORIGINS"] = "http://localhost:5173"
 os.environ["DEV_AUTH_EMAIL"] = ""
 os.environ["CF_ACCESS_TEAM_DOMAIN"] = ACCESS_TEAM_DOMAIN
@@ -51,6 +50,7 @@ MIGRATIONS_DIR = BACKEND_DIR / "db" / "migrations"
 COURSES_CSV = BACKEND_DIR.parent / "shared" / "courses.csv"
 
 ADMIN_EMAIL = "admin@test.com"
+# Someone who can sign in but is not in the admins table.
 STUDENT_EMAIL = "student@test.com"
 
 # Stands in for Cloudflare's signing key. Tests sign real RS256 tokens with it.
@@ -62,7 +62,7 @@ TURNSTILE_OK = "turnstile-ok"
 
 
 def bearer(token: str) -> dict:
-    """STUDENT-SIDE Google token, or a dev token ("dev", "dev:<email>")."""
+    """A bearer token: a dev token ("dev", "dev:<email>"), or anything a test wants to see rejected."""
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -175,15 +175,6 @@ def client():
         yield c
 
 
-def _fake_verify(token, request, audience, clock_skew_in_seconds=0):
-    """Stands in for Google: the token is the email. "unverified:<email>" has an unverified email."""
-    if token.startswith("unverified:"):
-        return {"email": token.split(":", 1)[1], "email_verified": False}
-    if "@" not in token:
-        raise ValueError("invalid token")
-    return {"email": token, "email_verified": True, "name": "Test User"}
-
-
 @pytest.fixture
 def fake_turnstile(monkeypatch):
     """The fake Cloudflare Turnstile of the current test. Ask for it to change its answer or read its calls."""
@@ -194,13 +185,10 @@ def fake_turnstile(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _fresh_data(client, monkeypatch, fake_turnstile):
-    """Each test starts with no requests, no inquiries, no blocks, no announcements, one admin, a fake Google,
+    """Each test starts with no inquiries, no announcements, no moderation log, one admin,
     a fake Turnstile and the test Cloudflare key."""
-    run_sql(
-        "truncate requests, inquiries, blocked_emails, admins, moderation_actions, announcements restart identity"
-    )
+    run_sql("truncate inquiries, admins, moderation_actions, announcements restart identity")
     run_sql("insert into admins (email) values (%s)", (ADMIN_EMAIL,))
-    monkeypatch.setattr(auth.id_token, "verify_oauth2_token", _fake_verify)
     monkeypatch.setattr(auth, "_jwks_client", _FakeJwks())
     monkeypatch.setattr(auth, "DEV_AUTH_EMAIL", None)
 
@@ -225,55 +213,13 @@ def inquire(client):
 
 
 @pytest.fixture
-def submit(client):
-    """STUDENT-SIDE. submit(body="...") posts through POST /api/requests, like a student; any field can be overridden.
-    Only for tests of the student path. Admin tests create data with add_request instead."""
-
-    def _submit(**overrides):
-        payload = {
-            "id_token": STUDENT_EMAIL,
-            "email": STUDENT_EMAIL,
-            "full_name": "ישראל ישראלי",
-            "course_name": "מכניקה",
-            "body": "פנייה לבדיקה",
-        }
-        payload.update(overrides)
-        return client.post("/api/requests", json=payload)
-
-    return _submit
-
-
-@pytest.fixture
 def admin(client):
-    """admin("GET", "/summary") calls /api/admin/... as the test admin."""
+    """admin("GET", "/me") calls /api/admin/... as the test admin."""
 
     def _call(method: str, path: str, **kwargs):
         return client.request(method, f"/api/admin{path}", headers=ADMIN, **kwargs)
 
     return _call
-
-
-@pytest.fixture
-def add_request():
-    """add_request(body="...", email="...") inserts a request straight into the DB and returns its id.
-    Admin tests use this, so they do not depend on the student endpoint (POST /api/requests)."""
-
-    def _add(**overrides) -> int:
-        row = {"full_name": "ישראל ישראלי", "email": STUDENT_EMAIL, "course_name": "מכניקה", "body": "פנייה לבדיקה"}
-        row.update(overrides)
-        return run_sql(
-            "insert into requests (full_name, email, course_name, body) "
-            "values (%(full_name)s, %(email)s, %(course_name)s, %(body)s) returning id",
-            row,
-        )[0][0]
-
-    return _add
-
-
-@pytest.fixture
-def new_request(add_request):
-    """Creates one request and returns its id."""
-    return add_request()
 
 
 @pytest.fixture

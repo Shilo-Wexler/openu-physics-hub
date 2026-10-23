@@ -145,7 +145,7 @@ test.describe("chat not reachable", () => {
 
   test("the rest of the console keeps working when the chat is down", async ({ page, api, open }) => {
     api.chatStatus = 502;
-    api.addRequest();
+    api.addInquiry();
     await open();
     await tab(page, "ניהול הצ'אט");
     await tab(page, "פניות");

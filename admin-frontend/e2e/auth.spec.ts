@@ -15,7 +15,7 @@ test.describe("sign-in and access", () => {
     void api;
     await page.goto("/");
     const form = page.locator(".dev-signin");
-    test.skip((await form.count()) === 0, "a Google client ID is configured, so there is no dev sign-in form");
+    test.skip((await form.count()) === 0, "not the dev server, so there is no dev sign-in form");
     await form.getByLabel("מייל").fill(ADMIN);
     await form.getByRole("button", { name: "התחברות (פיתוח)" }).click();
     await expect(page.locator(".counters")).toBeVisible();
@@ -25,7 +25,7 @@ test.describe("sign-in and access", () => {
     void api;
     await page.goto("/");
     const form = page.locator(".dev-signin");
-    test.skip((await form.count()) === 0, "a Google client ID is configured, so there is no dev sign-in form");
+    test.skip((await form.count()) === 0, "not the dev server, so there is no dev sign-in form");
     await form.getByLabel("מייל").fill("admin");
     await form.getByRole("button", { name: "התחברות (פיתוח)" }).click();
     await expect(form.locator(".field-error")).toHaveText("כתובת המייל לא תקינה. לדוגמה: name@gmail.com");
@@ -77,7 +77,7 @@ test.describe("sign-in and access", () => {
   });
 
   test("a 401 later (on the counters) also signs out with the notice", async ({ page, api, open }) => {
-    api.fail({ path: /^\/summary$/, status: 401 });
+    api.fail({ path: /^\/inquiries\/counts$/, status: 401 });
     await open();
     await expect(page.getByText("ההתחברות פגה. התחברו שוב.")).toBeVisible();
   });
@@ -98,27 +98,13 @@ test.describe("sign-in and access", () => {
     await expect(page.locator(".counters")).toBeVisible();
   });
 
-  test("an identity whose token has expired counts as signed out", async ({ page, api }) => {
-    void api;
-    await page.addInitScript((value) => sessionStorage.setItem("identity:admin", value), identity(ADMIN, Date.now() - 1000));
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "כניסת חברי ועדה" })).toBeVisible();
-  });
-
-  test("an identity that expires within a minute also counts as signed out", async ({ page, api }) => {
-    void api;
-    await page.addInitScript((value) => sessionStorage.setItem("identity:admin", value), identity(ADMIN, Date.now() + 30_000));
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "כניסת חברי ועדה" })).toBeVisible();
-  });
-
   test("every admin call carries the Bearer token", async ({ page, api, open }) => {
     let header = "";
     page.on("request", (r) => {
-      if (r.url().includes("/api/admin/summary")) header = r.headers()["authorization"] ?? "";
+      if (r.url().includes("/api/admin/inquiries/counts")) header = r.headers()["authorization"] ?? "";
     });
     await open();
-    await expect(counter(page, "לא נקראו")).toHaveText("0");
+    await expect(counter(page, "חדשות")).toHaveText("0");
     expect(header).toBe(`Bearer dev:${ADMIN}`);
     void api;
   });
