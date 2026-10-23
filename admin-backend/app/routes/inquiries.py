@@ -151,7 +151,8 @@ def update_inquiry(
     conn: Connection = Depends(get_conn),
 ):
     """Changes the status and/or the internal note; a field left out stays as it is.
-    A status change records who made it (handled_by). Returns the inquiry as it is now."""
+    handled_by is who took the inquiry on or closed it: set when the status changes to in_progress or
+    closed, and cleared when it goes back to new (back in the queue, nobody's). Returns the inquiry as it is now."""
     sent = payload.model_fields_set
     if not sent:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "nothing to update")
@@ -161,11 +162,17 @@ def update_inquiry(
     changes = ["updated_at = now()"]
     params: dict = {"id": inquiry_id}
     if "status" in sent:
-        # handled_by moves only when the status really changes, so saving the same status is harmless.
-        # On the right of "=", status is still the old value.
-        changes.append("handled_by = case when status is distinct from %(status)s then %(by)s else handled_by end")
+        if payload.status == "new":
+            changes.append("handled_by = null")
+        else:
+            # Moves only when the status really changes, so saving the same status keeps the handler.
+            # On the right of "=", status is still the old value.
+            changes.append(
+                "handled_by = case when status is distinct from %(status)s then %(by)s else handled_by end"
+            )
+            params["by"] = user.email
         changes.append("status = %(status)s")
-        params.update(status=payload.status, by=user.email)
+        params["status"] = payload.status
     if "internal_note" in sent:
         changes.append("internal_note = %(note)s")
         params["note"] = payload.internal_note or None  # "" clears the note too
