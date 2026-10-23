@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { Navigate, Outlet, Route, Routes } from "react-router";
 
 import { ApiError, isAbort, isAuthError } from "../../api/client";
+import { reportedMessages } from "../../api/chat";
 import { getInquiryCounts } from "../../api/inquiries";
 import { getMe } from "../../api/me";
 import { DEV_SIGN_IN, type Identity } from "../../auth/identity";
@@ -10,12 +11,14 @@ import { useIdentity } from "../../auth/useIdentity";
 import BottomNav from "../../layout/BottomNav";
 import ConsoleHeader from "../../layout/ConsoleHeader";
 import { allowed, sectionsFor, type Section } from "../../layout/sections";
+import BlockedUserPage from "../chat/BlockedUserPage";
+import ChatPage from "../chat/ChatPage";
+import ReportPage from "../chat/ReportPage";
 import InquiriesPage from "../inquiries/InquiriesPage";
 import InquiryDetailPage from "../inquiries/InquiryDetailPage";
 import MorePage from "../more/MorePage";
 import AdminsTab from "./AdminsTab";
 import AnnouncementsTab from "./AnnouncementsTab";
-import ChatTab from "./ChatTab";
 import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./context";
 
 type Access = "checking" | "ok" | "forbidden" | "error";
@@ -177,11 +180,12 @@ function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: Consol
   );
 }
 
-/** Inside the context, so it can load the new-inquiries count for the tab badge. */
+/** Inside the context, so it can load the counts for the tab badges. */
 function ConsoleShell({ sections, onSignOut }: { sections: Section[]; onSignOut: () => void }) {
   const { roles } = useAdmin();
   const newInquiries = useNewInquiries(allowed(roles, "inquiries"));
-  const badges = { inquiries: newInquiries };
+  const openReports = useOpenReports();
+  const badges = { inquiries: newInquiries, chat: openReports };
   // The first section this admin may see: inquiries for most, the chat for a moderator-only admin.
   const home = sections[0]?.path ?? "/more";
 
@@ -203,7 +207,11 @@ function ConsoleShell({ sections, onSignOut }: { sections: Section[]; onSignOut:
             <Route index element={<InquiriesPage />} />
             <Route path=":id" element={<InquiryDetailPage />} />
           </Route>
-          <Route path="chat" element={<ChatTab />} />
+          <Route path="chat">
+            <Route index element={<ChatPage />} />
+            <Route path="reports/:id" element={<ReportPage />} />
+            <Route path="blocked/:userId" element={<BlockedUserPage />} />
+          </Route>
           <Route
             path="announcements"
             element={
@@ -236,4 +244,11 @@ function useNewInquiries(enabled: boolean): number {
     [token, version, enabled],
   );
   return data?.new ?? 0;
+}
+
+/** The count on the chat tab: messages with open reports. Reloads after every change, like the inquiries count. */
+function useOpenReports(): number {
+  const { token, version } = useAdmin();
+  const { data } = useLoad((signal) => reportedMessages(token, signal), [token, version]);
+  return data?.length ?? 0;
 }
