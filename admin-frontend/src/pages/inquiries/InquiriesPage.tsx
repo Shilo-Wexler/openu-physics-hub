@@ -1,7 +1,7 @@
 /** The inquiries queue: a status switch, course and type filters, and the newest inquiries first. */
 
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 
 import { isAbort, isAuthError } from "../../api/client";
 import {
@@ -11,8 +11,8 @@ import {
   type InquiryFilters,
   type InquiryType,
 } from "../../api/inquiries";
+import { ListMessage, ListRow, LoadMore, RowList } from "../../components/ListRow";
 import SegmentedControl from "../../components/SegmentedControl";
-import { formatListTime } from "../../lib/format";
 import { courseLabel, STATUS_LABEL, TYPE_LABEL } from "../../lib/inquiryLabels";
 import { actionError, useAdmin, useLoad } from "../admin/context";
 import CourseFilter from "./CourseFilter";
@@ -157,7 +157,7 @@ function InquiryList({ filters, search }: ListProps) {
 
   if (!shown) {
     if (error) return <p className="error">{error}</p>;
-    return <p className={styles.status}>{loading ? "טוען..." : "אין פניות להצגה."}</p>;
+    return <ListMessage>{loading ? "טוען..." : "אין פניות להצגה."}</ListMessage>;
   }
 
   return (
@@ -165,25 +165,21 @@ function InquiryList({ filters, search }: ListProps) {
       {error && <p className="error">{error}</p>}
 
       {shown.items.length === 0 ? (
-        <p className={styles.status}>אין פניות להצגה.</p>
+        <ListMessage>אין פניות להצגה.</ListMessage>
       ) : (
-        <ul className={styles.list}>
+        <RowList>
           {shown.items.map((inquiry) => (
-            <InquiryItem key={inquiry.id} inquiry={inquiry} search={search} showStatus={filters.view === "all"} />
+            <InquiryRow key={inquiry.id} inquiry={inquiry} search={search} showStatus={filters.view === "all"} />
           ))}
-        </ul>
+        </RowList>
       )}
 
-      {shown.nextBefore !== null && (
-        <button type="button" className={styles.more} disabled={loadingMore || stale} onClick={loadMore}>
-          {loadingMore ? "טוען..." : "טען עוד"}
-        </button>
-      )}
+      {shown.nextBefore !== null && <LoadMore loading={loadingMore} disabled={stale} onClick={loadMore} />}
     </div>
   );
 }
 
-interface ItemProps {
+interface RowProps {
   inquiry: Inquiry;
   search: string;
   /** In the "all" view the status is not known from the view, so the row says it. */
@@ -191,35 +187,22 @@ interface ItemProps {
 }
 
 /** One row, like an email in a mail app: a blue dot while new, type and time, course, the start of the text. */
-function InquiryItem({ inquiry, search, showStatus }: ItemProps) {
+function InquiryRow({ inquiry, search, showStatus }: RowProps) {
   const isNew = inquiry.status === "new";
   return (
-    <li className={styles.item}>
-      <Link to={`/inquiries/${inquiry.id}${search}`} className={styles.row}>
-        <span className={isNew ? `${styles.dot} ${styles.unread}` : styles.dot} aria-hidden="true" />
-        {/* The separator line runs under the text and the chevron, starting after the dot. */}
-        <span className={styles.content}>
-          <span className={styles.body}>
-            <span className={styles.top}>
-              <span className={isNew ? `${styles.type} ${styles.bold}` : styles.type}>{TYPE_LABEL[inquiry.type]}</span>
-              <time className={styles.time} dateTime={inquiry.created_at}>
-                {formatListTime(inquiry.created_at)}
-              </time>
-            </span>
-            <span className={styles.course}>
-              {courseLabel(inquiry.course_number, inquiry.course_name)}
-              {showStatus && ` · ${STATUS_LABEL[inquiry.status]}`}
-            </span>
-            <span className={styles.preview} dir="auto">
-              {inquiry.content}
-            </span>
-          </span>
-          {/* Shows the row opens a screen, like every iOS list row that does. */}
-          <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </span>
-      </Link>
-    </li>
+    <ListRow
+      to={`/inquiries/${inquiry.id}${search}`}
+      leading={<span className={isNew ? `${styles.dot} ${styles.unread}` : styles.dot} aria-hidden="true" />}
+      title={TYPE_LABEL[inquiry.type]}
+      strong={isNew}
+      time={inquiry.created_at}
+      subtitle={
+        <>
+          {courseLabel(inquiry.course_number, inquiry.course_name)}
+          {showStatus && ` · ${STATUS_LABEL[inquiry.status]}`}
+        </>
+      }
+      preview={inquiry.content}
+    />
   );
 }

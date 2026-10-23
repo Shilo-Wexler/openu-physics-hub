@@ -11,6 +11,8 @@ import { useIdentity } from "../../auth/useIdentity";
 import BottomNav from "../../layout/BottomNav";
 import ConsoleHeader from "../../layout/ConsoleHeader";
 import { allowed, sectionsFor, type Section } from "../../layout/sections";
+import AnnouncementEditorPage from "../announcements/AnnouncementEditorPage";
+import AnnouncementListPage from "../announcements/AnnouncementListPage";
 import BlockedUserPage from "../chat/BlockedUserPage";
 import ChatPage from "../chat/ChatPage";
 import ReportPage from "../chat/ReportPage";
@@ -18,7 +20,6 @@ import InquiriesPage from "../inquiries/InquiriesPage";
 import InquiryDetailPage from "../inquiries/InquiryDetailPage";
 import MorePage from "../more/MorePage";
 import AdminsTab from "./AdminsTab";
-import AnnouncementsTab from "./AnnouncementsTab";
 import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./context";
 
 type Access = "checking" | "ok" | "forbidden" | "error";
@@ -212,14 +213,19 @@ function ConsoleShell({ sections, onSignOut }: { sections: Section[]; onSignOut:
             <Route path="reports/:id" element={<ReportPage />} />
             <Route path="blocked/:userId" element={<BlockedUserPage />} />
           </Route>
+          {/* "new" is matched before ":id", so both open the same form, empty or filled. */}
           <Route
             path="announcements"
             element={
               <Guard role="announcements">
-                <AnnouncementsTab />
+                <Outlet />
               </Guard>
             }
-          />
+          >
+            <Route index element={<AnnouncementListPage />} />
+            <Route path="new" element={<AnnouncementEditorPage />} />
+            <Route path=":id" element={<AnnouncementEditorPage />} />
+          </Route>
           <Route path="more" element={<MorePage onSignOut={onSignOut} />} />
           <Route path="more/admins" element={<AdminsTab />} />
           <Route path="*" element={<Navigate to="/" replace />} />
