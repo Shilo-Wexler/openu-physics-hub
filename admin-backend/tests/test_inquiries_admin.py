@@ -32,6 +32,7 @@ def row_of(inquiry_id: int) -> tuple:
 
 # Access
 
+
 @pytest.mark.parametrize(("method", "path", "body"), ROUTES)
 def test_no_sign_in_is_401(client, add_inquiry, method, path, body):
     add_inquiry()
@@ -55,6 +56,7 @@ def test_inquiries_role_may_use_every_route(client, add_inquiry, admin_with_role
 
 
 # The list
+
 
 def test_empty_list(admin):
     r = admin("GET", "/inquiries")
@@ -146,6 +148,7 @@ def test_exactly_one_full_page_has_no_next(admin, add_inquiry, monkeypatch):
 
 # Counts
 
+
 def test_counts_list_every_status(admin):
     assert admin("GET", "/inquiries/counts").json() == {"new": 0, "in_progress": 0, "closed": 0}
 
@@ -156,6 +159,7 @@ def test_counts(admin, add_inquiry):
 
 
 # One inquiry
+
 
 def test_get_one(admin, add_inquiry):
     inquiry_id = add_inquiry(content="Details")
@@ -172,6 +176,7 @@ def test_get_unknown_is_404(admin):
 
 
 # Changes
+
 
 def test_status_change_records_who(admin, add_inquiry):
     inquiry_id = add_inquiry()
@@ -196,6 +201,15 @@ def test_same_status_keeps_the_handler(admin, add_inquiry):
     run_sql("update inquiries set handled_by = 'other@test.com' where id = %s", (inquiry_id,))
     admin("POST", f"/inquiries/{inquiry_id}", json={"status": "in_progress"})
     assert row_of(inquiry_id) == ("in_progress", "other@test.com", None)
+
+
+def test_back_to_new_clears_the_handler(admin, add_inquiry):
+    inquiry_id = add_inquiry()
+    admin("POST", f"/inquiries/{inquiry_id}", json={"status": "in_progress"})
+    r = admin("POST", f"/inquiries/{inquiry_id}", json={"status": "new"})
+    assert r.status_code == 200
+    assert r.json()["handled_by"] is None
+    assert row_of(inquiry_id) == ("new", None, None)
 
 
 def test_note_alone_leaves_status_and_handler(admin, add_inquiry):
