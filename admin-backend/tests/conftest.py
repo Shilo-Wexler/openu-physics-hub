@@ -274,3 +274,33 @@ def add_request():
 def new_request(add_request):
     """Creates one request and returns its id."""
     return add_request()
+
+
+@pytest.fixture
+def add_inquiry():
+    """add_inquiry(status="closed", type="staff") inserts an inquiry straight into the DB and returns its id.
+    Console tests use this, so they do not depend on Turnstile or the public form."""
+
+    def _add(**overrides) -> int:
+        row = {"course_number": 0, "type": "exams", "content": "Test inquiry", "status": "new"}
+        row.update(overrides)
+        return run_sql(
+            "insert into inquiries (course_number, type, content, status) "
+            "values (%(course_number)s, %(type)s, %(content)s, %(status)s) returning id",
+            row,
+        )[0][0]
+
+    return _add
+
+
+@pytest.fixture
+def admin_with_roles():
+    """admin_with_roles("announcements") adds an admin with only these roles and returns the headers
+    of a console request as that admin. For tests of who may and may not use a route."""
+
+    def _add(*roles: str) -> dict:
+        email = f"{'-'.join(roles)}@test.com"
+        run_sql("insert into admins (email, roles) values (%s, %s)", (email, list(roles)))
+        return access(email)
+
+    return _add
