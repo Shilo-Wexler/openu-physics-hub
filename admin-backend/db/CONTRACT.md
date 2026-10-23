@@ -43,7 +43,19 @@ Loaded from `shared/courses.csv`, plus `0,כללי`. A course that an inquiry po
 
 ## Chat moderation (`moderation_actions`)
 
-Every chat action (dismiss, remove, block, unblock) is logged with the admin and the target, and only after the chat backend confirmed it.
+- Every chat action (dismiss, remove, block, unblock) is logged with the admin and the target, and only after the chat backend confirmed it.
+- The log shows the chat backend's details (nickname, course, text, what became of the message), asked for all rows at once. If the chat backend is down, the log still loads, with ids only.
+- An action can be undone (`POST /api/admin/chat/actions/{id}/undo`) only while it is the latest action on its message or user, and only once. The undo is the opposite action, logged with `undoes` pointing at the action it undid:
+
+| Action | Undone by | In the chat |
+|---|---|---|
+| `dismiss` | `reopen` | The dismissed reports are open again |
+| `remove` | `restore` | The message is back, and its reports are open again |
+| `block` | `unblock` | |
+| `unblock` | `block` | |
+
+- `reopen` and `restore` are not undone in turn: they put the message back in the reported list, where it is decided again.
+- `409` when it can't be undone: not the latest, undone already, or the chat backend has nothing to undo (the message changed since, or its author deleted it).
 
 ## Announcements (`announcements`)
 

@@ -1,4 +1,4 @@
-"""Calls to the chat backend's /internal moderation API (chat-backend/docs/moderation-api.md).
+"""Calls to the chat backend's /internal moderation API (chat-backend/docs/internal-api.md).
 
 Server to server only: the browser talks to /api/admin/chat/*, never to the chat backend.
 Errors become HTTPExceptions the admin routes can pass straight on.
@@ -40,7 +40,8 @@ def call(method: str, path: str) -> Any:
         # Our token is wrong: a configuration problem, not the admin's fault. Never log the token.
         log.error("chat backend rejected MOD_API_TOKEN")
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "chat backend rejected the moderation token")
-    if response.status_code in (404, 422):
+    # 409: an undo with nothing left to undo (the message was handled again since).
+    if response.status_code in (404, 409, 422):
         raise HTTPException(response.status_code, _detail(response))
     if response.status_code >= 400:
         log.error("chat backend error %s on %s %s", response.status_code, method, path)
