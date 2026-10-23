@@ -20,6 +20,7 @@ import {
 } from "../../api/announcements";
 import { isAbort, isAuthError } from "../../api/client";
 import BackLink from "../../components/BackLink";
+import { useConfirm } from "../../components/ConfirmSheet";
 import { Group, Row } from "../../components/GroupedList";
 import { formatDateTime } from "../../lib/format";
 import { actionError, useAdmin } from "../admin/context";
@@ -150,6 +151,7 @@ export default function AnnouncementEditorPage() {
 
 function AnnouncementEditor({ id }: { id: number | null }) {
   const { token, changed, onAuthError } = useAdmin();
+  const confirm = useConfirm();
   const navigate = useNavigate();
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -315,8 +317,12 @@ function AnnouncementEditor({ id }: { id: number | null }) {
 
   async function remove() {
     if (!saved) return;
-    // The browser's own question for now; the console's own dialog replaces it in a later step.
-    if (!window.confirm("למחוק את ההכרזה לצמיתות? אי אפשר לשחזר אותה.")) return;
+    const ok = await confirm({
+      message: "ההכרזה תימחק לצמיתות, ואי אפשר יהיה לשחזר אותה.",
+      action: "מחיקת ההכרזה",
+      danger: true,
+    });
+    if (!ok) return;
     setSaving(true);
     setError(null);
     try {

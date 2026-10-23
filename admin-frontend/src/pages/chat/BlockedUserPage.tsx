@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router";
 import { isAuthError } from "../../api/client";
 import { blockedUsers, removedMessages, unblockUser } from "../../api/chat";
 import BackLink from "../../components/BackLink";
+import { useConfirm } from "../../components/ConfirmSheet";
 import { Group, Row } from "../../components/GroupedList";
 import { formatDateTime } from "../../lib/format";
 import { actionError, useAdmin, useLoad } from "../admin/context";
@@ -16,6 +17,7 @@ const BACK = "/chat?view=blocked";
 
 export default function BlockedUserPage() {
   const { token, version, changed, onAuthError } = useAdmin();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const userId = useParams().userId ?? "";
   const [busy, setBusy] = useState(false);
@@ -27,7 +29,12 @@ export default function BlockedUserPage() {
   const user = users.data?.find((u) => u.user_id === userId);
 
   async function unblock() {
-    if (busy || !user || !window.confirm(`לבטל את החסימה של ${user.nickname}?`)) return;
+    if (busy || !user) return;
+    const ok = await confirm({
+      message: `החשבון של ${user.nickname} יוכל שוב לכתוב, לדרג ולדווח.`,
+      action: "ביטול החסימה",
+    });
+    if (!ok) return;
     setBusy(true);
     setError(null);
     try {
@@ -81,13 +88,13 @@ export default function BlockedUserPage() {
 
       {error && <p className="error">{error}</p>}
 
-      <Group footer="אחרי ביטול החסימה הוא יוכל שוב לכתוב, לדרג ולדווח.">
-        <Row label="ביטול החסימה" onClick={unblock} />
+      <Group footer="אחרי ביטול החסימה החשבון יוכל שוב לכתוב, לדרג ולדווח.">
+        <Row label="ביטול החסימה" onClick={() => void unblock()} />
       </Group>
 
       <h2 className={styles.sectionTitle}>הודעות שהוסרו</h2>
       {removed.failed && <LoadError loaded={removed} what="ההודעות שהוסרו" />}
-      {removed.data && removed.data.length === 0 && <p className={styles.status}>לא הוסרו הודעות שלו.</p>}
+      {removed.data && removed.data.length === 0 && <p className={styles.status}>לא הוסרו הודעות של החשבון הזה.</p>}
       {removed.data?.map((m) => (
         <article key={m.message_id} className={styles.removed}>
           <p className={styles.meta}>

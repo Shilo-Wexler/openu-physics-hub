@@ -8,6 +8,7 @@ import { getMe } from "../../api/me";
 import { DEV_SIGN_IN, type Identity } from "../../auth/identity";
 import SignIn from "../../auth/SignIn";
 import { useIdentity } from "../../auth/useIdentity";
+import { ConfirmProvider } from "../../components/ConfirmSheet";
 import BottomNav from "../../layout/BottomNav";
 import ConsoleHeader from "../../layout/ConsoleHeader";
 import { allowed, sectionsFor, type Section } from "../../layout/sections";
@@ -176,7 +177,10 @@ function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: Consol
 
   return (
     <AdminContext.Provider value={context}>
-      <ConsoleShell sections={sections} onSignOut={onSignOut} />
+      {/* Every screen of the console can ask "are you sure?" with useConfirm(). */}
+      <ConfirmProvider>
+        <ConsoleShell sections={sections} onSignOut={onSignOut} />
+      </ConfirmProvider>
     </AdminContext.Provider>
   );
 }

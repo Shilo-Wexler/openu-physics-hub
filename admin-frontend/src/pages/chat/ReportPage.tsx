@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router";
 import { isAuthError } from "../../api/client";
 import { blockUser, dismissReports, removeMessage, reportedMessages, unblockUser } from "../../api/chat";
 import BackLink from "../../components/BackLink";
+import { useConfirm } from "../../components/ConfirmSheet";
 import { Group, Row } from "../../components/GroupedList";
 import { formatDateTime } from "../../lib/format";
 import { actionError, useAdmin, useLoad } from "../admin/context";
@@ -14,6 +15,7 @@ import styles from "./ReportPage.module.css";
 
 export default function ReportPage() {
   const { token, version, changed, onAuthError } = useAdmin();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const id = Number(useParams().id);
   const [busy, setBusy] = useState(false);
@@ -69,6 +71,33 @@ export default function ReportPage() {
   }
 
   const m = message;
+
+  async function remove() {
+    const ok = await confirm({
+      message: "ההודעה תוסר מהצ'אט, והדיווחים עליה ייסגרו.",
+      action: "הסרת ההודעה",
+      danger: true,
+    });
+    if (ok) await run(() => removeMessage(token, m.message_id), true);
+  }
+
+  async function block() {
+    const ok = await confirm({
+      message: `החשבון של ${m.author_nickname} יוכל לקרוא, אבל לא לכתוב, לדרג או לדווח.`,
+      action: "חסימת הכותב",
+      danger: true,
+    });
+    if (ok) await run(() => blockUser(token, m.author_id), false);
+  }
+
+  async function unblock() {
+    const ok = await confirm({
+      message: `החשבון של ${m.author_nickname} יוכל שוב לכתוב, לדרג ולדווח.`,
+      action: "ביטול החסימה",
+    });
+    if (ok) await run(() => unblockUser(token, m.author_id), false);
+  }
+
   return (
     <>
       {back}
@@ -93,39 +122,16 @@ export default function ReportPage() {
 
       <Group footer="התעלמות: הדיווחים נסגרים וההודעה נשארת בצ'אט.">
         <Row label="להתעלם מהדיווח" onClick={() => run(() => dismissReports(token, m.message_id), true)} />
-        <Row
-          label="להסיר את ההודעה"
-          danger
-          onClick={() => {
-            if (window.confirm("להסיר את ההודעה מהצ'אט? הדיווחים עליה ייסגרו.")) {
-              void run(() => removeMessage(token, m.message_id), true);
-            }
-          }}
-        />
+        <Row label="להסיר את ההודעה" danger onClick={() => void remove()} />
       </Group>
 
       <Group title="הכותב">
         <Row label="הודעות שדווחו" value={m.author_reported_count} />
         <Row label="הודעות שהוסרו" value={m.author_removed_count} />
         {m.author_blocked ? (
-          <Row
-            label="ביטול החסימה"
-            onClick={() => {
-              if (window.confirm(`לבטל את החסימה של ${m.author_nickname}?`)) {
-                void run(() => unblockUser(token, m.author_id), false);
-              }
-            }}
-          />
+          <Row label="ביטול החסימה" onClick={() => void unblock()} />
         ) : (
-          <Row
-            label="לחסום את הכותב"
-            danger
-            onClick={() => {
-              if (window.confirm(`לחסום את ${m.author_nickname}? הוא יוכל לקרוא, אבל לא לכתוב, לדרג או לדווח.`)) {
-                void run(() => blockUser(token, m.author_id), false);
-              }
-            }}
-          />
+          <Row label="לחסום את הכותב" danger onClick={() => void block()} />
         )}
       </Group>
     </>
