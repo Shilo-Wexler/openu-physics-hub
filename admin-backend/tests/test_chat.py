@@ -185,7 +185,24 @@ def test_undo_sends_the_opposite_and_logs_it(admin, chat, path, chat_undo, inver
 
     chat.reply(200, [])
     undone = admin("GET", f"/chat/actions/{action_id}").json()
-    assert (undone["can_undo"], undone["undone_by"]) == (False, last_action_id())
+    assert (undone["can_undo"], undone["undone_by"], undone["undone_by_email"]) == (False, last_action_id(), ADMIN_EMAIL)
+    assert undone["undone_at"] is not None
+
+
+def test_log_leaves_out_undos(admin, chat):
+    chat.reply(200, {"status": "ok"})
+    admin("POST", "/chat/messages/197/remove")
+    removed = last_action_id()
+    admin("POST", f"/chat/actions/{removed}/undo")
+
+    chat.reply(200, [])
+    rows = admin("GET", "/chat/actions").json()
+    # Only the remove, marked undone; the restore shows on it, not as a row of its own.
+    assert [(r["id"], r["undone_by"]) for r in rows] == [(removed, last_action_id())]
+    # The undo itself can still be read by its id.
+    assert admin("GET", f"/chat/actions/{last_action_id()}").json()["undoes"] == removed
+    # Undos are not a filter either.
+    assert admin("GET", "/chat/actions", params={"action": "restore"}).status_code == 422
 
 
 def test_undo_only_once(admin, chat):
