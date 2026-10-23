@@ -68,8 +68,27 @@ def upload(admin):
     return _upload
 
 
+@pytest.fixture
+def image_only(draft, upload, act):
+    """image_only(publish=True) creates an announcement with no title and no text, only an image."""
+
+    def _image_only(publish: bool = False) -> dict:
+        created = draft(title="", body="")
+        assert upload(created["id"]).status_code == 200
+        if publish:
+            response = act(created["id"], "publish")
+            assert response.status_code == 200, response.text
+            return response.json()
+        return created
+
+    return _image_only
+
+
 def public_ids(client) -> list[int]:
     return [item["id"] for item in client.get("/api/announcements").json()["announcements"]]
+
+
+EMPTY = {"detail": "announcement is empty"}
 
 
 # ---------- Console: create, edit, delete ----------
@@ -90,11 +109,22 @@ def test_create_with_title_only(draft):
     assert draft(body="")["body"] == ""
 
 
+def test_create_with_text_only(draft):
+    created = draft(title="   ")
+    assert created["title"] == ""  # spaces alone are no title
+    assert created["body"] == "Notice text"
+
+
+def test_an_empty_draft_is_allowed(admin):
+    """The console saves the text before the image, so an image-only announcement starts out empty."""
+    response = admin("POST", "/announcements", json={})
+    assert response.status_code == 201
+    assert (response.json()["title"], response.json()["body"]) == ("", "")
+
+
 @pytest.mark.parametrize(
     "payload, detail",
     [
-        ({"body": "x"}, "missing title"),
-        ({"title": "   "}, "invalid title"),
         ({"title": "x" * 201}, "invalid title"),
         ({"title": "x", "body": "x" * 5001}, "invalid body"),
     ],
@@ -127,6 +157,12 @@ def test_edit_missing_announcement(admin):
     assert response.json() == {"detail": "announcement not found"}
 
 
+def test_edit_missing_announcement_with_no_content(admin):
+    """Missing comes first: an empty edit of an announcement that is not there is still 404."""
+    response = admin("POST", "/announcements/999", json={})
+    assert response.status_code == 404
+
+
 def test_delete(admin, published, client):
     created = published(pin=True)
     assert admin("DELETE", f"/announcements/{created['id']}").status_code == 204
@@ -146,6 +182,72 @@ def test_console_list_order_and_total(admin, draft, published):
     assert [item["id"] for item in body["items"]] == [pinned["id"], unpublished["id"], new["id"]]
     second_page = admin("GET", "/announcements", params={"page_size": 3, "page": 2}).json()
     assert [item["id"] for item in second_page["items"]] == [old["id"]]
+
+
+# ---------- Console: a published announcement always shows something ----------
+
+def test_an_empty_draft_cannot_be_published(act, draft, client):
+    created = draft(title="", body="")
+    response = act(created["id"], "publish", pin=True)
+    assert response.status_code == 422
+    assert response.json() == EMPTY
+    assert public_ids(client) == []
+    assert client.get("/api/announcements/pinned").json() is None
+
+
+@pytest.mark.parametrize("fields", [{"body": ""}, {"title": ""}])
+def test_title_or_text_alone_can_be_published(published, fields):
+    assert published(**fields)["published_at"] is not None
+
+
+def test_an_image_alone_can_be_published(image_only, client):
+    created = image_only(publish=True)
+    item = client.get("/api/announcements").json()["announcements"][0]
+    assert item["id"] == created["id"]
+    assert (item["title"], item["body"]) == ("", "")
+    assert item["image"] is not None
+
+
+def test_a_published_one_cannot_be_emptied(admin, published):
+    created = published()
+    response = admin("POST", f"/announcements/{created['id']}", json={"title": " ", "body": ""})
+    assert response.status_code == 422
+    assert response.json() == EMPTY
+    assert run_sql("select title, body from announcements") == [(created["title"], created["body"])]
+
+
+def test_a_published_image_one_can_lose_its_text(admin, upload, published):
+    """With an image left, the title and the text can both go."""
+    created = published()
+    upload(created["id"])
+    response = admin("POST", f"/announcements/{created['id']}", json={"title": "", "body": ""})
+    assert response.status_code == 200
+    assert (response.json()["title"], response.json()["body"]) == ("", "")
+
+
+def test_a_draft_can_be_emptied(admin, draft):
+    created = draft()
+    assert admin("POST", f"/announcements/{created['id']}", json={}).status_code == 200
+
+
+def test_the_only_image_of_a_published_one_stays(admin, image_only):
+    created = image_only(publish=True)
+    response = admin("DELETE", f"/announcements/{created['id']}/image")
+    assert response.status_code == 422
+    assert response.json() == EMPTY
+    assert run_sql("select image is not null, image_version from announcements") == [(True, 1)]
+
+
+def test_the_only_image_of_a_draft_can_go(admin, image_only):
+    created = image_only()
+    response = admin("DELETE", f"/announcements/{created['id']}/image")
+    assert response.status_code == 200
+    assert response.json()["image"] is None
+
+
+def test_the_database_refuses_an_empty_published_one():
+    with pytest.raises(Exception, match="announcements_has_content"):
+        run_sql("insert into announcements (author_email, published_at) values ('x@t.com', now())")
 
 
 # ---------- Console: publish and pin ----------
@@ -278,7 +380,7 @@ def test_upload_needs_alt(upload, draft):
 
 
 def test_upload_rejects_non_images(upload, draft):
-    response = upload(draft()["id"], b"<svg xmlns='http://www.w3.org/2000/svg'/>")
+    response = upload(draft()["id"], b"\x3csvg xmlns='http://www.w3.org/2000/svg'/>")
     assert response.status_code == 422
     assert response.json() == {"detail": "not an image"}
 
@@ -297,6 +399,12 @@ def test_delete_image(admin, upload, draft):
     # Removing it again is not an error and changes nothing.
     assert admin("DELETE", f"/announcements/{created['id']}/image").status_code == 200
     assert run_sql("select image_version from announcements")[0][0] == 2
+
+
+def test_delete_image_of_missing_announcement(admin):
+    response = admin("DELETE", "/announcements/999/image")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "announcement not found"}
 
 
 # ---------- Public site ----------
@@ -362,3 +470,4 @@ def test_console_needs_the_announcements_role(client):
     response = client.post(url, json={"title": "x"}, headers=access("ann@test.com"))
     assert response.status_code == 201
     assert response.json()["author_email"] == "ann@test.com"
+    

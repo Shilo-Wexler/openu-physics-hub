@@ -1,4 +1,5 @@
-/** One committee announcement: title, date, a "pinned" mark, an optional image and its text.
+/** One committee announcement: date, a "pinned" mark, and whichever of title, image and text it has
+    (each is optional, but a published one has at least one).
     Used by the announcements page and by the home page (which shows only the pinned one, cut short). */
 
 import type { Announcement } from "../../shared/api/announcements";
@@ -18,24 +19,27 @@ interface Props {
 export default function AnnouncementCard({ announcement, headingLevel = 2, short = false }: Props) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const titleId = `announcement-${announcement.id}`;
-  const { image } = announcement;
+  const { image, title } = announcement;
+  const date = dateFormat.format(new Date(announcement.published_at));
 
   return (
     <article
       className={[styles.card, announcement.pinned && styles.pinned].filter(Boolean).join(" ")}
-      aria-labelledby={titleId}
+      // A screen reader names the card by its title; without one, by its date.
+      aria-labelledby={title ? titleId : undefined}
+      aria-label={title ? undefined : `הכרזה מ־${date}`}
     >
       <div className={styles.meta}>
         {announcement.pinned && <span className={styles.badge}>נעוץ</span>}
-        <time dateTime={announcement.published_at}>
-          {dateFormat.format(new Date(announcement.published_at))}
-        </time>
+        <time dateTime={announcement.published_at}>{date}</time>
         {announcement.edited_at && <span className={styles.detail}>נערך</span>}
       </div>
 
-      <Heading className={styles.title} id={titleId} dir="auto">
-        {announcement.title}
-      </Heading>
+      {title && (
+        <Heading className={styles.title} id={titleId} dir="auto">
+          {title}
+        </Heading>
+      )}
 
       {image && (
         // Tapping opens the full image in a new tab, where it can be zoomed and saved.
