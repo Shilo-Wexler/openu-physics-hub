@@ -50,7 +50,6 @@ def _team_domain(value: str | None) -> str | None:
 
 ENV = _environment()
 DATABASE_URL = _required("DATABASE_URL")
-GOOGLE_CLIENT_ID = _required("GOOGLE_CLIENT_ID")
 ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 
 # Console sign-in: Cloudflare Access sits in front of the console and adds a signed JWT to every request.
@@ -76,7 +75,7 @@ def _optional_secret(name: str) -> str | None:
 
 
 # Chat moderation (server to server, see chat-backend/docs/moderation-api.md).
-# Both optional: without them the request system works and /api/admin/chat/* answers 503.
+# Both optional: without them the rest of the console works and /api/admin/chat/* answers 503.
 CHAT_API_URL = os.environ.get("CHAT_API_URL", "").strip().rstrip("/") or None
 MOD_API_TOKEN = _optional_secret("MOD_API_TOKEN")
 if MOD_API_TOKEN is not None and len(MOD_API_TOKEN) < 32:
@@ -90,10 +89,6 @@ CHAT_TIMEOUT_SECONDS = 5
 TURNSTILE_SECRET = _optional_secret("TURNSTILE_SECRET")
 if TURNSTILE_SECRET is None and ENV == "prod":
     raise RuntimeError("Missing required environment variable: TURNSTILE_SECRET (required when ENV=prod)")
-
-# STUDENT-SIDE: submission limits (spam protection) for POST /api/requests.
-MAX_REQUESTS_PER_HOUR = 5
-DUPLICATE_WINDOW_MINUTES = 5
 
 # Admin list paging.
 MAX_PAGE_SIZE = 100

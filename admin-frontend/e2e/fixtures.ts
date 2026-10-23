@@ -7,9 +7,9 @@ import { ADMIN, FakeApi } from "./fake-api";
 export { expect };
 export * from "./fake-api";
 
-/** The value the console keeps in sessionStorage after signing in (see src/auth/identity.ts). */
-export function identity(email: string, expiresAt: number | null = null) {
-  return JSON.stringify({ token: `dev:${email}`, email, name: null, expiresAt });
+/** The value the console keeps in sessionStorage after a dev sign-in (see src/auth/identity.ts). */
+export function identity(email: string) {
+  return JSON.stringify({ token: `dev:${email}`, email });
 }
 
 export const test = base.extend<{ api: FakeApi; open: (email?: string) => Promise<void> }>({
@@ -28,22 +28,27 @@ export const test = base.extend<{ api: FakeApi; open: (email?: string) => Promis
   },
 });
 
-/** The number shown in a counter box ("לא נקראו", "בטיפול", "נסגרו", 'סה"כ'). */
+/** The number shown in a counter box ("חדשות", "בטיפול", "סגורות", 'סה"כ'). */
 export function counter(page: Page, label: string) {
   return page.locator(".counter-box", { hasText: label }).locator(".counter-value");
 }
 
-/** Rows of the requests table. */
+/** Rows of the inquiries table. */
 export function rows(page: Page) {
   return page.locator(".requests-table tbody tr");
 }
 
+/** The open inquiry's side panel. */
+export function panel(page: Page) {
+  return page.locator("aside.detail");
+}
+
 /** Switches the console tab. */
-export async function tab(page: Page, name: "פניות" | "סטטיסטיקה" | "חסימות פניות" | "ניהול הצ'אט" | "מנהלים") {
+export async function tab(page: Page, name: "פניות" | "ניהול הצ'אט" | "הכרזות" | "מנהלים") {
   await page.getByRole("tab", { name, exact: true }).click();
 }
 
-/** Switches the view inside the requests tab. */
-export async function view(page: Page, name: "לא נקראו" | "בטיפול" | "סגורות" | "הכל") {
+/** Switches the view inside the inquiries tab. */
+export async function view(page: Page, name: "חדשות" | "בטיפול" | "סגורות" | "הכל") {
   await page.locator(".segmented button", { hasText: name }).click();
 }

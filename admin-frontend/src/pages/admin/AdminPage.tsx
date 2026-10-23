@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ApiError, isAbort, isAuthError } from "../../api/client";
 import { getInquiryCounts } from "../../api/inquiries";
-import { getMe } from "../../api/requests";
+import { getMe } from "../../api/me";
 import { DEV_SIGN_IN, type Identity } from "../../auth/identity";
 import SignIn from "../../auth/SignIn";
 import { useIdentity } from "../../auth/useIdentity";

@@ -1,116 +1,60 @@
-# OpenUVoice: מצב צד הניהול, ומה מצופה מכל צד
+# Admin side: status
 
-עודכן: 2026-10-13. מבוסס על "חיבור הצד הציבורי לצד הניהול", "צד הניהול: מה קיים ואיך הוא מתחבר", ו"תשובה: צד הניהול".
+Updated 2026-10-23.
 
-## חלוקת העבודה
+## Who owns what
 
-- **הצד הציבורי (אצלך):** `public-frontend` ו-`chat-backend`.
-- **צד הניהול (אצלי):** `admin-backend` ו-`admin-frontend`.
-- **שום שירות לא נוגע ב-DB של שירות אחר.** החיבורים ביניהם עוברים רק דרך החוזים: `POST /api/inquiries`, ‏`GET /api/announcements`, ונתיבי `/internal` של הצ'אט.
+- Public side: `public-frontend`, `chat-backend`.
+- Admin side: `admin-backend`, `admin-frontend`.
+- No service touches another service's DB. They talk only through:
+  - `POST /api/inquiries` and `GET /api/announcements` (admin-backend, public);
+  - the chat's `/internal` routes (never public).
 
-## מה נעשה אצלי
+## What exists
 
-**admin-backend** (Python, FastAPI, psycopg 3, Postgres 17):
-- **פניות בקונסולה:**
-  - רשימה עם סינון לפי קורס, מצב ומייל, ועם עימוד.
-  - תור "לא נקראו", מהישנה לחדשה.
-  - פנייה בודדת.
-  - סימון כנקראה או לא נקראה, סגירה, החזרה לטיפול ממצב סגור, ומחיקה.
-- **סטטיסטיקה:** מונים, פניות לפי קורס (עם טווח תאריכים), ופניות לפי שבוע.
-- **ניהול הצ'אט:** `/api/admin/chat/...` מעביר ל-`/internal` שלך עם `MOD_API_TOKEN`. כל פעולה שמשנה משהו נרשמת ביומן `moderation_actions`: מי, מה, על איזה מזהה, ומתי, וזה קורה רק אחרי שהצ'אט אישר. שגיאות מהצ'אט מתורגמות ל-502, 503, 404 ו-422.
-- **מנהלים:** טבלת `admins` (עם `added_by`), ו-`GET /api/admin/me`. היום ההתחברות היא Google ID token, ויש מצב פיתוח (`DEV_AUTH_EMAIL`).
-- **תפקידים ושתי דרגות:** לכל מנהל יש `roles`, מתוך התפקידים שהצעת. בקונסולה יש שתי דרגות: **מנהל ראשי** (`admin`: הכול, כולל ניהול מנהלים) ו**מנהל** (`announcements`, `inquiries`, `moderator`: הכול חוץ מניהול מנהלים). `/me` מחזיר את התפקידים.
-- **ניהול מנהלים מהקונסולה:** לשונית "מנהלים". רק מנהל ראשי יכול להוסיף (עם בחירת דרגה), לשנות דרגה ולהסיר, ולא את עצמו, כך שתמיד נשאר מנהל ראשי. השינוי חל מיד. מנהל רגיל רואה את הרשימה בלבד.
-- **קורסים:** נטענים מ-`shared/courses.csv`, כולל `0,כללי`. אין בקוד מספר קורסים קבוע.
-- **מיגרציות:** קבצי SQL ממוספרים ב-`db/migrations`, שרצים עם psql. בפריסה יוכלו לרוץ כ-Job, כמו אצלך.
-- **בדיקות:**
-  - 137 בדיקות pytest, על DB זמני ששמו חייב להיגמר ב-`_test`, עם Google ושרת צ'אט מזויפים.
-  - smoke test מקצה לקצה מול השרת הרץ, שבודק את המצב בפועל אחרי כל בקשה.
-- **סימונים בקוד:** כל מה ששייך להגשה הישנה של הסטודנט מסומן `STUDENT-SIDE`. הקוד הזה ייצא במעבר ל-`/api/inquiries`.
+**admin-backend** (Python, FastAPI, psycopg 3, Postgres):
+- Inquiries: the anonymous public form, and console routes to list, filter and handle them. See `db/CONTRACT.md`.
+- Announcements: public read, console create, edit, publish and pin.
+- Chat moderation: `/api/admin/chat/...` forwards to the chat's `/internal` with `MOD_API_TOKEN`, and logs each action.
+- Admins and roles: `admins` table, `GET /api/admin/me`, add/change/remove from the console.
+- Sign-in: Cloudflare Access. The server checks the `Cf-Access-Jwt-Assertion` header.
+- Errors are always `{"detail": "..."}`.
+- `/docs`, `/redoc` and `/openapi.json` only when `ENV=dev`.
+- One health route: `/health`.
 
-**admin-frontend** (React, TypeScript ו-Vite, באותן גרסאות ואותם משתני עיצוב כמו אצלך; פורט 5174):
-- **התחברות עם Google,** ובדיקת הרשאה מול `/me` (מסך "אין הרשאה" למי שלא ברשימה).
-- **פניות:**
-  - המצב מוצג בגוון השורה, בסגנון Gmail: חדשה בלבן ומודגש, בטיפול באפור בהיר, סגורה באפור כהה יותר.
-  - פתיחת פנייה מסמנת אותה כנקראה.
-  - כפתור "החזרה לטיפול" לפנייה סגורה.
-- **סטטיסטיקה:** גרף לפי קורס (רק קורסים עם פניות), גרף לפי שבוע, ושולחים מובילים.
-- **בדיקות בדפדפן:** 171 בדיקות Playwright לקונסולה, מול API מזויף.
-- **שגיאות אחידות:** כל שגיאה מהשרת היא `{"detail": "..."}`, כולל שגיאות קלט (`invalid <שדה>`) ותקלות לא צפויות (`internal error`), כמו שסיכמנו. בקונסולה כל ההודעות מנוסחות במקום אחד.
-- **ניהול הצ'אט:** הודעות מדווחות (התעלמות, הסרה, חסימה), משתמשים חסומים עם ההודעות שהוסרו, ויומן פעולות.
-- **עיצוב:** מצב כהה, ותצוגה מותאמת לטלפון.
+**admin-frontend** (React, TypeScript, Vite):
+- Tabs: inquiries, chat moderation, announcements, admins.
+- Two levels: full admin (`admin`) and admin (everything except managing admins).
 
-**פיתוח מקומי:**
+## Settings
 
-| כתובת | שירות |
-| --- | --- |
-| `localhost:5174` | admin-frontend |
-| `localhost:8001` | admin-backend |
-| `localhost:8000` | chat-backend |
-| `localhost:5173` | public-frontend |
+| Name | Notes |
+|---|---|
+| `ENV` | `dev` or `prod` (default `prod`) |
+| `DEV_AUTH_EMAIL` | Dev sign-in bypass. Refused unless `ENV=dev` |
+| `CHAT_API_URL`, `MOD_API_TOKEN` | Chat moderation |
+| `TURNSTILE_SECRET` | Required in prod |
+| `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD` | Required in prod |
 
-כל השירותים רצים ב-Docker, על רשת אחת ו-Postgres אחד. בתוכו יש DB נפרד לכל שירות: `admin_db`, ‏`chat_db` ו-`admin_test`.
+Secrets can also come from a `<NAME>_FILE`.
 
-**תיעוד:**
-- `db/CONTRACT.md`: חוזה ה-DB.
-- `docs/admin-integration.md`: התשובה למסמך החיבור שלך.
+## Tests
 
-## מה סוכם
+- pytest: 220, on a temporary DB whose name must end in `_test`.
+- Playwright (console): 81, against a fake API.
 
-| נושא | הסיכום |
-| --- | --- |
-| ניתוב | `openuvoice.com` לסטודנטים, `admin.openuvoice.com` למנהלים. מ-admin-backend נחשפים לציבור רק `POST /api/inquiries` ו-`GET /api/announcements`. `/internal` לא נחשף |
-| חוזה הפניות | אנונימי, בדיוק כמו בטופס שלך |
-| Turnstile | בלי `TURNSTILE_SECRET`: מתקבל `null`. עם secret: טוקן חסר או לא תקין מחזיר 422. בייצור השרת לא עולה בלי secret. לקריאה ל-`siteverify` יש timeout קצר, ואם היא נכשלת, הפנייה לא עוברת |
-| בוט שנתפס במלכודת | מקבל `201` עם `id` מאותו מונה, בלי שנשמרת שורה |
-| שגיאות 5xx | `{"detail": "..."}` |
-| חוזה ההודעות | כמו במסמך שלך |
-| התחברות מנהלים | Cloudflare Access, ואחריו טבלת `admins` עם תפקידים: `admin`, `moderator`, `inquiries`, `announcements` |
-| `ENV` | `dev` או `prod`. כשלא מוגדר: `prod`. כל ערך אחר מפיל את השרת בעלייה |
-| `/docs`, `/redoc`, `/openapi.json` | קיימים רק כש-`ENV=dev` |
-| בדיקות תקינות | `/health/live` בלי DB, ו-`/health/ready` עם DB ו-timeout קצר |
-| שמות הגדרות | `CHAT_INTERNAL_URL`, ‏`ADMIN_DEV_EMAIL`, ‏`TURNSTILE_SECRET`, ‏`CF_ACCESS_TEAM_DOMAIN`, ‏`CF_ACCESS_AUD` |
-| עבודה בגיט | PR קטן לכל שינוי, ו-Squash and merge |
+## Local ports
 
-## הבהרה לגבי psycopg
+| Port | Service |
+|---|---|
+| 5173 | public-frontend |
+| 5174 | admin-frontend |
+| 8000 | chat-backend |
+| 8001 | admin-backend |
 
-אצלי כל נקודות הקצה מוגדרות כ-`def` רגיל, ולא `async def`. FastAPI מריץ פונקציות כאלה ב-threadpool, כך ששאילתה סינכרונית לא חוסמת את השרת. החשש מחסימה נכון רק לחיבור סינכרוני **בתוך** `async def`, ואצלי אין מקרה כזה. מעבר ל-`AsyncConnectionPool` הוא אפשרות לעתיד, לא תיקון של באג.
+## Next
 
-## מה הלאה אצלי (PR קטן לכל שלב)
-
-- [ ] **PR 1:** כל מה שקיים היום, כ-draft.
-- [ ] **PR 2: פניות לפי החוזה.**
-  - `POST /api/inquiries`, וטבלת `inquiries`: קורס לפי מספר, סוג ועדיפות (`low`, `normal`, `high`).
-  - הסטטוסים `new`, ‏`in_progress` ו-`closed`, ועוד `is_read`.
-  - שיוך למטפל, וסינון "הפניות שלי".
-  - תיקון של סוג הפנייה על ידי מנהל.
-  - טבלת היסטוריה `inquiry_events`, שרושמת כל שינוי עם מי ומתי.
-  - Turnstile ומלכודת. לא נשמר IP, ותוכן הפנייה לא נכתב ללוג.
-  - יוצאים: `/api/requests`, חסימת מיילים, ו"השולחים המובילים".
-- [ ] **PR 3: תשתית.** `ENV`, כיבוי `/docs` בייצור, `/health/live` ו-`/health/ready`, ו-Python 3.14 (אחרי שאוודא שכל הספריות תומכות).
-- [ ] **PR 4: יומן ומחיקה וסטטיסטיקה.**
-  - יומן פעולות אחד לכל המערכת: פניות, הודעות, מנהלים וצ'אט.
-  - מחיקה רכה (`deleted_at`), שמותרת רק ל-`admin` ונרשמת ביומן.
-  - סטטיסטיקה: הצלבת קורס מול סוג, זמן עד תחילת טיפול ועד סגירה, ו"נסגרו השבוע".
-  - סינון לפי טווח תאריכים בקונסולה.
-- [ ] **PR 5: הרשאות.** Cloudflare Access, בדיקת תפקיד ספציפי בכל נתיב (היום נבדקת רק `admin` לניהול מנהלים), השבתת מנהל (`active`), והגנה מ-CSRF (מתקבל רק `application/json` בבקשות שמשנות משהו).
-- [ ] **PR 6: הודעות הוועד.** `GET /api/announcements`, ‏`/api/admin/announcements`, ולשונית הודעות בקונסולה.
-- [ ] **בפריסה:** כותרות אבטחה ב-nginx של admin-frontend (`Content-Security-Policy`, ‏`frame-ancestors 'none'`, ‏`Referrer-Policy: no-referrer`), ומיגרציות כ-Job (Helm hook).
-
-## מה מצופה ממך
-
-- [ ] לשנות את השם ל-`chat-backend/docs/internal-api.md`, ולעדכן אותי כשזה ב-main
-- [ ] לפתוח אתר Turnstile, ולהעביר אליי את ה-secret בפרטיות
-- [ ] להעביר אליי את `MOD_API_TOKEN` בפרטיות
-- [ ] להוסיף ב-`public-frontend/vite.config.ts` את ה-proxy ל-`/api/inquiries` ול-`/api/announcements` (אל `localhost:8001`), כשהנתיבים שלי ב-main
-- [ ] דף `/announcements` באתר
-- [ ] רכיב Turnstile בטופס הפנייה
-- [ ] לעבור על PR 1 כשהוא נפתח
-- [ ] לקבוע איתי גרסת Postgres אחת לשני ה-DB-ים. אצלי היום 17
-
-## פתוח, לא חוסם
-
-- כמה זמן שומרים פנייה סגורה. ההצעה שלך: מחיקה אוטומטית אחרי כשנתיים.
-- התראה לוועד (מייל או הודעה) כשנכנסת פנייה חדשה.
-- קוד מעקב לסטודנט, שבודק איתו את הסטטוס בלי שום פרט מזהה.
-- מי מגדיר את Cloudflare Access על `admin.openuvoice.com`, בשלב הפריסה.
+- Console redesign.
+- Cloudflare Access app for `admin.openuvoice.com`.
+- Deploy: Docker, Helm, migrations as a Job, security headers in nginx.
+- Align the Python version (Dockerfile 3.12, local 3.14).

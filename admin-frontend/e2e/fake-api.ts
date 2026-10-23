@@ -1,7 +1,7 @@
 /**
  * An in-memory stand-in for admin-backend, installed in the browser with page.route().
  * It follows the real API's rules (admin-backend/app/routes), so the console can be tested
- * without Docker, a database or Google. Tests seed it, act in the page, then read its state back.
+ * without Docker or a database. Tests seed it, act in the page, then read its state back.
  */
 
 import type { Page, Route } from "@playwright/test";
@@ -11,15 +11,20 @@ export const STAFF = "staff@test.com";
 export const FULL = ["admin"];
 export const STANDARD = ["announcements", "inquiries", "moderator"];
 
-export interface Req {
+export type InquiryStatus = "new" | "in_progress" | "closed";
+export type InquiryType = "exams" | "staff" | "accessibility" | "admin" | "other";
+
+export interface Inquiry {
   id: number;
-  full_name: string;
-  email: string;
+  course_number: number;
   course_name: string;
-  body: string;
-  status: "new" | "closed";
-  is_opened: boolean;
+  type: InquiryType;
+  content: string;
+  status: InquiryStatus;
+  handled_by: string | null;
+  internal_note: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Course {
@@ -61,6 +66,12 @@ export const COURSES: Course[] = [
 export const USER_A = "11111111-1111-4111-8111-111111111111";
 export const USER_B = "44444444-4444-4444-8444-444444444444";
 
+// Same as the server (CONSOLE_PAGE_SIZE in admin-backend/app/routes/inquiries.py).
+export const INQUIRY_PAGE_SIZE = 50;
+const INQUIRY_STATUSES: InquiryStatus[] = ["new", "in_progress", "closed"];
+const INQUIRY_TYPES: InquiryType[] = ["exams", "staff", "accessibility", "admin", "other"];
+const MAX_NOTE_LENGTH = 2000;
+
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
 
 export class FakeApi {
@@ -73,8 +84,7 @@ export class FakeApi {
     this.admins.push({ email, roles: [...STANDARD], added_by: ADMIN, created_at: minutesAgo(5_000) });
   }
   courses = COURSES.map((c) => ({ ...c }));
-  requests: Req[] = [];
-  blocked: { email: string; reason: string | null; blocked_at: string }[] = [];
+  inquiries: Inquiry[] = [];
   failures: Failure[] = [];
   calls: { method: string; path: string; body: unknown }[] = [];
   chatStatus: number | null = null; // 503 = not configured, 502 = down
@@ -85,30 +95,33 @@ export class FakeApi {
   removed: Record<string, { message_id: number; course_id: number; course_name: string; content: string; created_at: string; removed_at: string }[]> = {};
   actions: { id: number; admin_email: string; action: string; message_id: number | null; user_id: string | null; created_at: string }[] = [];
 
-  private nextId = 1;
+  private nextInquiryId = 1;
   private nextActionId = 1;
 
-  /** Adds one request; created_at defaults to `minutesOld` minutes ago (newest = smallest). */
-  addRequest(fields: Partial<Req> & { minutesOld?: number } = {}): Req {
-    const { minutesOld, ...rest } = fields;
-    const r: Req = {
-      id: this.nextId++,
-      full_name: "ישראל ישראלי",
-      email: "student@test.com",
-      course_name: "מכניקה",
-      body: "פנייה לבדיקה",
+  /** Adds one inquiry, as the public form would. Ids grow, so the last one added is the newest. */
+  addInquiry(fields: Partial<Inquiry> = {}): Inquiry {
+    const courseNumber = fields.course_number ?? 0;
+    const created = minutesAgo(100 - this.nextInquiryId);
+    const inquiry: Inquiry = {
+      id: this.nextInquiryId++,
+      course_number: courseNumber,
+      course_name: this.courses.find((c) => c.course_number === courseNumber)?.name ?? "",
+      type: "exams",
+      content: "פנייה לבדיקה",
       status: "new",
-      is_opened: false,
-      created_at: minutesAgo(minutesOld ?? 100 - this.nextId),
-      ...rest,
+      handled_by: null,
+      internal_note: null,
+      created_at: created,
+      updated_at: created,
+      ...fields,
     };
-    this.requests.push(r);
-    return r;
+    this.inquiries.push(inquiry);
+    return inquiry;
   }
 
-  /** n requests, oldest first: body "פנייה 1" .. "פנייה n". */
-  addMany(n: number, fields: Partial<Req> = {}): Req[] {
-    return Array.from({ length: n }, (_, i) => this.addRequest({ body: `פנייה ${i + 1}`, minutesOld: 1000 - i, ...fields }));
+  /** n inquiries, oldest first: content "פנייה 1" .. "פנייה n". */
+  addManyInquiries(n: number, fields: Partial<Inquiry> = {}): Inquiry[] {
+    return Array.from({ length: n }, (_, i) => this.addInquiry({ content: `פנייה ${i + 1}`, ...fields }));
   }
 
   addReported(fields: Partial<Reported> = {}): Reported {
@@ -140,7 +153,6 @@ export class FakeApi {
   }
 
   async install(page: Page) {
-    await page.route("**/accounts.google.com/**", (route) => route.abort());
     await page.route("**/api/admin/**", (route) => this.handle(route));
   }
 
@@ -167,7 +179,7 @@ export class FakeApi {
 
     const auth = req.headers()["authorization"] ?? "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-    if (!token) return this.json(route, 401, { detail: "missing bearer token" });
+    if (!token) return this.json(route, 401, { detail: "missing access token" });
     const email = token.startsWith("dev:") ? token.slice(4).toLowerCase() : token.toLowerCase();
     if (!email.includes("@")) return this.json(route, 401, { detail: "invalid or expired token" });
     if (!this.admins.some((a) => a.email === email)) return this.json(route, 403, { detail: "not an admin" });
@@ -196,82 +208,13 @@ export class FakeApi {
     const requireFull = () => {
       if (!me.roles.includes("admin")) throw new HttpError(403, "requires the admin role");
     };
+    if (path.startsWith("/inquiries")) {
+      if (!me.roles.includes("admin") && !me.roles.includes("inquiries")) throw new HttpError(403, "requires the inquiries role");
+      return this.inquiry(method, path, q, body, admin);
+    }
+
     if (method === "GET" && path === "/me") return ok({ email: admin, name: null, roles: me.roles });
-    if (method === "GET" && path === "/summary") {
-      const r = this.requests;
-      return ok({
-        unread: r.filter((x) => !x.is_opened).length,
-        in_progress: r.filter((x) => x.is_opened && x.status === "new").length,
-        closed: r.filter((x) => x.status === "closed").length,
-        total: r.length,
-      });
-    }
-    if (method === "GET" && path === "/requests") return ok(this.list(q));
     if (method === "GET" && path === "/courses") return ok([...this.courses].sort((a, b) => a.course_number - b.course_number));
-
-    if ((m = path.match(/^\/requests\/(\d+)$/))) {
-      const r = this.find(Number(m[1]));
-      if (method === "GET") {
-        const { ...full } = r;
-        return ok(full);
-      }
-      if (method === "DELETE") {
-        this.requests = this.requests.filter((x) => x !== r);
-        return undefined;
-      }
-    }
-    if ((m = path.match(/^\/requests\/(\d+)\/(read|unread|close|reopen)$/)) && method === "POST") {
-      const r = this.find(Number(m[1]));
-      const action = m[2];
-      if (action === "read") r.is_opened = true;
-      if (action === "unread") {
-        if (r.status === "closed") throw new HttpError(409, "a closed request cannot be marked unread");
-        r.is_opened = false;
-      }
-      if (action === "close") {
-        if (!r.is_opened) throw new HttpError(409, "request must be read before closing");
-        r.status = "closed";
-      }
-      if (action === "reopen") r.status = "new";
-      return ok({ id: r.id, status: r.status, is_opened: r.is_opened });
-    }
-
-    if (method === "GET" && path === "/stats/by-course") {
-      return ok(
-        this.courses
-          .map((c) => {
-            const mine = this.requests.filter((r) => r.course_name === c.name);
-            return { course_name: c.name, course_number: c.course_number, total: mine.length, unread: mine.filter((r) => !r.is_opened).length };
-          })
-          .sort((a, b) => b.total - a.total || a.course_name.localeCompare(b.course_name)),
-      );
-    }
-    if (method === "GET" && path === "/stats/weekly") {
-      const weeks = Number(q.get("weeks") ?? 12);
-      const start = weekStart(new Date());
-      return ok(
-        Array.from({ length: weeks }, (_, i) => {
-          const from = new Date(start.getTime() - (weeks - 1 - i) * 7 * 86_400_000);
-          const to = new Date(from.getTime() + 7 * 86_400_000);
-          const total = this.requests.filter((r) => new Date(r.created_at) >= from && new Date(r.created_at) < to).length;
-          return { week: from.toISOString(), total };
-        }),
-      );
-    }
-    if (method === "GET" && path === "/stats/top-senders") {
-      const by = new Map<string, Req[]>();
-      for (const r of this.requests) by.set(r.email, [...(by.get(r.email) ?? []), r]);
-      return ok(
-        [...by.entries()]
-          .map(([email, rs]) => ({
-            email,
-            total: rs.length,
-            last_at: rs.map((r) => r.created_at).sort().at(-1),
-            is_blocked: this.blocked.some((b) => b.email === email),
-          }))
-          .sort((a, b) => b.total - a.total),
-      );
-    }
 
     if (path === "/admins" && method === "GET") return ok(this.admins);
     if (path === "/admins" && method === "POST") {
@@ -303,47 +246,66 @@ export class FakeApi {
       return undefined;
     }
 
-    if (path === "/blocked" && method === "GET") return ok([...this.blocked].reverse());
-    if (path === "/blocked" && method === "POST") {
-      const email = String(body?.email ?? "").trim().toLowerCase();
-      if (!email.includes("@")) throw new HttpError(422, "invalid email");
-      const existing = this.blocked.find((b) => b.email === email);
-      if (existing) existing.reason = body?.reason ?? null;
-      else this.blocked.push({ email, reason: body?.reason ?? null, blocked_at: new Date().toISOString() });
-      return ok(this.blocked.find((b) => b.email === email), 201);
-    }
-    if ((m = path.match(/^\/blocked\/(.+)$/)) && method === "DELETE") {
-      const email = decodeURIComponent(m[1]!).toLowerCase();
-      if (!this.blocked.some((b) => b.email === email)) throw new HttpError(404, "email is not blocked");
-      this.blocked = this.blocked.filter((b) => b.email !== email);
-      return undefined;
-    }
-
     throw new HttpError(404, "Not Found");
   }
 
-  private list(q: URLSearchParams) {
-    let rows = [...this.requests];
-    const course = q.get("course_name");
-    const status = q.get("status");
-    const opened = q.get("is_opened");
-    const email = q.get("email");
-    if (course) rows = rows.filter((r) => r.course_name === course);
-    if (status) rows = rows.filter((r) => r.status === status);
-    if (opened !== null) rows = rows.filter((r) => r.is_opened === (opened === "true"));
-    if (email) rows = rows.filter((r) => r.email === email.trim().toLowerCase());
-    const oldest = q.get("sort") === "oldest";
-    rows.sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : a.id - b.id) * (oldest ? 1 : -1));
-    const page = Number(q.get("page") ?? 1);
-    const size = Number(q.get("page_size") ?? 25);
-    const items = rows.slice((page - 1) * size, page * size).map(({ body, ...r }) => ({ ...r, preview: body.slice(0, 200) }));
-    return { items, total: rows.length, page, page_size: size };
-  }
+  // ---- inquiries ---------------------------------------------------------
 
-  private find(id: number): Req {
-    const r = this.requests.find((x) => x.id === id);
-    if (!r) throw new HttpError(404, "request not found");
-    return r;
+  private inquiry(method: string, path: string, q: URLSearchParams, body: any, admin: string): { status?: number; data: unknown } {
+    let m: RegExpMatchArray | null;
+
+    if (method === "GET" && path === "/inquiries/counts") {
+      const counts = { new: 0, in_progress: 0, closed: 0 };
+      for (const i of this.inquiries) counts[i.status]++;
+      return { data: counts };
+    }
+
+    if (method === "GET" && path === "/inquiries") {
+      const status = q.get("status");
+      const type = q.get("type");
+      const course = q.get("course");
+      const before = q.get("before");
+      if (status !== null && !INQUIRY_STATUSES.includes(status as InquiryStatus)) throw new HttpError(422, "invalid status");
+      if (type !== null && !INQUIRY_TYPES.includes(type as InquiryType)) throw new HttpError(422, "invalid type");
+      if (course !== null && !(Number.isInteger(Number(course)) && Number(course) >= 0)) throw new HttpError(422, "invalid course");
+      if (before !== null && !(Number.isInteger(Number(before)) && Number(before) >= 1)) throw new HttpError(422, "invalid before");
+
+      const rows = this.inquiries
+        .filter((i) => status === null || i.status === status)
+        .filter((i) => type === null || i.type === type)
+        .filter((i) => course === null || i.course_number === Number(course))
+        .filter((i) => before === null || i.id < Number(before))
+        .sort((a, b) => b.id - a.id); // newest first
+      const items = rows.slice(0, INQUIRY_PAGE_SIZE);
+      const more = rows.length > INQUIRY_PAGE_SIZE;
+      return { data: { items, next_before: more ? items[items.length - 1]!.id : null } };
+    }
+
+    if ((m = path.match(/^\/inquiries\/(\d+)$/))) {
+      const inquiry = this.inquiries.find((i) => i.id === Number(m![1]));
+      if (!inquiry) throw new HttpError(404, "inquiry not found");
+      if (method === "GET") return { data: inquiry };
+      if (method === "POST") {
+        const sent = Object.keys(body ?? {}).filter((k) => k === "status" || k === "internal_note");
+        if (sent.length === 0) throw new HttpError(422, "nothing to update");
+        if (sent.includes("status") && !INQUIRY_STATUSES.includes(body.status)) throw new HttpError(422, "invalid status");
+        if (sent.includes("internal_note")) {
+          const note = body.internal_note === null ? "" : String(body.internal_note).trim();
+          if (note.length > MAX_NOTE_LENGTH) throw new HttpError(422, "invalid internal_note");
+          inquiry.internal_note = note || null;
+        }
+        if (sent.includes("status")) {
+          // Back to new: nobody handles it. Any other change records who made it; the same status keeps the handler.
+          if (body.status === "new") inquiry.handled_by = null;
+          else if (body.status !== inquiry.status) inquiry.handled_by = admin;
+          inquiry.status = body.status;
+        }
+        inquiry.updated_at = new Date().toISOString();
+        return { data: inquiry };
+      }
+    }
+
+    throw new HttpError(404, "Not Found");
   }
 
   // ---- chat --------------------------------------------------------------
@@ -414,10 +376,4 @@ class HttpError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
   }
-}
-
-/** Monday 00:00 (UTC) of the week of `d`. */
-function weekStart(d: Date): Date {
-  const day = (d.getUTCDay() + 6) % 7; // Monday = 0
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day));
 }

@@ -10,14 +10,14 @@ from fastapi.responses import JSONResponse
 
 from .config import ALLOWED_ORIGINS, DEV_AUTH_EMAIL
 from .db import pool
-from .routes import admin, announcements, chat, inquiries, public
+from .routes import admin, announcements, chat, inquiries
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if DEV_AUTH_EMAIL:
         logging.getLogger("uvicorn.error").warning(
-            "DEV_AUTH_EMAIL is set: Google sign-in is bypassed. Never use this in production."
+            "DEV_AUTH_EMAIL is set: Cloudflare Access sign-in is bypassed. Never use this in production."
         )
     pool.open()
     yield
@@ -31,7 +31,7 @@ class UTF8JSONResponse(JSONResponse):
 
 
 app = FastAPI(
-    title="Physics committee requests - admin backend",
+    title="OpenUVoice admin backend",
     lifespan=lifespan,
     default_response_class=UTF8JSONResponse,
 )
@@ -70,7 +70,6 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-app.include_router(public.router)
 app.include_router(inquiries.router)
 app.include_router(inquiries.admin_router)
 app.include_router(admin.router)

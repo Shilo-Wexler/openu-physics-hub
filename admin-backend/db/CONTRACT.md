@@ -1,40 +1,50 @@
-# חוזה ה-DB של מערכת הפניות
+# Admin DB contract
 
-> STUDENT-SIDE: הסעיפים "מה הסטודנט שולח" ו"מה השרת בודק" שייכים להגשה של הסטודנט (`POST /api/requests`), שעדיין לא הוחלט אם תישאר כאן. החוזה המלא בשביל החבר: `docs/requests-api.md`.
+The rules the admin-backend DB keeps. The schema is in `migrations/`; this file says what it means.
 
-## מה הסטודנט שולח לשרת
+## Inquiries (`inquiries`)
 
-| שדה | חובה | כלל |
-|---|---|---|
-| `id_token` | כן | ה-token שהתקבל מגוגל. השרת מאמת אותו ולא שומר אותו |
-| `email` | כן | המייל מגוגל. חייב להיות זהה למייל שבתוך ה-token |
-| `full_name` | כן | 1 עד 100 תווים |
-| `course_name` | כן | שם קורס בדיוק כפי שהוא ב-`shared/courses.csv`, או `כללי`. זה הסיווג היחיד של הפנייה |
-| `body` | כן | 1 עד 5000 תווים, אחרי חיתוך רווחים בקצוות |
+Anonymous: no name, email or IP is stored, and the content is never written to the log.
 
-## מה השרת בודק לפני ששומר
+### What the site sends (`POST /api/inquiries`)
 
-1. ה-token תקין: חתימה של גוגל, `aud` שווה ל-Client ID של האתר, `iss` של גוגל, לא פג תוקף.
-2. `email_verified` ב-token הוא `true`.
-3. המייל שנשלח, אחרי המרה לאותיות קטנות וחיתוך רווחים, שווה למייל שב-token. אחרת הבקשה נדחית.
-4. הגבלת קצב לפי מייל ולפי IP.
-
-## מה השרת ממלא
-
-| שדה | ערך ביצירה |
+| Field | Rule |
 |---|---|
-| `email` | המייל מה-token, באותיות קטנות |
-| `status` | `new` |
-| `is_opened` | `false` |
-| `created_at` | שעון השרת |
+| `course_id` | A course number from `shared/courses.csv`, or `0` for "כללי" |
+| `type` | `exams`, `staff`, `accessibility`, `admin` or `other` |
+| `content` | 1 to 2000 characters after trimming |
+| `website` | Honeypot. Filled in: `201 {"id": 0}`, nothing is saved |
+| `turnstile_token` | Required. Missing or rejected: `422`. Cloudflare unreachable: `503` |
 
-## כללי מצב
+The server sets `status = new`, `created_at` and `updated_at`.
 
-- פנייה נוצרת כ-`new` ו-`is_opened = false`.
-- אדמין מסמן פנייה כנקראה (`is_opened = true`) או מחזיר אותה ללא נקראה (`false`).
-- פנייה סגורה לא יכולה לחזור ללא נקראה.
-- מעבר ל-`closed` מותר רק כש-`is_opened = true`. ה-DB דוחה כל ניסיון אחר.
-- מייל שנמצא ב-`blocked_emails` לא יכול ליצור פנייה. ה-DB דוחה את ההכנסה.
-- סטודנט רק יוצר פנייה. הוא לא קורא, לא עורך ולא מוחק.
-- אדמין יכול למחוק פנייה. המחיקה סופית ואי אפשר לשחזר אותה.
-- רק מי שהמייל שלו נמצא ב-`admins` נכנס לדף האדמין.
+### Handling in the console
+
+- Needs the `inquiries` or `admin` role.
+- Status: `new`, `in_progress` or `closed`, in any direction.
+- `handled_by` (an admin's email):
+  - set to the current admin when the status changes;
+  - kept when the status stays the same;
+  - cleared when the inquiry goes back to `new`.
+- `internal_note`: up to 2000 characters. `""` or `null` clears it.
+- Every change sets `updated_at`.
+- Inquiries are never deleted from the console.
+
+## Courses (`courses`)
+
+Loaded from `shared/courses.csv`, plus `0,כללי`. A course that an inquiry points to cannot be removed.
+
+## Admins (`admins`)
+
+- Only emails in this table can use the console. Cloudflare Access signs them in first.
+- Roles: `admin`, `moderator`, `inquiries`, `announcements`.
+- Only `admin` can add, change or remove admins, and never their own row.
+- Changes apply on the next request.
+
+## Chat moderation (`moderation_actions`)
+
+Every chat action (dismiss, remove, block, unblock) is logged with the admin and the target, and only after the chat backend confirmed it.
+
+## Announcements (`announcements`)
+
+A title with text and/or one image (WebP). Many can be published; exactly one can be pinned.

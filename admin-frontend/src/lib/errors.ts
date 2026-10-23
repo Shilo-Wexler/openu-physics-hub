@@ -17,12 +17,10 @@ const BY_DETAIL: Record<string, string> = {
   "403:not an admin": "אין לחשבון הזה הרשאת מנהל.",
   "invalid email": "כתובת המייל לא תקינה.",
   "invalid roles": "הדרגה שנבחרה לא תקינה.",
-  // requests
-  "request must be read before closing": "קודם צריך לפתוח את הפנייה, ורק אחר כך לסגור אותה.",
-  "a closed request cannot be marked unread": "פנייה סגורה אי אפשר לסמן כלא נקראה. קודם מחזירים אותה לטיפול.",
-  "request not found": "הפנייה לא נמצאה. ייתכן שמישהו אחר מחק אותה.",
-  // request blocks
-  "email is not blocked": "המייל הזה כבר לא חסום. רעננו את הדף.",
+  // inquiries
+  "requires the inquiries role": "אין לך הרשאה לטפל בפניות.",
+  "inquiry not found": "הפנייה לא נמצאה. רעננו את הדף.",
+  "invalid internal_note": "ההערה ארוכה מדי: עד 2000 תווים.",
   // chat
   "message not found": "ההודעה לא נמצאה. ייתכן שכבר הוסרה.",
   "user not found": "המשתמש לא נמצא בצ'אט.",

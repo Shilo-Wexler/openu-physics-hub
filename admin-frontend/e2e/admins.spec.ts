@@ -251,15 +251,17 @@ test.describe("a standard admin (מנהל)", () => {
     await expect(page.locator(".admins-table button")).toHaveCount(0);
   });
 
-  test("still has every other tab and can handle requests", async ({ page, api, open }) => {
+  test("still has every other tab and can handle inquiries", async ({ page, api, open }) => {
     api.addStaff();
-    const r = api.addRequest();
+    const inquiry = api.addInquiry();
     await open(STAFF);
-    await expect(page.getByRole("tab")).toHaveCount(5);
+    await expect(page.getByRole("tab")).toHaveCount(4);
     await page.locator(".requests-table tbody tr").first().click();
-    await page.locator("aside.detail").getByRole("button", { name: "סגירת הפנייה" }).click();
-    await expect(page.locator("aside.detail .state-swatch")).toHaveText("סגורה");
-    expect(api.requests.find((x) => x.id === r.id)?.status).toBe("closed");
+    await page.locator("aside.detail").getByRole("button", { name: "לקחת לטיפול" }).click();
+    // A status change closes the panel, so the result is checked on the server.
+    await expect
+      .poll(() => api.inquiries.find((x) => x.id === inquiry.id))
+      .toMatchObject({ status: "in_progress", handled_by: STAFF });
   });
 
   test("can moderate the chat", async ({ page, api, open }) => {
@@ -270,15 +272,6 @@ test.describe("a standard admin (מנהל)", () => {
     await page.getByRole("button", { name: "התעלמות (ההודעה נשארת)" }).click();
     await expect(page.locator("article.report-card")).toHaveCount(0);
     expect(api.actions[0]).toMatchObject({ action: "dismiss", admin_email: STAFF });
-  });
-
-  test("can block emails from requests", async ({ page, api, open }) => {
-    api.addStaff();
-    await open(STAFF);
-    await tab(page, "חסימות פניות");
-    await page.getByLabel("מייל").fill("spam@test.com");
-    await page.getByRole("button", { name: "חסימה", exact: true }).click();
-    await expect(page.locator(".card", { hasText: "מיילים חסומים" }).locator("tbody tr")).toHaveCount(1);
   });
 
   test("the server refuses admin management for them anyway", async ({ page, api, open }) => {
