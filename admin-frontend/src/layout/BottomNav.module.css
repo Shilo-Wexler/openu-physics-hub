@@ -1,0 +1,88 @@
+.bar {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+  padding-block-end: env(safe-area-inset-bottom);
+  background: rgb(249 249 249 / 0.94);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border-block-start: 1px solid var(--color-border-strong);
+}
+
+.tab {
+  min-height: var(--bottom-nav-height);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.current {
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+}
+
+.iconWrap {
+  position: relative;
+  display: flex;
+}
+
+.icon {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.current .icon {
+  stroke-width: 2;
+}
+
+/* The iOS red count, over the icon's top corner. */
+.badge {
+  position: absolute;
+  top: -4px;
+  left: 60%;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 5px;
+  border-radius: 9px;
+  background: var(--color-badge);
+  color: #ffffff;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 18px;
+  text-align: center;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* While typing, the keyboard needs the space. */
+html:where(:has(textarea:focus, input:not([type="radio"], [type="checkbox"]):focus)) .bar {
+  display: none;
+}
+
+/* From 641px the header shows the sections instead. */
+@media (width >= 641px) {
+  .bar {
+    display: none;
+  }
+}

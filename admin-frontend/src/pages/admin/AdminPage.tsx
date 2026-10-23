@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Navigate, Route, Routes } from "react-router";
 
 import { ApiError, isAbort, isAuthError } from "../../api/client";
 import { getInquiryCounts } from "../../api/inquiries";
@@ -6,7 +7,10 @@ import { getMe } from "../../api/me";
 import { DEV_SIGN_IN, type Identity } from "../../auth/identity";
 import SignIn from "../../auth/SignIn";
 import { useIdentity } from "../../auth/useIdentity";
-import { LEVEL_LABEL, levelOf } from "../../lib/levels";
+import BottomNav from "../../layout/BottomNav";
+import ConsoleHeader from "../../layout/ConsoleHeader";
+import { allowed, sectionsFor, type Section } from "../../layout/sections";
+import MorePage from "../more/MorePage";
 import AdminsTab from "./AdminsTab";
 import AnnouncementsTab from "./AnnouncementsTab";
 import ChatTab from "./ChatTab";
@@ -60,19 +64,21 @@ export default function AdminPage() {
 
   if (expired && !DEV_SIGN_IN) {
     return (
-      <section className="card">
-        <h1>ההתחברות פגה</h1>
-        <p>רעננו את הדף כדי להתחבר שוב.</p>
-        <button className="btn btn-primary" onClick={() => window.location.reload()}>
-          רענון
-        </button>
-      </section>
+      <PlainFrame>
+        <section className="card">
+          <h1>ההתחברות פגה</h1>
+          <p>רעננו את הדף כדי להתחבר שוב.</p>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
+            רענון
+          </button>
+        </section>
+      </PlainFrame>
     );
   }
 
   if (!identity) {
     return (
-      <>
+      <PlainFrame>
         <h1>כניסת חברי ועדה</h1>
         <section className="card">
           {expired && <p className="notice">ההתחברות פגה. התחברו שוב.</p>}
@@ -80,36 +86,44 @@ export default function AdminPage() {
           <SignIn onEmail={handleEmail} />
           {signInError && <p className="error">{signInError}</p>}
         </section>
-      </>
+      </PlainFrame>
     );
   }
 
-  if (access === "checking") return <p>בודק הרשאות...</p>;
+  if (access === "checking") {
+    return (
+      <PlainFrame>
+        <p>בודק הרשאות...</p>
+      </PlainFrame>
+    );
+  }
 
   if (access === "forbidden" || access === "error") {
     return (
-      <section className="card">
-        {access === "forbidden" ? (
-          <>
-            <h1>אין הרשאה</h1>
-            <p>
-              {identity.email ? (
-                <>
-                  החשבון <bdi dir="ltr">{identity.email}</bdi>
-                </>
-              ) : (
-                "החשבון שהתחברת איתו"
-              )}{" "}
-              אינו מוגדר כחבר ועדה. אם זו טעות, בקשו ממנהל המערכת להוסיף אותו.
-            </p>
-          </>
-        ) : (
-          <p className="error">לא הצלחנו לבדוק את ההרשאות שלך, כי השרת לא זמין. נסו לרענן את הדף.</p>
-        )}
-        <button className="btn" onClick={signOut}>
-          התחברות עם חשבון אחר
-        </button>
-      </section>
+      <PlainFrame>
+        <section className="card">
+          {access === "forbidden" ? (
+            <>
+              <h1>אין הרשאה</h1>
+              <p>
+                {identity.email ? (
+                  <>
+                    החשבון <bdi dir="ltr">{identity.email}</bdi>
+                  </>
+                ) : (
+                  "החשבון שהתחברת איתו"
+                )}{" "}
+                אינו מוגדר כחבר ועדה. אם זו טעות, בקשו ממנהל המערכת להוסיף אותו.
+              </p>
+            </>
+          ) : (
+            <p className="error">לא הצלחנו לבדוק את ההרשאות שלך, כי השרת לא זמין. נסו לרענן את הדף.</p>
+          )}
+          <button className="btn" onClick={signOut}>
+            התחברות עם חשבון אחר
+          </button>
+        </section>
+      </PlainFrame>
     );
   }
 
@@ -118,18 +132,14 @@ export default function AdminPage() {
   );
 }
 
-type Tab = "inquiries" | "chat" | "announcements" | "admins";
-
-// role: the tab is shown only to admins with that role (or "admin"). The server checks it again.
-const TABS: { id: Tab; label: string; role?: string }[] = [
-  { id: "inquiries", label: "פניות", role: "inquiries" },
-  { id: "chat", label: "ניהול הצ'אט" },
-  { id: "announcements", label: "הכרזות", role: "announcements" },
-  { id: "admins", label: "מנהלים" },
-];
-
-function allowed(roles: string[], role?: string): boolean {
-  return !role || roles.includes("admin") || roles.includes(role);
+/** The header and page area without sections: for the screens before the console opens. */
+function PlainFrame({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <ConsoleHeader sections={[]} />
+      <main>{children}</main>
+    </>
+  );
 }
 
 interface ConsoleProps {
@@ -142,12 +152,9 @@ interface ConsoleProps {
 }
 
 function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: ConsoleProps) {
-  const tabs = useMemo(() => TABS.filter((t) => allowed(roles, t.role)), [roles]);
-  // The first tab this admin may see: inquiries for most, the chat for a moderator-only admin.
-  const [tab, setTab] = useState<Tab>(() => tabs[0]?.id ?? "chat");
+  const sections = useMemo(() => sectionsFor(roles), [roles]);
   const [version, setVersion] = useState(0);
   const changed = useCallback(() => setVersion((v) => v + 1), []);
-  const seesInquiries = allowed(roles, "inquiries");
 
   const context = useMemo<AdminContextValue>(
     () => ({
@@ -164,58 +171,64 @@ function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: Consol
 
   return (
     <AdminContext.Provider value={context}>
-      <div className="admin-bar">
-        <span className="muted">
-          <bdi dir="ltr">{email}</bdi> <span className="badge level-badge">{LEVEL_LABEL[levelOf(roles)]}</span>{" "}
-          <button className="link-button" onClick={onSignOut}>
-            התנתקות
-          </button>
-        </span>
-      </div>
-
-      {seesInquiries && <SummaryBar />}
-
-      <div className="tabs" role="tablist">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            className={tab === t.id ? "tab active" : "tab"}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "inquiries" && <InquiriesTab />}
-      {tab === "chat" && <ChatTab />}
-      {tab === "announcements" && <AnnouncementsTab />}
-      {tab === "admins" && <AdminsTab />}
+      <ConsoleShell sections={sections} onSignOut={onSignOut} />
     </AdminContext.Provider>
   );
 }
 
-/** The inquiry counters above the tabs. Reloads after every change (version). */
-function SummaryBar() {
-  const { token, version } = useAdmin();
-  const { data } = useLoad((signal) => getInquiryCounts(token, signal), [token, version]);
-  const total = data ? data.new + data.in_progress + data.closed : undefined;
-  const counters = [
-    { label: "חדשות", value: data?.new, highlight: true },
-    { label: "בטיפול", value: data?.in_progress },
-    { label: "סגורות", value: data?.closed },
-    { label: "סה\"כ", value: total },
-  ];
+/** Inside the context, so it can load the new-inquiries count for the tab badge. */
+function ConsoleShell({ sections, onSignOut }: { sections: Section[]; onSignOut: () => void }) {
+  const { roles } = useAdmin();
+  const newInquiries = useNewInquiries(allowed(roles, "inquiries"));
+  const badges = { inquiries: newInquiries };
+  // The first section this admin may see: inquiries for most, the chat for a moderator-only admin.
+  const home = sections[0]?.path ?? "/more";
+
   return (
-    <div className="counters">
-      {counters.map((c) => (
-        <div key={c.label} className={c.highlight ? "counter-box highlight" : "counter-box"}>
-          <span className="counter-value">{c.value ?? "–"}</span>
-          <span className="counter-label">{c.label}</span>
-        </div>
-      ))}
-    </div>
+    <>
+      <ConsoleHeader sections={sections} badges={badges} />
+      <main>
+        <Routes>
+          <Route index element={<Navigate to={home} replace />} />
+          <Route
+            path="inquiries"
+            element={
+              <Guard role="inquiries">
+                <InquiriesTab />
+              </Guard>
+            }
+          />
+          <Route path="chat" element={<ChatTab />} />
+          <Route
+            path="announcements"
+            element={
+              <Guard role="announcements">
+                <AnnouncementsTab />
+              </Guard>
+            }
+          />
+          <Route path="more" element={<MorePage onSignOut={onSignOut} />} />
+          <Route path="more/admins" element={<AdminsTab />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+      <BottomNav sections={sections} badges={badges} />
+    </>
   );
+}
+
+/** A section opened by URL without its role goes back home. The server refuses the data anyway. */
+function Guard({ role, children }: { role: string; children: ReactNode }) {
+  const { roles } = useAdmin();
+  return allowed(roles, role) ? children : <Navigate to="/" replace />;
+}
+
+/** The count on the inquiries tab. Reloads after every change (version); 0 when the admin can't see inquiries. */
+function useNewInquiries(enabled: boolean): number {
+  const { token, version } = useAdmin();
+  const { data } = useLoad(
+    (signal) => (enabled ? getInquiryCounts(token, signal) : Promise.resolve(null)),
+    [token, version, enabled],
+  );
+  return data?.new ?? 0;
 }

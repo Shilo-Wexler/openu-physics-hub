@@ -13,8 +13,10 @@ export default defineConfig(({ mode }) => {
     server: {
       // 5174, so it can run next to public-frontend (5173).
       port: 5174,
-      // Fail instead of moving to another port: Google sign-in only accepts registered origins.
+      // Fail instead of moving to another port: the dev tunnel points at 5174.
       strictPort: true,
+      // The Cloudflare tunnel hostname used for testing on a phone.
+      allowedHosts: ["admin-dev.openuvoice.com"],
       // Dev only: forward API calls to the admin backend, so the browser sees one origin,
       // the same as behind the Ingress in production.
       proxy: {
