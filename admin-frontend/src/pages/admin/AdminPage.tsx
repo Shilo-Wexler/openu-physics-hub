@@ -14,6 +14,7 @@ import ConsoleHeader from "../../layout/ConsoleHeader";
 import { allowed, sectionsFor, type Section } from "../../layout/sections";
 import AnnouncementEditorPage from "../announcements/AnnouncementEditorPage";
 import AnnouncementListPage from "../announcements/AnnouncementListPage";
+import ActionPage from "../chat/ActionPage";
 import BlockedUserPage from "../chat/BlockedUserPage";
 import ChatPage from "../chat/ChatPage";
 import ReportPage from "../chat/ReportPage";
@@ -216,6 +217,7 @@ function ConsoleShell({ sections, onSignOut }: { sections: Section[]; onSignOut:
             <Route index element={<ChatPage />} />
             <Route path="reports/:id" element={<ReportPage />} />
             <Route path="blocked/:userId" element={<BlockedUserPage />} />
+            <Route path="log/:id" element={<ActionPage />} />
           </Route>
           {/* "new" is matched before ":id", so both open the same form, empty or filled. */}
           <Route

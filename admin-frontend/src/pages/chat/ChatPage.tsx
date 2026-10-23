@@ -2,15 +2,11 @@
 
 import { useNavigate, useSearchParams } from "react-router";
 
-import {
-  blockedUsers,
-  moderationActions,
-  reportedMessages,
-  type ModerationActionType,
-} from "../../api/chat";
+import { blockedUsers, moderationActions, reportedMessages } from "../../api/chat";
 import { ListMessage, ListRow, RowList } from "../../components/ListRow";
 import SegmentedControl from "../../components/SegmentedControl";
 import { formatDay } from "../../lib/format";
+import { ACTION_LABEL, targetName } from "../../lib/moderationLabels";
 import { useAdmin, useLoad } from "../admin/context";
 import LoadError from "../admin/LoadError";
 import styles from "./ChatPage.module.css";
@@ -22,13 +18,6 @@ const VIEWS: { value: View; label: string }[] = [
   { value: "blocked", label: "חסומים" },
   { value: "log", label: "יומן" },
 ];
-
-const ACTION_LABEL: Record<ModerationActionType, string> = {
-  dismiss: "התעלמות מדיווח",
-  remove: "הסרת הודעה",
-  block: "חסימת משתמש",
-  unblock: "ביטול חסימה",
-};
 
 /** The view from the URL; anything else is the reports, the view that needs work. */
 function readView(params: URLSearchParams): View {
@@ -129,20 +118,31 @@ function Log() {
 
   return (
     <RowList>
-      {actions.data.map((a) => (
-        <ListRow
-          key={a.id}
-          title={
-            <>
-              {ACTION_LABEL[a.action]}
-              {/* The chat server knows messages by number only; nicknames here need a server change. */}
-              {a.message_id !== null && <span className={styles.target}> · הודעה {a.message_id}</span>}
-            </>
-          }
-          time={a.created_at}
-          subtitle={<bdi dir="ltr">{a.admin_email}</bdi>}
-        />
-      ))}
+      {actions.data.map((a) => {
+        // Without the chat backend there is no nickname; the message number still tells which one.
+        const target = targetName(a) ?? (a.message_id !== null ? `הודעה ${a.message_id}` : null);
+        return (
+          <ListRow
+            key={a.id}
+            to={`/chat/log/${a.id}`}
+            title={
+              <>
+                {ACTION_LABEL[a.action]}
+                {target && (
+                  <span className={styles.target}>
+                    {" · "}
+                    <bdi>{target}</bdi>
+                  </span>
+                )}
+              </>
+            }
+            badge={a.undone_by !== null && <span className={styles.undone}>בוטלה</span>}
+            time={a.created_at}
+            subtitle={<bdi dir="ltr">{a.admin_email}</bdi>}
+            preview={a.message?.content}
+          />
+        );
+      })}
     </RowList>
   );
 }

@@ -9,8 +9,19 @@
   font-weight: var(--weight-bold);
 }
 
-/* The message number after a log action, quieter than the action. */
+/* Who or what a log action was about, quieter than the action. */
 .target {
   color: var(--color-text-muted);
   font-weight: var(--weight-regular);
+}
+
+/* "Undone" after a log action: grey, since the action no longer stands. */
+.undone {
+  flex: none;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
 }
