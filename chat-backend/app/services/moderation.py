@@ -1,4 +1,5 @@
-"""Moderation for the admin console: reported messages, removing messages, blocking users.
+"""Moderation for the admin console: reported messages, removing messages, blocking users,
+and undoing a dismissal or a removal.
 
 Called only through the /internal routes, by the admin backend (not by browsers).
 """
@@ -12,6 +13,8 @@ from app.services.messages import MessageNotFound
 
 # Most reported messages returned in one list; the console shows the worst first.
 REPORTED_LIMIT = 100
+# Most ids one details request may ask for: more than a page of the console's moderation log.
+MAX_IDS = 200
 
 # Active messages with open reports, most reported first, with the author's history:
 # how many of their messages moderators removed, and how many were ever reported.
@@ -40,9 +43,29 @@ _REPORTED = """
      limit $1
 """
 
+# Any messages by id, deleted ones too, for the console's log: what was written, by whom, where,
+# what became of it (state) and its reports. Reports per message are few, so counting them is cheap.
+_MESSAGES = """
+    select m.id as message_id, m.course_id, c.name as course_name, m.content, m.created_at,
+           m.user_id as author_id, u.nickname as author_nickname,
+           case when m.deleted_at is null then 'active'
+                when m.deleted_by = 'moderator' then 'removed'
+                else 'deleted' end as state,
+           (select count(*) from reports r where r.message_id = m.id and r.status = 'open') as open_reports,
+           (select count(*) from reports r where r.message_id = m.id) as all_reports
+      from messages m
+      join users u on u.id = m.user_id
+      join courses c on c.id = m.course_id
+     where m.id = any($1::bigint[])
+"""
+
 
 class UserNotFound(Exception):
     pass
+
+
+class NothingToUndo(Exception):
+    """The message is no longer as the action left it (handled again since), so there is nothing to undo."""
 
 
 async def reported_messages() -> list[asyncpg.Record]:
@@ -56,6 +79,29 @@ async def dismiss(message_id: int) -> int:
         message_id,
     )
     return int(status.split()[-1])
+
+
+async def reopen(message_id: int) -> int:
+    """Undo a dismissal: the message's dismissed reports are open again, so it is back in the
+    reports list for a new decision. Only while the message is still in the chat.
+    Returns how many reports were reopened."""
+    async with db.pool.acquire() as conn, conn.transaction():
+        # for update: a removal at the same moment waits, so the check below stays true.
+        row = await conn.fetchrow(
+            "select deleted_at from messages where id = $1 for update", message_id
+        )
+        if row is None:
+            raise MessageNotFound()
+        if row["deleted_at"] is not None:
+            raise NothingToUndo()
+        status = await conn.execute(
+            "update reports set status = 'open' where message_id = $1 and status = 'dismissed'",
+            message_id,
+        )
+        reopened = int(status.split()[-1])
+        if reopened == 0:
+            raise NothingToUndo()
+        return reopened
 
 
 async def remove(message_id: int) -> None:
@@ -78,6 +124,28 @@ async def remove(message_id: int) -> None:
             "update reports set status = 'resolved' where message_id = $1 and status = 'open'",
             message_id,
         )
+
+
+async def restore(message_id: int) -> int:
+    """Undo a removal: the message is back in the chat, and the reports closed with it are open again,
+    so it is back in the reports list for a new decision. Only for a message a moderator removed,
+    never one its author deleted. Returns how many reports were reopened."""
+    async with db.pool.acquire() as conn, conn.transaction():
+        row = await conn.fetchrow(
+            "select deleted_by from messages where id = $1 for update", message_id
+        )
+        if row is None:
+            raise MessageNotFound()
+        if row["deleted_by"] != "moderator":
+            raise NothingToUndo()
+        await conn.execute(
+            "update messages set deleted_at = null, deleted_by = null where id = $1", message_id
+        )
+        status = await conn.execute(
+            "update reports set status = 'open' where message_id = $1 and status = 'resolved'",
+            message_id,
+        )
+        return int(status.split()[-1])
 
 
 async def block(user_id: UUID) -> None:
@@ -130,3 +198,15 @@ async def removed_messages(user_id: UUID) -> list[asyncpg.Record]:
     ):
         raise UserNotFound()
     return rows
+
+
+async def messages_by_id(ids: list[int]) -> list[asyncpg.Record]:
+    """Details of these messages, in no set order. Ids that don't exist are left out."""
+    return await db.pool.fetch(_MESSAGES, ids)
+
+
+async def users_by_id(ids: list[UUID]) -> list[asyncpg.Record]:
+    """Nickname and block state of these users, in no set order. Ids that don't exist are left out."""
+    return await db.pool.fetch(
+        "select id as user_id, nickname, blocked_at from users where id = any($1::uuid[])", ids
+    )
