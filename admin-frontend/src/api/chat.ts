@@ -1,6 +1,6 @@
 /**
  * Chat moderation, through the admin backend (/api/admin/chat/*), which calls the chat backend's
- * /internal API server to server. Shapes mirror chat-backend/docs/moderation-api.md.
+ * /internal API server to server. Shapes mirror chat-backend/docs/internal-api.md.
  */
 
 import { request } from "./client";
@@ -38,7 +38,32 @@ export interface RemovedMessage {
   removed_at: string;
 }
 
-export type ModerationActionType = "dismiss" | "remove" | "block" | "unblock";
+/** reopen and restore are only ever undos (of dismiss and remove). */
+export type ModerationActionType = "dismiss" | "remove" | "block" | "unblock" | "reopen" | "restore";
+
+/** What became of a message: still in the chat, removed by a moderator, or deleted by its author. */
+export type MessageState = "active" | "removed" | "deleted";
+
+/** The chat backend's details of a message an action was about, as it is now. */
+export interface ActionMessage {
+  message_id: number;
+  course_id: number;
+  course_name: string;
+  content: string;
+  created_at: string;
+  author_id: string;
+  author_nickname: string;
+  state: MessageState;
+  open_reports: number;
+  all_reports: number;
+}
+
+/** The chat backend's details of a user an action was about, as they are now. */
+export interface ActionUser {
+  user_id: string;
+  nickname: string;
+  blocked_at: string | null;
+}
 
 export interface ModerationAction {
   id: number;
@@ -47,6 +72,16 @@ export interface ModerationAction {
   message_id: number | null;
   user_id: string | null;
   created_at: string;
+  /** Set on an undo: the action it undid. */
+  undoes: number | null;
+  /** Set when this action was undone: the undo's id. */
+  undone_by: number | null;
+  /** Only the latest action on its message or user, not undone yet. */
+  can_undo: boolean;
+  /** null for a user action, or when the chat backend could not be reached. */
+  message: ActionMessage | null;
+  /** null for a message action, or when the chat backend could not be reached. */
+  user: ActionUser | null;
 }
 
 export function reportedMessages(token: string, signal?: AbortSignal) {
@@ -79,4 +114,16 @@ export function removedMessages(token: string, userId: string, signal?: AbortSig
 
 export function moderationActions(token: string, signal?: AbortSignal) {
   return request<ModerationAction[]>(`${BASE}/actions`, { token, signal, params: { limit: 100 } });
+}
+
+export function moderationAction(token: string, actionId: number, signal?: AbortSignal) {
+  return request<ModerationAction>(`${BASE}/actions/${actionId}`, { token, signal });
+}
+
+/** Sends the opposite action to the chat and logs it. 409 when it can't be undone. */
+export function undoModerationAction(token: string, actionId: number) {
+  return request<{ undone: number; action: ModerationActionType }>(`${BASE}/actions/${actionId}/undo`, {
+    token,
+    method: "POST",
+  });
 }
