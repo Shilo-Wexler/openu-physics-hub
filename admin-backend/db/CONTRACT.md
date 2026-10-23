@@ -47,4 +47,10 @@ Every chat action (dismiss, remove, block, unblock) is logged with the admin and
 
 ## Announcements (`announcements`)
 
-A title with text and/or one image (WebP). Many can be published; exactly one can be pinned.
+- Three parts, each optional: a title (up to 200 characters, `""` for none), a text (up to 5000) and one image (WebP, with a required description for screen readers).
+- A published announcement has at least one part. The server refuses with `422 "announcement is empty"`:
+  - publishing an empty one;
+  - emptying the title and the text of a published one with no image;
+  - removing the only part of a published one, its image.
+- A draft may be empty: the console saves the text before it uploads the image.
+- Many can be published. At most one, a published one, is pinned to the home page.

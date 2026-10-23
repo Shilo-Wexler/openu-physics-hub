@@ -5,8 +5,9 @@
 -- as GPS, and rejects files that are not really images), so only WebP bytes ever reach this table.
 create table announcements (
   id            bigint generated always as identity primary key,
-  title         text not null check (length(trim(title)) between 1 and 200),
-  -- Plain text with line breaks, shown as text (never as HTML). May be empty when there is an image.
+  -- Every part is optional (title, text, image), but a published announcement has at least one.
+  title         text not null default '' check (length(title) <= 200),
+  -- Plain text with line breaks, shown as text (never as HTML).
   body          text not null default '' check (length(body) <= 5000),
   -- Null: a draft, seen only in the console. Set on every publish, so the site sorts by it.
   published_at  timestamptz,
@@ -29,6 +30,11 @@ create table announcements (
   constraint announcements_image_complete check (
     (image is null and image_width is null and image_height is null and image_alt is null)
     or (image is not null and image_width is not null and image_height is not null and image_alt is not null)
+  ),
+  -- The site never shows an empty announcement. A draft may be empty for a moment: the console
+  -- saves the text first and uploads the image after it, so an image-only one starts out empty.
+  constraint announcements_has_content check (
+    published_at is null or trim(title) <> '' or trim(body) <> '' or image is not null
   )
 );
 
@@ -40,3 +46,4 @@ create unique index announcements_one_pinned_idx on announcements ((true)) where
 -- (Postgres keeps large values apart from the row and reads them only when asked).
 create index announcements_published_idx on announcements (published_at desc, id desc)
   where published_at is not null;
+  

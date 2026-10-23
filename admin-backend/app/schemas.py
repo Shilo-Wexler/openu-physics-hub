@@ -38,10 +38,12 @@ class NewAdmin(BaseModel):
 
 class AnnouncementIn(BaseModel):
     """Creating or editing an announcement: always the whole text, so the console sends what it shows.
-    Publishing, pinning and the image each have their own route (/api/admin/announcements/{id}/...)."""
+    Publishing, pinning and the image each have their own route (/api/admin/announcements/{id}/...).
+    Both fields may be empty ("" means none): a published announcement needs only one of title, text
+    or image, and the routes that publish or change a published one check that."""
 
-    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
-    # Plain text; may be empty (an announcement can be a title and an image).
+    title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] = ""
+    # Plain text.
     body: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)] = ""
 
 

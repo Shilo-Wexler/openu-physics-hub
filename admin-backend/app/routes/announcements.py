@@ -4,8 +4,11 @@
 - admin_router: the console, /api/admin/announcements. Needs the "announcements" role (or "admin").
 
 A new announcement is a draft until it is published. Any number can be published; at most one, which
-must be published, is pinned to the site's home page. Only GET, POST and DELETE are used (the CORS
-setup in main.py allows nothing else), so every change is a POST to /{id} or /{id}/<action>.
+must be published, is pinned to the site's home page. Title, text and image are each optional, but a
+published announcement always has at least one of them: publishing an empty one, or emptying a
+published one, is refused with 422 "announcement is empty". A draft may be empty, because the console
+saves the text before it uploads the image. Only GET, POST and DELETE are used (the CORS setup in
+main.py allows nothing else), so every change is a POST to /{id} or /{id}/<action>.
 """
 
 from datetime import datetime
@@ -40,6 +43,11 @@ ADMIN_ORDER = "order by pinned desc, published_at desc nulls first, id desc"
 
 # Text or image changes count as an edit only once the site shows the announcement.
 MARK_EDITED = "edited_at = case when published_at is null then edited_at else now() end"
+
+# The row has something to show. Title and body are stored trimmed (AnnouncementIn), so "" means none.
+# Each change that could leave a published announcement empty puts this in its WHERE, so the check and
+# the change are one statement, and two admins editing at once cannot slip past it.
+HAS_CONTENT = "(title <> '' or body <> '' or image is not null)"
 
 # Any constant works: pinning takes this lock, so two admins pinning at once run one after the other.
 PIN_LOCK_KEY = 5_000_001
@@ -85,6 +93,15 @@ def _image_response(data: bytes, cache: str) -> Response:
 
 def _not_found() -> HTTPException:
     return HTTPException(status.HTTP_404_NOT_FOUND, "announcement not found")
+
+
+def _refused(conn: Connection, announcement_id: int) -> HTTPException:
+    """Why a change guarded by HAS_CONTENT updated no row: the announcement is missing (404),
+    or the change would leave a published announcement empty (422)."""
+    exists = conn.execute("select 1 from announcements where id = %s", (announcement_id,)).fetchone()
+    if exists is None:
+        return _not_found()
+    return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "announcement is empty")
 
 
 def _cursor(row: dict) -> str:
@@ -186,7 +203,8 @@ def create_announcement(
     user: GoogleUser = Depends(require_announcements),
     conn: Connection = Depends(get_conn),
 ):
-    """Saved as a draft. The image (POST /{id}/image) and publishing (POST /{id}/publish) come next."""
+    """Saved as a draft, which may be empty (an image-only one gets its image next).
+    The image (POST /{id}/image) and publishing (POST /{id}/publish) come next."""
     row = conn.execute(
         f"insert into announcements (title, body, author_email) "
         f"values (%(title)s, %(body)s, %(author)s) returning {ADMIN_COLUMNS}",
@@ -197,7 +215,8 @@ def create_announcement(
 
 @admin_router.post("/{announcement_id}")
 def edit_announcement(announcement_id: int, payload: AnnouncementIn, conn: Connection = Depends(get_conn)):
-    """Replaces the title and the text. Saving the same text again does not mark it as edited."""
+    """Replaces the title and the text. Saving the same text again does not mark it as edited.
+    A published announcement keeps something to show: emptying both with no image is refused."""
     row = conn.execute(
         f"""
         update announcements
@@ -206,12 +225,13 @@ def edit_announcement(announcement_id: int, payload: AnnouncementIn, conn: Conne
                               and (title is distinct from %(title)s or body is distinct from %(body)s)
                              then now() else edited_at end
         where id = %(id)s
+          and (published_at is null or %(title)s <> '' or %(body)s <> '' or image is not null)
         returning {ADMIN_COLUMNS}
         """,
         {**payload.model_dump(), "id": announcement_id},
     ).fetchone()
     if row is None:
-        raise _not_found()
+        raise _refused(conn, announcement_id)
     return _admin_shape(row)
 
 
@@ -243,13 +263,14 @@ def _get_admin(conn: Connection, announcement_id: int) -> dict:
 @admin_router.post("/{announcement_id}/publish")
 def publish(announcement_id: int, pin: bool = False, conn: Connection = Depends(get_conn)):
     """Shows it on the site, at the top of the list (also when publishing again after unpublishing).
-    pin=true also puts it on the home page, in place of the one pinned before."""
+    pin=true also puts it on the home page, in place of the one pinned before. An empty one is refused."""
     row = conn.execute(
-        "update announcements set published_at = now(), edited_at = null where id = %s returning id",
+        f"update announcements set published_at = now(), edited_at = null "
+        f"where id = %s and {HAS_CONTENT} returning id",
         (announcement_id,),
     ).fetchone()
     if row is None:
-        raise _not_found()
+        raise _refused(conn, announcement_id)
     if pin:
         _pin(conn, announcement_id)
     return _get_admin(conn, announcement_id)
@@ -335,7 +356,8 @@ def upload_image(
 
 @admin_router.delete("/{announcement_id}/image")
 def delete_image(announcement_id: int, conn: Connection = Depends(get_conn)):
-    """Removes the image and returns the announcement. Removing an image that is not there is not an error."""
+    """Removes the image and returns the announcement. Removing an image that is not there is not an error.
+    The image of a published announcement with no title and no text is all it shows, so it stays (422)."""
     row = conn.execute(
         f"""
         update announcements
@@ -343,10 +365,11 @@ def delete_image(announcement_id: int, conn: Connection = Depends(get_conn)):
             image_version = image_version + case when image is null then 0 else 1 end,
             edited_at = case when image is null or published_at is null then edited_at else now() end
         where id = %s
+          and (published_at is null or title <> '' or body <> '' or image is null)
         returning {ADMIN_COLUMNS}
         """,
         (announcement_id,),
     ).fetchone()
     if row is None:
-        raise _not_found()
+        raise _refused(conn, announcement_id)
     return _admin_shape(row)
