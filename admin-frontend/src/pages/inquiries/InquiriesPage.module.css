@@ -1,0 +1,165 @@
+.status {
+  padding: var(--space-4) 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* Course search and type button in one row: the search takes what the button leaves.
+   position: relative makes the row the box that the course results open over, so they get the whole width. */
+.filters {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+/* Grid items don't shrink below their content by default; a long course name must not widen the row. */
+.filters > * {
+  min-width: 0;
+}
+
+/* The previous list while the new one loads. Dimmed only after a short delay, so a fast answer
+   swaps the list without a flicker; back to full at once (the delay is on this class only). */
+.stale {
+  opacity: 0.5;
+  transition: opacity 0.2s ease 0.15s;
+  pointer-events: none;
+}
+
+.list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-2);
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.row:active {
+  background: var(--color-surface-muted);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* Inset separator: starts after the dot, like iOS Mail. */
+.item + .item .content {
+  border-block-start: 0.5px solid var(--color-border-strong);
+}
+
+.dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-block-start: 18px;
+  border-radius: 50%;
+}
+
+.unread {
+  background: var(--color-primary);
+}
+
+/* Text and chevron side by side. */
+.content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  padding-inline-end: var(--space-3);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  padding-block: var(--space-2);
+}
+
+.chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--color-border-strong);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.type {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--weight-medium);
+}
+
+.bold {
+  font-weight: var(--weight-bold);
+}
+
+.time {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.course {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+/* Two lines, then "...". The -webkit- form is what browsers run today; line-clamp is the standard name. */
+.preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.more {
+  display: block;
+  width: 100%;
+  min-height: var(--tap-size);
+  margin-block-end: var(--space-3);
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.more:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
