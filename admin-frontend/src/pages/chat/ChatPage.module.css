@@ -1,12 +1,9 @@
-/* How many open reports, after the nickname: red, like the tab's badge. */
+/* How many open reports, after the nickname: red text, no background. */
 .count {
   flex: none;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  background: var(--color-danger-soft);
   color: var(--color-danger);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
 }
 
 /* Who or what a log action was about, quieter than the action. */
