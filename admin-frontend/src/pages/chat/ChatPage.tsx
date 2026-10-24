@@ -7,6 +7,7 @@ import { ListMessage, ListRow, RowList } from "../../components/ListRow";
 import SegmentedControl from "../../components/SegmentedControl";
 import { formatDay } from "../../lib/format";
 import { ACTION_LABEL, targetName } from "../../lib/moderationLabels";
+import AdminLabel from "../admin/AdminLabel";
 import { useAdmin, useLoad } from "../admin/context";
 import LoadError from "../admin/LoadError";
 import styles from "./ChatPage.module.css";
@@ -138,7 +139,7 @@ function Log() {
             }
             badge={a.undone_by !== null && <span className={styles.undone}>בוטלה</span>}
             time={a.created_at}
-            subtitle={<bdi dir="ltr">{a.admin_email}</bdi>}
+            subtitle={<AdminLabel email={a.admin_email} />}
             preview={a.message?.content}
           />
         );

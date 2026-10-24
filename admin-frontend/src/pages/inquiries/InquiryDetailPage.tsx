@@ -16,6 +16,7 @@ import BackLink from "../../components/BackLink";
 import { Group, Row } from "../../components/GroupedList";
 import { formatDateTime } from "../../lib/format";
 import { courseLabel, STATUS_LABEL, TYPE_LABEL } from "../../lib/inquiryLabels";
+import AdminLabel from "../admin/AdminLabel";
 import { actionError, useAdmin } from "../admin/context";
 import { filtersSearch, readFilters } from "./filters";
 import styles from "./InquiryDetailPage.module.css";
@@ -146,6 +147,7 @@ function InquiryDetail({ id }: { id: number }) {
                 label={STATUS_LABEL[option]}
                 value={option === status ? check : undefined}
                 onClick={() => setStatus(option)}
+                choice
               />
             ))}
           </Group>
@@ -155,10 +157,7 @@ function InquiryDetail({ id }: { id: number }) {
           </button>
 
           <Group title="פרטים">
-            <Row
-              label="מטפל"
-              value={inquiry.handled_by ? <bdi dir="ltr">{inquiry.handled_by}</bdi> : "עוד לא"}
-            />
+            <Row label="מטפל" value={inquiry.handled_by ? <AdminLabel email={inquiry.handled_by} /> : "עוד לא"} />
             <Row label="עודכנה" value={formatDateTime(inquiry.updated_at)} />
           </Group>
         </>

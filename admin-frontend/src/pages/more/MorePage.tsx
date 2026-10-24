@@ -48,7 +48,7 @@ interface Props {
 
 /** Everything that does not fit the bottom bar, plus the signed-in account. New sections become rows here. */
 export default function MorePage({ onSignOut }: Props) {
-  const { email, role } = useAdmin();
+  const { email, role, nameOf } = useAdmin();
 
   return (
     <>
@@ -58,9 +58,14 @@ export default function MorePage({ onSignOut }: Props) {
         <Row icon={<IconTile paths={USERS_ICON} color="var(--color-primary)" />} label="מנהלים" to="/more/admins" />
       </Group>
 
+      {/* Opens your own admin screen, where you change your name. */}
       <Group title="החשבון שלך">
-        <Row label="מייל" value={<bdi dir="ltr">{email}</bdi>} />
-        <Row label="תפקיד" value={LEVEL_LABEL[role]} />
+        <Row
+          label={<bdi>{nameOf(email) ?? email}</bdi>}
+          detail={<bdi dir="ltr">{email}</bdi>}
+          value={LEVEL_LABEL[role]}
+          to={`/more/admins/${encodeURIComponent(email)}`}
+        />
       </Group>
 
       <Group>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 
+import { listAdmins } from "../../api/admins";
 import { ApiError, isAbort, isAuthError } from "../../api/client";
 import { reportedMessages } from "../../api/chat";
 import { getInquiryCounts } from "../../api/inquiries";
@@ -22,7 +23,8 @@ import ReportPage from "../chat/ReportPage";
 import InquiriesPage from "../inquiries/InquiriesPage";
 import InquiryDetailPage from "../inquiries/InquiryDetailPage";
 import MorePage from "../more/MorePage";
-import AdminsTab from "./AdminsTab";
+import AdminEditorPage from "./AdminEditorPage";
+import AdminsListPage from "./AdminsListPage";
 import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./context";
 
 type Access = "checking" | "ok" | "forbidden" | "error";
@@ -161,6 +163,8 @@ interface ConsoleProps {
 function AdminConsole({ identity, email, role, onSignOut, onAuthError }: ConsoleProps) {
   const [version, setVersion] = useState(0);
   const changed = useCallback(() => setVersion((v) => v + 1), []);
+  const names = useAdminNames(identity.token, version, onAuthError);
+  const nameOf = useCallback((adminEmail: string) => names.get(adminEmail) ?? null, [names]);
 
   const context = useMemo<AdminContextValue>(
     () => ({
@@ -168,11 +172,12 @@ function AdminConsole({ identity, email, role, onSignOut, onAuthError }: Console
       email,
       role,
       isMember: role === "member",
+      nameOf,
       version,
       changed,
       onAuthError,
     }),
-    [identity.token, email, role, version, changed, onAuthError],
+    [identity.token, email, role, nameOf, version, changed, onAuthError],
   );
 
   return (
@@ -183,6 +188,24 @@ function AdminConsole({ identity, email, role, onSignOut, onAuthError }: Console
       </ConfirmProvider>
     </AdminContext.Provider>
   );
+}
+
+/** Admins' names by email, so screens show a name instead of an email. Reloads after every change
+    (a rename, a new admin). If the list fails to load, screens just show the emails. */
+function useAdminNames(token: string, version: number, onAuthError: () => void): Map<string, string> {
+  const [names, setNames] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    const controller = new AbortController();
+    listAdmins(token, controller.signal)
+      .then((admins) => setNames(new Map(admins.map((a) => [a.email, a.name]))))
+      .catch((error: unknown) => {
+        if (isAbort(error)) return;
+        if (isAuthError(error)) onAuthError();
+        else console.error(error);
+      });
+    return () => controller.abort();
+  }, [token, version, onAuthError]);
+  return names;
 }
 
 /** Inside the context, so it can load the counts for the tab badges. Every level sees every section. */
@@ -214,7 +237,11 @@ function ConsoleShell({ onSignOut }: { onSignOut: () => void }) {
             <Route path=":id" element={<AnnouncementEditorPage />} />
           </Route>
           <Route path="more" element={<MorePage onSignOut={onSignOut} />} />
-          <Route path="more/admins" element={<AdminsTab />} />
+          <Route path="more/admins">
+            <Route index element={<AdminsListPage />} />
+            <Route path="new" element={<AdminEditorPage />} />
+            <Route path=":email" element={<AdminEditorPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

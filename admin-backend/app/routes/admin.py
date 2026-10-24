@@ -5,7 +5,7 @@ from psycopg import Connection
 
 from ..auth import GoogleUser, require_admin, require_manager
 from ..db import get_conn
-from ..schemas import AdminRole, NewAdmin
+from ..schemas import AdminNameIn, AdminRole, NewAdmin
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -14,7 +14,8 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(re
 
 @router.get("/me")
 def me(user: GoogleUser = Depends(require_admin)):
-    """200 with the admin's email; 401/403 come from require_admin. The frontend uses it as the admin check."""
+    """200 with the admin's email, name and level; 401/403 come from require_admin.
+    The frontend uses it as the admin check."""
     return {"email": user.email, "name": user.name, "role": user.role}
 
 
@@ -29,7 +30,7 @@ def list_courses(conn: Connection = Depends(get_conn)):
 
 # ---------- Admins: every level sees them; admins manage them; only a super admin touches a super admin ----------
 
-ADMIN_COLUMNS = "email, role, added_by, created_at"
+ADMIN_COLUMNS = "email, name, role, added_by, created_at"
 
 
 def _guard_super_admin(user: GoogleUser, *roles: str) -> None:
@@ -62,9 +63,9 @@ def add_admin(payload: NewAdmin, user: GoogleUser = Depends(require_manager), co
     """Takes effect at once: access is checked against this table on every request."""
     _guard_super_admin(user, payload.role)
     row = conn.execute(
-        f"insert into admins (email, role, added_by) values (%s, %s, %s) on conflict (email) do nothing "
+        f"insert into admins (email, name, role, added_by) values (%s, %s, %s, %s) on conflict (email) do nothing "
         f"returning {ADMIN_COLUMNS}",
-        (payload.email, payload.role, user.email),
+        (payload.email, payload.name, payload.role, user.email),
     ).fetchone()
     if row is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "already an admin")
@@ -83,8 +84,28 @@ def set_admin_role(
     ).fetchone()
 
 
+@router.put("/admins/{email}/name")
+def set_admin_name(
+    email: str, payload: AdminNameIn, user: GoogleUser = Depends(require_admin), conn: Connection = Depends(get_conn)
+):
+    """Every level may rename themselves. Another admin's name follows the rules of changing their level:
+    not by a member, and a super admin's only by a super admin."""
+    target = email.strip().lower()
+    if target != user.email:
+        if user.is_member:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "requires an admin")
+        target = _target(conn, user, target)["email"]
+    row = conn.execute(
+        f"update admins set name = %s where email = %s returning {ADMIN_COLUMNS}", (payload.name, target)
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not an admin")
+    return row
+
+
 @router.delete("/admins/{email}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_admin(email: str, user: GoogleUser = Depends(require_manager), conn: Connection = Depends(get_conn)):
     """Takes effect at once."""
     target = _target(conn, user, email)
     conn.execute("delete from admins where email = %s", (target["email"],))
+    

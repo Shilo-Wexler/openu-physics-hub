@@ -18,6 +18,8 @@ const BY_DETAIL: Record<string, string> = {
   "403:not an admin": "אין לחשבון הזה הרשאת מנהל.",
   "invalid email": "כתובת המייל לא תקינה.",
   "invalid role": "התפקיד שנבחר לא תקין.",
+  "missing name": "צריך שם.",
+  "invalid name": "השם צריך להיות בין 2 ל-40 תווים.",
   // inquiries
   "inquiry not found": "הפנייה לא נמצאה. רעננו את הדף.",
   "invalid internal_note": "ההערה ארוכה מדי: עד 2000 תווים.",
