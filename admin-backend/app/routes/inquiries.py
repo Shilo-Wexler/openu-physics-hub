@@ -1,7 +1,7 @@
 """Inquiries. Two routers in one file, like announcements:
 
 - router: the public site's anonymous form, POST /api/inquiries. No sign-in, and no identity is stored.
-- admin_router: the console, /api/admin/inquiries. Needs the "inquiries" role (or "admin").
+- admin_router: the console, /api/admin/inquiries. Every admin level may use it.
 
 Anti-flood on the public route is layered: the Ingress limits requests per IP (429, before this code
 runs), Turnstile stops scripts, and the honeypot field catches simple bots.
@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from psycopg import Connection, errors
 
 from .. import turnstile
-from ..auth import GoogleUser, require_role
+from ..auth import GoogleUser, require_admin
 from ..db import get_conn, pool
 from ..schemas import InquiryStatus, InquiryType, InquiryUpdate, NewInquiry
 
@@ -37,12 +37,8 @@ ADMIN_COLUMNS = """
 """
 ADMIN_FROM = "from inquiries i join courses c on c.course_number = i.course_number"
 
-require_inquiries = require_role("inquiries")
-
 router = APIRouter(prefix="/api", tags=["public"])
-admin_router = APIRouter(
-    prefix="/api/admin/inquiries", tags=["admin"], dependencies=[Depends(require_inquiries)]
-)
+admin_router = APIRouter(prefix="/api/admin/inquiries", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 def _not_found() -> HTTPException:
@@ -147,7 +143,7 @@ def get_inquiry(inquiry_id: int, conn: Connection = Depends(get_conn)):
 def update_inquiry(
     inquiry_id: int,
     payload: InquiryUpdate,
-    user: GoogleUser = Depends(require_inquiries),
+    user: GoogleUser = Depends(require_admin),
     conn: Connection = Depends(get_conn),
 ):
     """Changes the status and/or the internal note; a field left out stays as it is.

@@ -1,7 +1,6 @@
-"""Console sign-in (Cloudflare Access JWT) and the admin and role checks."""
+"""Console sign-in (Cloudflare Access JWT) and the admin and level checks."""
 
-from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import jwt
 from fastapi import Depends, Header, HTTPException, status
@@ -29,11 +28,16 @@ _jwks_client = (
 class GoogleUser:
     email: str
     name: str | None
-    roles: list[str] = field(default_factory=list)  # filled in by require_admin
+    role: str = ""  # filled in by require_admin: super_admin, admin or member
 
     @property
-    def is_full_admin(self) -> bool:
-        return "admin" in self.roles
+    def is_super_admin(self) -> bool:
+        return self.role == "super_admin"
+
+    @property
+    def is_member(self) -> bool:
+        """A committee member: no managing admins, and announcements as drafts only."""
+        return self.role == "member"
 
 
 def _dev_user(token: str) -> GoogleUser | None:
@@ -84,27 +88,15 @@ def require_admin(
         if not access_token:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing access token")
         user = verify_access_token(access_token)
-    row = conn.execute("select roles from admins where email = %s", (user.email,)).fetchone()
+    row = conn.execute("select role from admins where email = %s", (user.email,)).fetchone()
     if row is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not an admin")
-    user.roles = list(row["roles"])
+    user.role = row["role"]
     return user
 
 
-def require_full_admin(user: GoogleUser = Depends(require_admin)) -> GoogleUser:
-    """Only the "admin" role may add, change or remove admins."""
-    if not user.is_full_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "requires the admin role")
+def require_manager(user: GoogleUser = Depends(require_admin)) -> GoogleUser:
+    """An admin or a super admin: managing admins, publishing and pinning. Not a committee member."""
+    if user.is_member:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "requires an admin")
     return user
-
-
-def require_role(role: str) -> Callable[..., GoogleUser]:
-    """A dependency for one area of the console: an admin with that role, or a full admin
-    (who may do everything). Usage: user: GoogleUser = Depends(require_role("announcements"))."""
-
-    def check(user: GoogleUser = Depends(require_admin)) -> GoogleUser:
-        if not user.is_full_admin and role not in user.roles:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, f"requires the {role} role")
-        return user
-
-    return check

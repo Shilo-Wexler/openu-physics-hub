@@ -8,17 +8,17 @@ import { ApiError } from "../api/client";
 
 /** Known server details. A "status:detail" key wins over a plain "detail" key. */
 const BY_DETAIL: Record<string, string> = {
+  // levels
+  "requires an admin": "חבר ועדה לא יכול לבצע את הפעולה הזו. צריך מנהל או מנהל ראשי.",
+  "requires a super admin": "רק מנהל ראשי יכול להוסיף מנהל ראשי, או לשנות ולהסיר מנהל ראשי.",
   // admins
   "already an admin": "המייל הזה כבר ברשימת המנהלים.",
-  "you cannot remove yourself": "אי אפשר להסיר את עצמך. מנהל ראשי אחר יכול לעשות את זה.",
-  "you cannot change your own roles": "אי אפשר לשנות את הדרגה של עצמך. מנהל ראשי אחר יכול לעשות את זה.",
-  "requires the admin role": "רק מנהל ראשי יכול להוסיף, לשנות או להסיר מנהלים.",
+  "you cannot change or remove yourself": "אי אפשר לשנות או להסיר את עצמך. מנהל אחר יכול לעשות את זה.",
   "404:not an admin": "המייל הזה כבר לא ברשימת המנהלים. רעננו את הדף.",
   "403:not an admin": "אין לחשבון הזה הרשאת מנהל.",
   "invalid email": "כתובת המייל לא תקינה.",
-  "invalid roles": "הדרגה שנבחרה לא תקינה.",
+  "invalid role": "התפקיד שנבחר לא תקין.",
   // inquiries
-  "requires the inquiries role": "אין לך הרשאה לטפל בפניות.",
   "inquiry not found": "הפנייה לא נמצאה. רעננו את הדף.",
   "invalid internal_note": "ההערה ארוכה מדי: עד 2000 תווים.",
   // chat
@@ -28,7 +28,6 @@ const BY_DETAIL: Record<string, string> = {
   "chat backend unavailable": "שרת הצ'אט לא זמין כרגע. נסו שוב בעוד רגע.",
   "chat backend rejected the moderation token": "שרת הצ'אט דחה את החיבור. צריך לבדוק ש-MOD_API_TOKEN זהה בשני השרתים.",
   // announcements
-  "requires the announcements role": "אין לך הרשאה לנהל הכרזות.",
   "announcement not found": "ההכרזה לא נמצאה. ייתכן שמישהו אחר מחק אותה. רעננו את הדף.",
   "announcement is not published": "אפשר לנעוץ לדף הבית רק הכרזה מפורסמת. רעננו את הדף.",
   "invalid title": "הכותרת לא תקינה: צריך בין 1 ל-200 תווים.",

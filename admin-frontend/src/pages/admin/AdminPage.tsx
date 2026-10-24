@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Navigate, Outlet, Route, Routes } from "react-router";
+import { Navigate, Route, Routes } from "react-router";
 
 import { ApiError, isAbort, isAuthError } from "../../api/client";
 import { reportedMessages } from "../../api/chat";
@@ -11,7 +11,8 @@ import { useIdentity } from "../../auth/useIdentity";
 import { ConfirmProvider } from "../../components/ConfirmSheet";
 import BottomNav from "../../layout/BottomNav";
 import ConsoleHeader from "../../layout/ConsoleHeader";
-import { allowed, sectionsFor, type Section } from "../../layout/sections";
+import { SECTIONS } from "../../layout/sections";
+import type { Level } from "../../lib/levels";
 import AnnouncementEditorPage from "../announcements/AnnouncementEditorPage";
 import AnnouncementListPage from "../announcements/AnnouncementListPage";
 import ActionPage from "../chat/ActionPage";
@@ -30,7 +31,8 @@ export default function AdminPage() {
   const { identity, signIn, signOut, error: signInError } = useIdentity("admin");
   const [access, setAccess] = useState<Access>("checking");
   const [email, setEmail] = useState("");
-  const [roles, setRoles] = useState<string[]>([]);
+  // Set from /me before the console opens; the lowest level until then.
+  const [role, setRole] = useState<Level>("member");
   const [expired, setExpired] = useState(false);
 
   // In dev, back to the email box. In production the page shows "expired" with a reload button:
@@ -57,7 +59,7 @@ export default function AdminPage() {
     getMe(identity.token, controller.signal)
       .then((me) => {
         setEmail(me.email);
-        setRoles(me.roles ?? []);
+        setRole(me.role);
         setAccess("ok");
       })
       .catch((error: unknown) => {
@@ -134,9 +136,7 @@ export default function AdminPage() {
     );
   }
 
-  return (
-    <AdminConsole identity={identity} email={email} roles={roles} onSignOut={signOut} onAuthError={onAuthError} />
-  );
+  return <AdminConsole identity={identity} email={email} role={role} onSignOut={signOut} onAuthError={onAuthError} />;
 }
 
 /** The header and page area without sections: for the screens before the console opens. */
@@ -153,13 +153,12 @@ interface ConsoleProps {
   identity: Identity;
   /** From /api/admin/me. */
   email: string;
-  roles: string[];
+  role: Level;
   onSignOut: () => void;
   onAuthError: () => void;
 }
 
-function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: ConsoleProps) {
-  const sections = useMemo(() => sectionsFor(roles), [roles]);
+function AdminConsole({ identity, email, role, onSignOut, onAuthError }: ConsoleProps) {
   const [version, setVersion] = useState(0);
   const changed = useCallback(() => setVersion((v) => v + 1), []);
 
@@ -167,49 +166,38 @@ function AdminConsole({ identity, email, roles, onSignOut, onAuthError }: Consol
     () => ({
       token: identity.token,
       email,
-      roles,
-      isFullAdmin: roles.includes("admin"),
+      role,
+      isMember: role === "member",
       version,
       changed,
       onAuthError,
     }),
-    [identity.token, email, roles, version, changed, onAuthError],
+    [identity.token, email, role, version, changed, onAuthError],
   );
 
   return (
     <AdminContext.Provider value={context}>
       {/* Every screen of the console can ask "are you sure?" with useConfirm(). */}
       <ConfirmProvider>
-        <ConsoleShell sections={sections} onSignOut={onSignOut} />
+        <ConsoleShell onSignOut={onSignOut} />
       </ConfirmProvider>
     </AdminContext.Provider>
   );
 }
 
-/** Inside the context, so it can load the counts for the tab badges. */
-function ConsoleShell({ sections, onSignOut }: { sections: Section[]; onSignOut: () => void }) {
-  const { roles } = useAdmin();
-  const newInquiries = useNewInquiries(allowed(roles, "inquiries"));
+/** Inside the context, so it can load the counts for the tab badges. Every level sees every section. */
+function ConsoleShell({ onSignOut }: { onSignOut: () => void }) {
+  const newInquiries = useNewInquiries();
   const openReports = useOpenReports();
   const badges = { inquiries: newInquiries, chat: openReports };
-  // The first section this admin may see: inquiries for most, the chat for a moderator-only admin.
-  const home = sections[0]?.path ?? "/more";
 
   return (
     <>
-      <ConsoleHeader sections={sections} badges={badges} />
+      <ConsoleHeader sections={SECTIONS} badges={badges} />
       <main>
         <Routes>
-          <Route index element={<Navigate to={home} replace />} />
-          {/* One guard for every inquiries screen; Outlet is where the matching screen below renders. */}
-          <Route
-            path="inquiries"
-            element={
-              <Guard role="inquiries">
-                <Outlet />
-              </Guard>
-            }
-          >
+          <Route index element={<Navigate to="/inquiries" replace />} />
+          <Route path="inquiries">
             <Route index element={<InquiriesPage />} />
             <Route path=":id" element={<InquiryDetailPage />} />
           </Route>
@@ -220,14 +208,7 @@ function ConsoleShell({ sections, onSignOut }: { sections: Section[]; onSignOut:
             <Route path="log/:id" element={<ActionPage />} />
           </Route>
           {/* "new" is matched before ":id", so both open the same form, empty or filled. */}
-          <Route
-            path="announcements"
-            element={
-              <Guard role="announcements">
-                <Outlet />
-              </Guard>
-            }
-          >
+          <Route path="announcements">
             <Route index element={<AnnouncementListPage />} />
             <Route path="new" element={<AnnouncementEditorPage />} />
             <Route path=":id" element={<AnnouncementEditorPage />} />
@@ -237,24 +218,15 @@ function ConsoleShell({ sections, onSignOut }: { sections: Section[]; onSignOut:
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      <BottomNav sections={sections} badges={badges} />
+      <BottomNav sections={SECTIONS} badges={badges} />
     </>
   );
 }
 
-/** A section opened by URL without its role goes back home. The server refuses the data anyway. */
-function Guard({ role, children }: { role: string; children: ReactNode }) {
-  const { roles } = useAdmin();
-  return allowed(roles, role) ? children : <Navigate to="/" replace />;
-}
-
-/** The count on the inquiries tab. Reloads after every change (version); 0 when the admin can't see inquiries. */
-function useNewInquiries(enabled: boolean): number {
+/** The count on the inquiries tab. Reloads after every change (version). */
+function useNewInquiries(): number {
   const { token, version } = useAdmin();
-  const { data } = useLoad(
-    (signal) => (enabled ? getInquiryCounts(token, signal) : Promise.resolve(null)),
-    [token, version, enabled],
-  );
+  const { data } = useLoad((signal) => getInquiryCounts(token, signal), [token, version]);
   return data?.new ?? 0;
 }
 

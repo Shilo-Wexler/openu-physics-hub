@@ -1,23 +1,25 @@
 import { useState, type FormEvent } from "react";
 
-import { addAdmin, listAdmins, removeAdmin, setAdminRoles } from "../../api/admins";
+import { addAdmin, listAdmins, removeAdmin, setAdminRole } from "../../api/admins";
 import { isAuthError } from "../../api/client";
 import { formatDateTime } from "../../lib/format";
-import { LEVEL_HINT, LEVEL_LABEL, levelOf, rolesOf, type Level } from "../../lib/levels";
+import { LEVEL_HINT, LEVEL_LABEL, levelsManagedBy, type Level } from "../../lib/levels";
 import FieldError from "../../components/FieldError";
 import { emailError } from "../../lib/validation";
 import { actionError, useAdmin, useLoad } from "./context";
 import LoadError from "./LoadError";
 
 /**
- * Admins. Everyone sees the list. A full admin ("מנהל ראשי") can add, change the level of and remove
- * other admins; a standard admin ("מנהל") can do everything else in the console, but not this.
+ * Admins. Every level sees the list. A super admin manages everyone; an admin manages admins and members,
+ * never a super admin; a member manages no one (lib/levels). Nobody changes or removes their own row.
  */
 export default function AdminsTab() {
-  const { token, email: me, isFullAdmin, version, changed, onAuthError } = useAdmin();
+  const { token, email: me, role, version, changed, onAuthError } = useAdmin();
   const admins = useLoad((signal) => listAdmins(token, signal), [token, version]);
+  // The levels this admin may give, and whose rows they may change or remove.
+  const managed = levelsManagedBy(role);
   const [email, setEmail] = useState("");
-  const [level, setLevel] = useState<Level>("standard");
+  const [level, setLevel] = useState<Level>("member");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState<string | null>(null);
@@ -46,16 +48,16 @@ export default function AdminsTab() {
     setFieldError(problem);
     if (problem) return;
     const target = email.trim().toLowerCase();
-    if (await run(() => addAdmin(token, target, rolesOf(level)))) {
+    if (await run(() => addAdmin(token, target, level))) {
       setAdded(target);
       setEmail("");
-      setLevel("standard");
+      setLevel("member");
     }
   }
 
   function changeLevel(target: string, next: Level) {
     if (window.confirm(`לשנות את ${target} ל"${LEVEL_LABEL[next]}"? (${LEVEL_HINT[next]})`)) {
-      void run(() => setAdminRoles(token, target, rolesOf(next)));
+      void run(() => setAdminRole(token, target, next));
     }
   }
 
@@ -67,7 +69,7 @@ export default function AdminsTab() {
 
   return (
     <div className="stats">
-      {isFullAdmin ? (
+      {managed.length > 0 && (
         <form className="card form" onSubmit={add} noValidate>
           <h2>הוספת מנהל</h2>
           <p className="muted">ההרשאה נכנסת לתוקף מיד: המנהל החדש נכנס עם חשבון הגוגל של המייל הזה.</p>
@@ -87,8 +89,8 @@ export default function AdminsTab() {
             <FieldError id="admin-email-error" message={fieldError} />
           </label>
           <fieldset className="levels">
-            <legend>דרגה</legend>
-            {(["standard", "full"] as const).map((l) => (
+            <legend>תפקיד</legend>
+            {managed.map((l) => (
               <label key={l} className="checkbox">
                 <input type="radio" name="level" value={l} checked={level === l} onChange={() => setLevel(l)} />
                 <span>
@@ -107,8 +109,6 @@ export default function AdminsTab() {
             </p>
           )}
         </form>
-      ) : (
-        <p className="notice standard-notice">רק מנהל ראשי יכול להוסיף, לשנות או להסיר מנהלים. את הרשימה אפשר לראות.</p>
       )}
 
       <section className="card">
@@ -121,47 +121,47 @@ export default function AdminsTab() {
               <thead>
                 <tr>
                   <th>מייל</th>
-                  <th>דרגה</th>
+                  <th>תפקיד</th>
                   <th>נוסף על ידי</th>
                   <th>מתי</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {admins.data.map((a) => {
-                  const current = levelOf(a.roles);
-                  const other: Level = current === "full" ? "standard" : "full";
-                  return (
-                    <tr key={a.email}>
-                      <td dir="ltr" className="email-cell">
-                        {a.email}
-                      </td>
-                      <td>
-                        <span className={`badge level-badge level-${current}`}>{LEVEL_LABEL[current]}</span>
-                      </td>
-                      <td dir="ltr" className="email-cell">
-                        {a.added_by ?? <span className="muted">–</span>}
-                      </td>
-                      <td className="nowrap">{formatDateTime(a.created_at)}</td>
-                      <td className="row-actions">
-                        {a.email === me ? (
-                          <span className="muted">(את/ה)</span>
-                        ) : (
-                          isFullAdmin && (
-                            <>
-                              <button className="btn btn-small" disabled={busy} onClick={() => changeLevel(a.email, other)}>
-                                {other === "full" ? "הפיכה למנהל ראשי" : "הפיכה למנהל"}
-                              </button>
-                              <button className="btn btn-small btn-danger" disabled={busy} onClick={() => remove(a.email)}>
-                                הסרה
-                              </button>
-                            </>
-                          )
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {admins.data.map((a) => (
+                  <tr key={a.email}>
+                    <td dir="ltr" className="email-cell">
+                      {a.email}
+                    </td>
+                    <td>
+                      <span className={`badge level-badge level-${a.role}`}>{LEVEL_LABEL[a.role]}</span>
+                    </td>
+                    <td dir="ltr" className="email-cell">
+                      {a.added_by ?? <span className="muted">–</span>}
+                    </td>
+                    <td className="nowrap">{formatDateTime(a.created_at)}</td>
+                    <td className="row-actions">
+                      {a.email === me ? (
+                        <span className="muted">(את/ה)</span>
+                      ) : (
+                        managed.includes(a.role) && (
+                          <>
+                            {managed
+                              .filter((l) => l !== a.role)
+                              .map((l) => (
+                                <button key={l} className="btn btn-small" disabled={busy} onClick={() => changeLevel(a.email, l)}>
+                                  הפיכה ל{LEVEL_LABEL[l]}
+                                </button>
+                              ))}
+                            <button className="btn btn-small btn-danger" disabled={busy} onClick={() => remove(a.email)}>
+                              הסרה
+                            </button>
+                          </>
+                        )
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

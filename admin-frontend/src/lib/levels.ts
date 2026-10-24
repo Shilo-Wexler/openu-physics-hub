@@ -1,29 +1,25 @@
-/**
- * Admin levels as shown in the console, on top of the roles stored by the backend
- * (admin, moderator, inquiries, announcements — the roles agreed with the chat side).
- */
+/** Admin levels, as the backend stores them (admins.role). The console calls them "תפקיד". */
 
-export type Level = "full" | "standard";
+export type Level = "super_admin" | "admin" | "member";
 
-/** Everything, including adding, changing and removing admins. */
-export const FULL_ROLES = ["admin"];
-/** Everything except managing admins. */
-export const STANDARD_ROLES = ["announcements", "inquiries", "moderator"];
+/** In the order the console offers them. */
+export const LEVELS: Level[] = ["super_admin", "admin", "member"];
 
 export const LEVEL_LABEL: Record<Level, string> = {
-  full: "מנהל ראשי",
-  standard: "מנהל",
+  super_admin: "מנהל ראשי",
+  admin: "מנהל",
+  member: "חבר ועדה",
 };
 
 export const LEVEL_HINT: Record<Level, string> = {
-  full: "הכול, כולל הוספה, שינוי והסרה של מנהלים",
-  standard: "הכול חוץ מניהול מנהלים",
+  super_admin: "אין הגבלות",
+  admin: "הכול, חוץ מהוספה ושינוי של מנהלים ראשיים",
+  member: "לא מנהל אחרים, ובהכרזות שומר רק טיוטות",
 };
 
-export function levelOf(roles: string[]): Level {
-  return roles.includes("admin") ? "full" : "standard";
-}
-
-export function rolesOf(level: Level): string[] {
-  return level === "full" ? FULL_ROLES : STANDARD_ROLES;
+/** The levels this admin may give, and whose admins they may change or remove. A member: none. */
+export function levelsManagedBy(level: Level): Level[] {
+  if (level === "super_admin") return LEVELS;
+  if (level === "admin") return ["admin", "member"];
+  return [];
 }

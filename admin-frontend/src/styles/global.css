@@ -301,7 +301,7 @@ th {
   color: var(--color-primary);
 }
 
-.level-badge.level-standard {
+.level-badge.level-admin, .level-badge.level-member {
   background: var(--color-border);
   color: var(--color-text);
 }

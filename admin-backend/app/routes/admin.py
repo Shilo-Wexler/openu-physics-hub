@@ -3,9 +3,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from psycopg import Connection
 
-from ..auth import GoogleUser, require_admin, require_full_admin
+from ..auth import GoogleUser, require_admin, require_manager
 from ..db import get_conn
-from ..schemas import AdminRoles, NewAdmin
+from ..schemas import AdminRole, NewAdmin
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(re
 @router.get("/me")
 def me(user: GoogleUser = Depends(require_admin)):
     """200 with the admin's email; 401/403 come from require_admin. The frontend uses it as the admin check."""
-    return {"email": user.email, "name": user.name, "roles": user.roles}
+    return {"email": user.email, "name": user.name, "role": user.role}
 
 
 # ---------- Courses ----------
@@ -27,51 +27,64 @@ def list_courses(conn: Connection = Depends(get_conn)):
     ).fetchall()
 
 
-# ---------- Admins: every admin can see the list; only the "admin" role may change it ----------
+# ---------- Admins: every level sees them; admins manage them; only a super admin touches a super admin ----------
 
-ADMIN_COLUMNS = "email, roles, added_by, created_at"
+ADMIN_COLUMNS = "email, role, added_by, created_at"
+
+
+def _guard_super_admin(user: GoogleUser, *roles: str) -> None:
+    """403 when an admin (not a super admin) tries to give or touch the super admin level."""
+    if "super_admin" in roles and not user.is_super_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "requires a super admin")
+
+
+def _target(conn: Connection, user: GoogleUser, email: str) -> dict:
+    """The admin row being changed or removed, locked until the change is saved. Never your own row,
+    so a super admin always remains: only a super admin can change or remove another one."""
+    target = email.strip().lower()
+    if target == user.email:
+        raise HTTPException(status.HTTP_409_CONFLICT, "you cannot change or remove yourself")
+    row = conn.execute("select email, role from admins where email = %s for update", (target,)).fetchone()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not an admin")
+    _guard_super_admin(user, row["role"])
+    return row
 
 
 @router.get("/admins")
 def list_admins(conn: Connection = Depends(get_conn)):
+    """Every level may see the list; only admins and super admins change it."""
     return conn.execute(f"select {ADMIN_COLUMNS} from admins order by created_at, email").fetchall()
 
 
 @router.post("/admins", status_code=status.HTTP_201_CREATED)
-def add_admin(payload: NewAdmin, user: GoogleUser = Depends(require_full_admin), conn: Connection = Depends(get_conn)):
+def add_admin(payload: NewAdmin, user: GoogleUser = Depends(require_manager), conn: Connection = Depends(get_conn)):
     """Takes effect at once: access is checked against this table on every request."""
+    _guard_super_admin(user, payload.role)
     row = conn.execute(
-        f"insert into admins (email, roles, added_by) values (%s, %s, %s) on conflict (email) do nothing "
+        f"insert into admins (email, role, added_by) values (%s, %s, %s) on conflict (email) do nothing "
         f"returning {ADMIN_COLUMNS}",
-        (payload.email, payload.roles, user.email),
+        (payload.email, payload.role, user.email),
     ).fetchone()
     if row is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "already an admin")
     return row
 
 
-@router.put("/admins/{email}/roles")
-def set_admin_roles(
-    email: str, payload: AdminRoles, user: GoogleUser = Depends(require_full_admin), conn: Connection = Depends(get_conn)
+@router.put("/admins/{email}/role")
+def set_admin_role(
+    email: str, payload: AdminRole, user: GoogleUser = Depends(require_manager), conn: Connection = Depends(get_conn)
 ):
-    """Change another admin's level. Not your own, so there is always someone left who can manage admins."""
-    target = email.strip().lower()
-    if target == user.email:
-        raise HTTPException(status.HTTP_409_CONFLICT, "you cannot change your own roles")
-    row = conn.execute(
-        f"update admins set roles = %s where email = %s returning {ADMIN_COLUMNS}", (payload.roles, target)
+    """Change another admin's level. Takes effect on their next request."""
+    target = _target(conn, user, email)
+    _guard_super_admin(user, payload.role)
+    return conn.execute(
+        f"update admins set role = %s where email = %s returning {ADMIN_COLUMNS}", (payload.role, target["email"])
     ).fetchone()
-    if row is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "not an admin")
-    return row
 
 
 @router.delete("/admins/{email}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_admin(email: str, user: GoogleUser = Depends(require_full_admin), conn: Connection = Depends(get_conn)):
-    """Takes effect at once. Not yourself, so there is always someone left who can manage admins."""
-    target = email.strip().lower()
-    if target == user.email:
-        raise HTTPException(status.HTTP_409_CONFLICT, "you cannot remove yourself")
-    row = conn.execute("delete from admins where email = %s returning email", (target,)).fetchone()
-    if row is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "not an admin")
+def remove_admin(email: str, user: GoogleUser = Depends(require_manager), conn: Connection = Depends(get_conn)):
+    """Takes effect at once."""
+    target = _target(conn, user, email)
+    conn.execute("delete from admins where email = %s", (target["email"],))

@@ -1,6 +1,6 @@
 # Admin side: status
 
-Updated 2026-10-23.
+Updated 2026-10-24.
 
 ## Who owns what
 
@@ -16,15 +16,15 @@ Updated 2026-10-23.
 - Inquiries: the anonymous public form, and console routes to list, filter and handle them. See `db/CONTRACT.md`.
 - Announcements: public read, console create, edit, publish and pin.
 - Chat moderation: `/api/admin/chat/...` forwards to the chat's `/internal` with `MOD_API_TOKEN`, and logs each action.
-- Admins and roles: `admins` table, `GET /api/admin/me`, add/change/remove from the console.
+- Admins and levels: `admins` table, `GET /api/admin/me`, add/change/remove from the console. Three levels, see `db/CONTRACT.md`.
 - Sign-in: Cloudflare Access. The server checks the `Cf-Access-Jwt-Assertion` header.
 - Errors are always `{"detail": "..."}`.
 - `/docs`, `/redoc` and `/openapi.json` only when `ENV=dev`.
 - One health route: `/health`.
 
 **admin-frontend** (React, TypeScript, Vite):
-- Tabs: inquiries, chat moderation, announcements, admins.
-- Two levels: full admin (`admin`) and admin (everything except managing admins).
+- Tabs: inquiries, chat moderation, announcements, more (admins).
+- Every level sees every screen; only the actions a level may not do are missing.
 
 ## Settings
 
@@ -38,10 +38,9 @@ Updated 2026-10-23.
 
 Secrets can also come from a `<NAME>_FILE`.
 
-## Tests
+## Checks
 
-- pytest: 220, on a temporary DB whose name must end in `_test`.
-- Playwright (console): 81, against a fake API.
+No automated tests: changes are checked by hand in the console and the site.
 
 ## Local ports
 
