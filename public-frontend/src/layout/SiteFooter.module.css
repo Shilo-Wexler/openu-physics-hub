@@ -13,6 +13,13 @@
   color: var(--color-text-muted);
 }
 
+/* The footer's links, side by side; they wrap on a narrow phone. */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-4);
+}
+
 .link {
   /* Small text, but still a full-size touch target. */
   display: inline-flex;

@@ -68,7 +68,7 @@ export default function ProfilePage() {
 
       {welcome && (
         <p className={styles.welcome}>
-          ברוכים הבאים! בחרו כינוי ואווטאר. אפשר לשנות אותם מתי שרוצים.
+          ברוכים הבאים! כאן בוחרים כינוי ואווטאר, ואפשר לשנות אותם מתי שרוצים.
         </p>
       )}
 
@@ -126,7 +126,7 @@ export default function ProfilePage() {
         </ul>
         {signOutError && (
           <p className={styles.error} role="alert">
-            ההתנתקות נכשלה, נסו שוב
+            לא הצלחנו להתנתק.
           </p>
         )}
       </section>

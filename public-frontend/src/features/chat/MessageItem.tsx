@@ -157,7 +157,7 @@ export default function MessageItem({
       <div className={styles.body}>
         <div className={styles.swipeable} data-swipe-area>
           {message.deleted || removed ? (
-            <p className={styles.deleted}>הביקורת נמחקה</p>
+            <p className={styles.deleted}>ההודעה נמחקה</p>
           ) : (
             <>
               <div className={styles.meta}>
@@ -187,7 +187,7 @@ export default function MessageItem({
 
               {deleteFailed && (
                 <p className={styles.error} role="alert">
-                  המחיקה נכשלה, נסו שוב
+                  לא הצלחנו למחוק את ההודעה.
                 </p>
               )}
 

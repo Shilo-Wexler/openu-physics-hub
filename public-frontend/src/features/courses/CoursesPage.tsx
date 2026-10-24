@@ -69,7 +69,7 @@ export default function CoursesPage() {
     <>
       <header className={styles.header}>
         <h1 className={styles.title}>צ'אט קורסים</h1>
-        <p className={styles.lead}>בחרו קורס כדי לקרוא ביקורות ולכתוב משלכם.</p>
+        <p className={styles.lead}>אפשר לבחור קורס, לקרוא ביקורות ולכתוב.</p>
       </header>
 
       <form role="search" className={styles.search} onSubmit={handleSubmit}>
@@ -85,7 +85,7 @@ export default function CoursesPage() {
           id="course-search"
           type="search"
           className={styles.searchInput}
-          placeholder="חפשו קורס או מספר קורס"
+          placeholder="חיפוש לפי שם או מספר קורס"
           enterKeyHint="go"
           autoComplete="off"
           aria-describedby="course-search-hint"
@@ -100,9 +100,9 @@ export default function CoursesPage() {
 
       {/* Keeps the wheel's space while the list loads, so nothing jumps. */}
       <div className={styles.wheelSlot}>
-        {state.status === "loading" && <p className={styles.message}>טוען קורסים...</p>}
+        {state.status === "loading" && <p className={styles.message}>טוען קורסים…</p>}
         {state.status === "error" && (
-          <p className={styles.message}>לא הצלחנו לטעון את הקורסים. נסו לרענן את הדף.</p>
+          <p className={styles.message}>לא הצלחנו לטעון את הקורסים. אפשר לרענן את הדף ולנסות שוב.</p>
         )}
         {state.status === "ready" && (
           <CourseWheel

@@ -109,7 +109,7 @@ export default function GoogleButton() {
   return (
     <div>
       <div ref={containerRef} />
-      {failed && <p role="alert">לא הצלחנו לטעון את ההתחברות עם גוגל, נסו לרענן</p>}
+      {failed && <p role="alert">לא הצלחנו לטעון את ההתחברות עם Google. אפשר לרענן את הדף ולנסות שוב.</p>}
     </div>
   );
 }

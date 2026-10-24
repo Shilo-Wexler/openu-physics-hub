@@ -114,11 +114,11 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   }
 
   if (state.status === "loading" || shared?.status === "loading") {
-    return <p className={styles.message}>טוען...</p>;
+    return <p className={styles.message}>טוען…</p>;
   }
   if (state.status === "not-found") return <p className={styles.message}>הקורס לא נמצא.</p>;
   if (state.status === "error") {
-    return <p className={styles.message}>לא הצלחנו לטעון את הקורס. נסו לרענן את הדף.</p>;
+    return <p className={styles.message}>לא הצלחנו לטעון את הקורס. אפשר לרענן את הדף ולנסות שוב.</p>;
   }
 
   const { course } = state;

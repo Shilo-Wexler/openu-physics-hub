@@ -169,10 +169,10 @@ export default function InquiryPage() {
               </div>
             ) : coursesFailed ? (
               <p className={styles.status}>
-                רשימת הקורסים לא נטענה. נסו לרענן את הדף, או לשלוח פנייה כללית.
+                לא הצלחנו לטעון את רשימת הקורסים. אפשר לרענן את הדף, או לשלוח פנייה כללית.
               </p>
             ) : courses === null ? (
-              <p className={styles.status}>טוען קורסים...</p>
+              <p className={styles.status}>טוען קורסים…</p>
             ) : (
               <CourseSearch courses={courses} onSelect={setCourse} />
             ))}
@@ -248,16 +248,16 @@ export default function InquiryPage() {
 
         {!TURNSTILE_SITE_KEY ? (
           <p className={styles.error} role="alert">
-            טופס הפניות לא זמין כרגע. נסו שוב מאוחר יותר.
+            טופס הפניות לא זמין כרגע. אפשר לנסות שוב מאוחר יותר.
           </p>
         ) : checkFailed ? (
           <p className={styles.error} role="alert">
-            לא הצלחנו לוודא שהשליחה מאדם. רעננו את הדף ונסו שוב.
+            לא הצלחנו לוודא שהשליחה מאדם. אפשר לרענן את הדף ולנסות שוב.
           </p>
         ) : (
           filled &&
           token === null &&
-          !sending && <p className={styles.status}>מאמתים את השליחה...</p>
+          !sending && <p className={styles.status}>מאמתים את השליחה…</p>
         )}
 
         {error && (
@@ -266,7 +266,7 @@ export default function InquiryPage() {
           </p>
         )}
         <button type="submit" className={styles.submit} disabled={!ready}>
-          {sending ? "שולח..." : "שליחה"}
+          {sending ? "שולח…" : "שליחה"}
         </button>
       </form>
     </div>
@@ -275,12 +275,12 @@ export default function InquiryPage() {
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 429) return "נשלחו הרבה פניות בזמן קצר. נסו שוב מאוחר יותר.";
-    if (error.status === 503) return "השירות לא זמין כרגע. נסו שוב בעוד כמה דקות.";
+    if (error.status === 429) return "נשלחו הרבה פניות בזמן קצר. אפשר לנסות שוב מאוחר יותר.";
+    if (error.status === 503) return "השירות לא זמין כרגע. אפשר לנסות שוב בעוד כמה דקות.";
     if (error.status === 422 && TURNSTILE_ERRORS.includes(error.message)) {
-      return "האימות נכשל. נסו לשלוח שוב.";
+      return "האימות נכשל. אפשר לשלוח שוב.";
     }
-    if (error.status === 422) return "אחד השדות לא תקין. בדקו ונסו שוב.";
+    if (error.status === 422) return "אחד השדות לא תקין. כדאי לבדוק ולשלוח שוב.";
   }
-  return "השליחה נכשלה, נסו שוב";
+  return "לא הצלחנו לשלוח את הפנייה.";
 }

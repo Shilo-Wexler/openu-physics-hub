@@ -184,9 +184,9 @@ function SortedReviews({
     return () => observer.disconnect();
   }, [nextBefore, loadingMore, loadMore]);
 
-  if (state.status === "loading") return <p className={styles.status}>טוען...</p>;
+  if (state.status === "loading") return <p className={styles.status}>טוען…</p>;
   if (state.status === "error") {
-    return <p className={styles.status}>לא הצלחנו לטעון את הביקורות. נסו לרענן את הדף.</p>;
+    return <p className={styles.status}>לא הצלחנו לטעון את הביקורות. אפשר לרענן את הדף ולנסות שוב.</p>;
   }
   // My new reviews come first; the server list may contain them too, so they are skipped there.
   const mineIds = new Set(mine.map((item) => item.review.id));
@@ -216,7 +216,7 @@ function SortedReviews({
         ))}
       </ol>
       <div ref={sentinel} />
-      {loadingMore && <p className={styles.status}>טוען...</p>}
+      {loadingMore && <p className={styles.status}>טוען…</p>}
     </>
   );
 }

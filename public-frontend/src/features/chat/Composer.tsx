@@ -194,12 +194,12 @@ export default function Composer({
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 422 && error.message === "offensive content") {
-      return "יש בהודעה מילה לא ראויה. ערכו אותה ונסו שוב.";
+      return "יש בהודעה מילה לא ראויה. אפשר לערוך ולפרסם שוב.";
     }
     if (error.status === 422) return `ההודעה צריכה להיות באורך 1-${MAX_LENGTH} תווים`;
-    if (error.status === 404) return "ההודעה שהגבתם עליה נמחקה";
+    if (error.status === 404) return "ההודעה שהגבת עליה נמחקה";
     if (error.status === 403) return "החשבון חסום ולא ניתן לפרסם";
     if (error.status === 401) return "צריך להתחבר מחדש";
   }
-  return "הפרסום נכשל, נסו שוב";
+  return "לא הצלחנו לפרסם את ההודעה.";
 }
