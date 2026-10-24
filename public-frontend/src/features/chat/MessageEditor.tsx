@@ -102,7 +102,7 @@ export default function MessageEditor({ initial, onSave, onCancel }: Props) {
           ביטול
         </button>
         <button type="submit" className={styles.save} disabled={!canSave}>
-          {saving ? "שומר..." : "שמירה"}
+          {saving ? "שומר…" : "שמירה"}
         </button>
       </div>
     </form>
@@ -112,12 +112,12 @@ export default function MessageEditor({ initial, onSave, onCancel }: Props) {
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 422 && error.message === "offensive content") {
-      return "יש בהודעה מילה לא ראויה. ערכו אותה ונסו שוב.";
+      return "יש בהודעה מילה לא ראויה. אפשר לערוך ולשמור שוב.";
     }
     if (error.status === 422) return `ההודעה צריכה להיות באורך 1-${MAX_LENGTH} תווים`;
     if (error.status === 404) return "ההודעה כבר נמחקה";
     if (error.status === 403) return "החשבון חסום ולא ניתן לערוך";
     if (error.status === 401) return "צריך להתחבר מחדש";
   }
-  return "השמירה נכשלה, נסו שוב";
+  return "לא הצלחנו לשמור את השינויים.";
 }

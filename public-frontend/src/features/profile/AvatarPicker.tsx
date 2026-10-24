@@ -53,7 +53,7 @@ export default function AvatarPicker({ current }: Props) {
       </div>
       {failed && (
         <p className={styles.error} role="alert">
-          שמירת האווטאר נכשלה, נסו שוב
+          לא הצלחנו לשמור את האווטאר.
         </p>
       )}
     </div>

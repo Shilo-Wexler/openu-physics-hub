@@ -180,14 +180,14 @@ export default function ReplyThread({
           </ol>
         )}
 
-        {loading && <p className={styles.status}>טוען...</p>}
+        {loading && <p className={styles.status}>טוען…</p>}
         {failed && (
           <button
             className={styles.toggle}
             type="button"
             onClick={() => void load(nextAfter ?? undefined)}
           >
-            הטעינה נכשלה, נסו שוב
+            לא הצלחנו לטעון את התגובות.
           </button>
         )}
 
@@ -211,7 +211,7 @@ export default function ReplyThread({
         createPortal(
           <Composer
             sticky
-            placeholder="כתבו תגובה..."
+            placeholder="כתיבת תגובה…"
             label="תגובה חדשה"
             replyingTo={quote}
             onCancel={onDoneReplying}

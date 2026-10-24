@@ -233,7 +233,7 @@ export default function CourseWheel({ courses, query, onOpen, controls }: Props)
   }
 
   if (count === 0) {
-    return <p className={styles.empty}>לא מצאנו קורס כזה. נסו שם אחר או מספר קורס.</p>;
+    return <p className={styles.empty}>לא מצאנו קורס כזה. אפשר לחפש לפי שם אחר או לפי מספר קורס.</p>;
   }
 
   // Only the rows near the middle are drawn, never the whole list.

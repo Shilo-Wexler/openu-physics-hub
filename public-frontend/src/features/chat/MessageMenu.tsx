@@ -128,7 +128,7 @@ export default function MessageMenu({
         setNotice("כבר דיווחת, ההודעה בבדיקה");
       } else {
         console.error(error);
-        setNotice("הדיווח נכשל, נסו שוב");
+        setNotice("לא הצלחנו לשלוח את הדיווח.");
       }
     }
   }

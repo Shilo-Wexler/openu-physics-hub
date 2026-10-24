@@ -108,7 +108,7 @@ export default function RatingPanel({ course, onChange }: Props) {
           aria-expanded="false"
           onClick={() => setMode("open")}
         >
-          <span>דרגו את הקורס</span>
+          <span>דירוג הקורס</span>
           <Chevron direction="down" />
         </button>
       )}
@@ -181,7 +181,7 @@ export default function RatingPanel({ course, onChange }: Props) {
           </div>
           {failed && (
             <p className={styles.error} role="alert">
-              שמירת הדירוג נכשלה, נסו שוב
+              לא הצלחנו לשמור את הדירוג.
             </p>
           )}
         </div>

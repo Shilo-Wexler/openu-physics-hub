@@ -1,13 +1,72 @@
-/** /about: who runs the site and why. The text is a draft until the final wording pass. */
+/** /about: who runs the site, why, and who made it. Privacy and terms live on /privacy. */
 
+import type { ReactNode } from "react";
 import styles from "./AboutPage.module.css";
 
-// The official bodies, for readers who meant to reach them. Plain text links, no logos,
-// so nothing suggests the site is theirs.
-const OFFICIAL_LINKS = [
-  { href: "https://www.openu.ac.il/", label: "האוניברסיטה הפתוחה" },
-  { href: "https://studentop.org/", label: "אגודת הסטודנטים" },
-];
+const OPENU_URL = "https://www.openu.ac.il/";
+const STUDENT_UNION_URL = "https://studentop.org/";
+
+/** Small monochrome marks that show where a person's link leads. */
+function LinkedInIcon() {
+  return (
+    <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+      <rect width="24" height="24" rx="4" />
+      <g fill="var(--color-bg)">
+        <circle cx="7" cy="7" r="1.8" />
+        <rect x="5.4" y="9.6" width="3.2" height="9.4" />
+        <path d="M10.6 9.6h3v1.4c.5-.9 1.6-1.7 3.1-1.7 2.8 0 3.3 1.8 3.3 4.2V19h-3.1v-4.9c0-1.2-.1-2.3-1.5-2.3s-1.7 1-1.7 2.2V19h-3.1z" />
+      </g>
+    </svg>
+  );
+}
+
+function GitLabIcon() {
+  return (
+    <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 22.5 1.4 14.6 4.3 3.2l2.6 7.6h10.2l2.6-7.6 2.9 11.4z" />
+    </svg>
+  );
+}
+
+const ICONS = { linkedin: LinkedInIcon, gitlab: GitLabIcon };
+
+interface Person {
+  name: string;
+  href: string;
+  site: keyof typeof ICONS;
+}
+
+// The team, each name linking to a profile they chose. New helpers join the credit line.
+const TEAM = {
+  shilo: { name: "Shilo Wexler", href: "https://www.linkedin.com/in/shilo-wexler", site: "linkedin" },
+  yehuda: { name: "Yehuda Inbal", href: "https://gitlab.com/Yehuda-Inbal", site: "gitlab" },
+  yoav: {
+    name: "Yoav Wasserman",
+    href: "https://www.linkedin.com/in/yoav-wasserman-6b2323297/",
+    site: "linkedin",
+  },
+} satisfies Record<string, Person>;
+
+/** Another site: a new tab, and noopener so it cannot reach back into this one. */
+function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a className={styles.link} href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
+}
+
+function PersonLink({ person }: { person: Person }) {
+  const Icon = ICONS[person.site];
+  return (
+    <span className={styles.person}>
+      <ExternalLink href={person.href}>
+        <Icon />
+        {person.name}
+      </ExternalLink>
+    </span>
+  );
+}
 
 export default function AboutPage() {
   return (
@@ -22,39 +81,24 @@ export default function AboutPage() {
           מי אנחנו
         </h2>
         <p className={styles.text}>
-          OpenUVoice הוא האתר של ועדת הסטודנטים של המחלקה לפיזיקה באוניברסיטה הפתוחה. המטרה:
-          מקום אחד לשתף חוויות מהקורסים, לעזור לבחור קורסים, ולהעביר אלינו בקשות ותלונות.
+          OpenUVoice הוא מקום אחד לסטודנטים לפיזיקה באוניברסיטה הפתוחה: לקרוא ולכתוב ביקורות על
+          קורסים, לדבר בצ'אט, לעקוב אחרי עדכוני ועדת הסטודנטים ולפנות אליה.
         </p>
         <p className={styles.text}>
-          חברי הוועדה הם סטודנטים מתנדבים. מדי פעם אנחנו נפגשים עם צוותי ההוראה כדי להציף בעיות
-          וטענות שעולות מהסטודנטים, וכאן הפניות שלכם נכנסות לתמונה.
+          ועדת הסטודנטים לפיזיקה היא קבוצה של סטודנטים מתנדבים. מדי פעם אנחנו נפגשים עם צוותי ההוראה
+          ומעלים בפניהם בעיות שסטודנטים מצביעים עליהן, והפניות שמגיעות דרך האתר עוזרות לנו לדעת מה
+          להעלות.
         </p>
         <p className={styles.text}>
-          האתר עצמאי. הוא לא האתר הרשמי של האוניברסיטה הפתוחה או של אגודת הסטודנטים.
+          האתר הוא מיזם עצמאי של סטודנטים, ואינו קשור רשמית ל
+          <ExternalLink href={OPENU_URL}>אוניברסיטה הפתוחה</ExternalLink> או ל
+          <ExternalLink href={STUDENT_UNION_URL}>אגודת הסטודנטים</ExternalLink>.
         </p>
       </section>
 
-      <section className={styles.section} aria-labelledby="about-privacy">
-        <h2 className={styles.sectionTitle} id="about-privacy">
-          פרטיות
-        </h2>
-        <p className={styles.text}>
-          ההתחברות היא עם Google, אבל אנחנו לא שומרים את השם, המייל או התמונה שלכם. באתר מופיעים
-          רק הכינוי והאווטאר שבחרתם.
-        </p>
-      </section>
-
-      <p className={styles.official}>
-        לפניות רשמיות:{" "}
-        {OFFICIAL_LINKS.map((link, index) => (
-          <span key={link.href}>
-            {index > 0 && " · "}
-            {/* Another site: a new tab, and noopener so it cannot reach back into this one. */}
-            <a className={styles.link} href={link.href} target="_blank" rel="noopener noreferrer">
-              {link.label}
-            </a>
-          </span>
-        ))}
+      <p className={styles.credit} dir="ltr">
+        Built by <PersonLink person={TEAM.shilo} /> and <PersonLink person={TEAM.yehuda} />,
+        designed together with <PersonLink person={TEAM.yoav} />.
       </p>
     </div>
   );

@@ -1,3 +1,4 @@
+/* Shared by /about and /privacy: one narrow column of short sections. */
 .page {
   display: flex;
   flex-direction: column;
@@ -27,6 +28,13 @@
   letter-spacing: -0.01em;
 }
 
+/* "Last updated" under the privacy page's title. */
+.updated {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 .section {
   display: flex;
   flex-direction: column;
@@ -46,13 +54,41 @@
   line-height: 1.7;
 }
 
-/* The official bodies, small and at the end. */
-.official {
+/* A bulleted list inside a section, such as the writing rules. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  line-height: 1.7;
+}
+
+/* The English credit line at the end: small, grey, kept on the right like the rest. */
+.credit {
   margin: 0;
   padding-block-start: var(--space-3);
   border-block-start: 1px solid var(--color-border);
+  text-align: right;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+}
+
+.credit .link {
+  color: inherit;
+}
+
+/* A name and its icon never split across lines. */
+.person {
+  white-space: nowrap;
+}
+
+.icon {
+  width: 0.9em;
+  height: 0.9em;
+  margin-inline-end: 4px;
+  vertical-align: -0.1em;
+  fill: currentColor;
 }
 
 .link {

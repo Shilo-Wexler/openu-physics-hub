@@ -8,7 +8,7 @@ import styles from "./HomePage.module.css";
 // lives in the footer.
 const AREAS: LinkRow[] = [
   { to: "/chat/general", title: "צ'אט כללי", text: "שיחה פתוחה על הכול: לימודים, מבחנים ומה שביניהם." },
-  { to: "/courses", title: "צ'אט קורסים", text: "ביקורות ודירוגים לכל קורס, מבחירה בגלגלת." },
+  { to: "/courses", title: "צ'אט קורסים", text: "ביקורות ודירוגים לקורסים." },
   { to: "/announcements", title: "הכרזות", text: "עדכונים והודעות מוועדת הסטודנטים." },
   {
     to: "/inquiry",
@@ -32,7 +32,7 @@ export default function HomePage() {
           מה באמת חושבים <strong>על הקורס.</strong>
         </h1>
         <p className={styles.lead}>
-          ביקורות ודירוגים אמיתיים, צ'אט פתוח, ופנייה אנונימית לוועדת הסטודנטים.
+          ביקורות ודירוגים מסטודנטים שכבר למדו את הקורס, צ'אט פתוח, ופנייה אנונימית לוועדת הסטודנטים.
         </p>
       </section>
 

@@ -12,7 +12,7 @@ const CHATS: LinkRow[] = [
     title: "צ'אט כללי",
     text: "שיחה פתוחה על הכול: לימודים, מבחנים ומה שביניהם.",
   },
-  { to: "/courses", title: "צ'אט קורסים", text: "ביקורות ודירוגים לכל קורס, מבחירה בגלגלת." },
+  { to: "/courses", title: "צ'אט קורסים", text: "ביקורות ודירוגים לקורסים." },
 ];
 
 export default function ChatHubPage() {

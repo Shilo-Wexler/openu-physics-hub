@@ -74,7 +74,7 @@ export default function NicknameForm({ current }: Props) {
             className={styles.save}
             disabled={!valid || status.kind === "saving"}
           >
-            {status.kind === "saving" ? "שומר..." : "שמירה"}
+            {status.kind === "saving" ? "שומר…" : "שמירה"}
           </button>
         )}
       </div>
@@ -100,10 +100,10 @@ export default function NicknameForm({ current }: Props) {
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 409) return "הכינוי הזה תפוס, נסו אחר";
+    if (error.status === 409) return "הכינוי הזה תפוס. אפשר לבחור כינוי אחר.";
     if (error.status === 422) return "כינוי לא תקין";
     if (error.status === 403) return "החשבון חסום ולא ניתן לשנות כינוי";
     if (error.status === 401) return "צריך להתחבר מחדש";
   }
-  return "השמירה נכשלה, נסו שוב";
+  return "לא הצלחנו לשמור את הכינוי.";
 }

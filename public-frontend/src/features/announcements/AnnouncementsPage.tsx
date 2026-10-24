@@ -88,7 +88,7 @@ export default function AnnouncementsPage() {
             <div className={styles.more}>
               {moreFailed && (
                 <p className={styles.error} role="alert">
-                  הטעינה נכשלה, נסו שוב
+                  לא הצלחנו לטעון עוד הכרזות.
                 </p>
               )}
               <button
@@ -106,4 +106,3 @@ export default function AnnouncementsPage() {
     </div>
   );
 }
-
