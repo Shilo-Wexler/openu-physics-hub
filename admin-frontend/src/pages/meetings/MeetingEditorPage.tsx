@@ -1,16 +1,25 @@
-/** One meeting summary as a form, new or existing: title, meeting date and text. The same screen is
-    for reading and for editing, like an announcement. "Save" sends it and returns to the list. */
+/** One meeting summary as a form, new or existing: title, meeting date, text and attached files. The same
+    screen is for reading and for editing, like an announcement. "Save" sends it and returns to the list. */
 
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 
 import { ApiError, isAbort, isAuthError } from "../../api/client";
-import { createMeeting, deleteMeeting, getMeeting, updateMeeting, type Meeting } from "../../api/meetings";
+import {
+  createMeeting,
+  deleteAttachment,
+  deleteMeeting,
+  getMeeting,
+  updateMeeting,
+  uploadAttachment,
+  type Meeting,
+} from "../../api/meetings";
 import BackLink from "../../components/BackLink";
 import { useConfirm } from "../../components/ConfirmSheet";
 import { Group, Row } from "../../components/GroupedList";
 import { formatDateTime } from "../../lib/format";
 import { actionError, useAdmin } from "../admin/context";
+import MeetingFiles, { toPending, type PendingFile } from "./MeetingFiles";
 import styles from "./MeetingEditorPage.module.css";
 import { todayMeetingDate } from "./meetingDate";
 
@@ -67,6 +76,9 @@ function MeetingEditor({ id }: { id: number | null }) {
   const [title, setTitle] = useState("");
   const [meetingDate, setMeetingDate] = useState(todayMeetingDate);
   const [content, setContent] = useState("");
+  // Files picked but not uploaded yet, and saved files to delete: both wait for "save" too.
+  const [pending, setPending] = useState<PendingFile[]>([]);
+  const [removed, setRemoved] = useState<ReadonlySet<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -92,9 +104,10 @@ function MeetingEditor({ id }: { id: number | null }) {
   }, [id, token, onAuthError]);
 
   // A new summary counts as changed once something is typed; the date alone is just the default.
-  const dirty = saved
+  const fieldsDirty = saved
     ? title.trim() !== saved.title || meetingDate !== saved.meeting_date || content.trim() !== saved.content
     : length(title) > 0 || length(content) > 0;
+  const dirty = fieldsDirty || pending.length > 0 || removed.size > 0;
 
   // Closing or reloading the tab with unsaved changes asks too (the browser's own question).
   useEffect(() => {
@@ -110,11 +123,17 @@ function MeetingEditor({ id }: { id: number | null }) {
   function problem(): string | null {
     if (length(title) > MAX_TITLE) return `הכותרת ארוכה מדי: עד ${MAX_TITLE} תווים.`;
     if (!meetingDate) return "צריך את תאריך הישיבה.";
-    if (length(content) === 0) return "צריך לכתוב את הסיכום.";
+    // Text and files are each optional, but not both: an empty summary says nothing.
+    // Only the console checks this: the server creates the summary before its files are uploaded.
+    const files = pending.length + (saved?.attachments.filter((a) => !removed.has(a.id)).length ?? 0);
+    if (length(content) === 0 && files === 0) return "צריך לכתוב סיכום או לצרף קובץ.";
     if (length(content) > MAX_CONTENT) return `הסיכום ארוך מדי: עד ${MAX_CONTENT} תווים.`;
     return null;
   }
 
+  /** The summary first (a new one needs its id for its files), then the removals, then the uploads,
+      one at a time. If one step fails, what already succeeded stays saved and leaves the form state,
+      so pressing "save" again continues from there instead of creating the summary twice. */
   async function save() {
     const wrong = problem();
     if (wrong) {
@@ -124,22 +143,50 @@ function MeetingEditor({ id }: { id: number | null }) {
     setSaving(true);
     setError(null);
     const input = { title: title.trim(), meeting_date: meetingDate, content: content.trim() };
+    let meeting = saved;
     try {
-      if (saved) await updateMeeting(token, saved.id, input);
-      else await createMeeting(token, input);
+      if (!meeting) meeting = await createMeeting(token, input);
+      else if (fieldsDirty) meeting = await updateMeeting(token, meeting.id, input);
+      setSaved(meeting);
       changed();
-      navigate(LIST, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
       else setError(actionError(e));
       setSaving(false);
+      return;
     }
+
+    const meetingId = meeting.id;
+    let current: PendingFile | null = null;
+    try {
+      for (const attachmentId of removed) {
+        await deleteAttachment(token, meetingId, attachmentId);
+        setRemoved((marks) => new Set([...marks].filter((mark) => mark !== attachmentId)));
+        setSaved((m) => m && { ...m, attachments: m.attachments.filter((a) => a.id !== attachmentId) });
+      }
+      for (const item of pending) {
+        current = item;
+        const attachment = await uploadAttachment(token, meetingId, item.file);
+        setPending((files) => files.filter((file) => file.key !== item.key));
+        setSaved((m) => m && { ...m, attachments: [...m.attachments, attachment] });
+      }
+    } catch (e) {
+      if (isAuthError(e)) onAuthError();
+      else if (current) {
+        setError(`הסיכום נשמר, אבל לא הצלחנו להעלות את "${current.file.name}". אפשר ללחוץ שוב על "שמירה".`);
+      } else {
+        setError(`הסיכום נשמר, אבל לא הצלחנו למחוק את כל הקבצים. אפשר ללחוץ שוב על "שמירה".`);
+      }
+      setSaving(false);
+      return;
+    }
+    navigate(LIST, { replace: true });
   }
 
   async function remove() {
     if (!saved) return;
     const ok = await confirm({
-      message: "הסיכום יימחק לצמיתות, ואי אפשר יהיה לשחזר אותו.",
+      message: "הסיכום והקבצים שלו יימחקו לצמיתות, ואי אפשר יהיה לשחזר אותם.",
       action: "מחיקת הסיכום",
       danger: true,
     });
@@ -155,6 +202,15 @@ function MeetingEditor({ id }: { id: number | null }) {
       else setError(actionError(e));
       setSaving(false);
     }
+  }
+
+  function toggleRemoved(attachmentId: number) {
+    setRemoved((marks) => {
+      const next = new Set(marks);
+      if (next.has(attachmentId)) next.delete(attachmentId);
+      else next.add(attachmentId);
+      return next;
+    });
   }
 
   const back = <BackLink to={LIST} label="סיכומי ישיבות" confirm={dirty ? LEAVE_QUESTION : undefined} />;
@@ -221,7 +277,7 @@ function MeetingEditor({ id }: { id: number | null }) {
 
       <section className={styles.section}>
         <label htmlFor="meeting-content" className={styles.label}>
-          סיכום
+          סיכום (לא חובה כשיש קובץ)
         </label>
         <textarea
           id="meeting-content"
@@ -233,6 +289,22 @@ function MeetingEditor({ id }: { id: number | null }) {
           dir={fieldDir(content)}
         />
       </section>
+
+      <MeetingFiles
+        meetingId={saved?.id ?? null}
+        saved={saved?.attachments ?? []}
+        pending={pending}
+        removed={removed}
+        canRemoveSaved={!isMember}
+        disabled={saving}
+        onAdd={(files) => {
+          setError(null);
+          setPending((current) => [...current, ...toPending(files)]);
+        }}
+        onRemovePending={(key) => setPending((current) => current.filter((file) => file.key !== key))}
+        onToggleRemoved={toggleRemoved}
+        onError={setError}
+      />
 
       {error && <p className="error">{error}</p>}
       <button type="button" className={styles.save} disabled={!dirty || saving} onClick={() => void save()}>
