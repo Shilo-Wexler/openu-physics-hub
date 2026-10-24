@@ -62,7 +62,7 @@ async def server_error(_: Request, exc: Exception):
     return UTF8JSONResponse(status_code=500, content={"detail": "internal error"})
 
 
-# PUT is for PUT /api/admin/admins/{email}/roles (replace an admin's roles).
+# PUT is for PUT /api/admin/admins/{email}/role and /name (change an admin's role or display name).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
