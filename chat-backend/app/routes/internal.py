@@ -1,4 +1,4 @@
-"""Moderation routes for the admin backend. Every route needs the shared token (see deps.py)."""
+"""Moderation and stats routes for the admin backend. Every route needs the shared token (see deps.py)."""
 
 from typing import Annotated
 from uuid import UUID
@@ -6,13 +6,17 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.routes.deps import require_mod_token
-from app.services import moderation
+from app.services import moderation, stats
 from app.services.messages import MessageNotFound
 
 # The dependency on the router protects every route here, including ones added later.
 router = APIRouter(
     prefix="/internal", tags=["internal"], dependencies=[Depends(require_mod_token)]
 )
+
+# Longest period a stats request may ask for. Longer is "all time" anyway (no days),
+# and the bound keeps now() - days inside the range Postgres dates can hold.
+MAX_STATS_DAYS = 3650
 
 
 def _check_ids(ids: list) -> None:
@@ -103,3 +107,13 @@ async def removed_messages(user_id: UUID):
     except moderation.UserNotFound:
         raise HTTPException(status_code=404, detail="user not found")
     return [dict(row) for row in rows]
+
+
+# ?limit=5&days=30: the courses with the most messages in the last 30 days.
+# Without days: all time.
+@router.get("/stats/courses")
+async def stats_courses(
+    limit: Annotated[int, Query(ge=1, le=stats.MAX_LIMIT)],
+    days: Annotated[int | None, Query(ge=1, le=MAX_STATS_DAYS)] = None,
+):
+    return [dict(row) for row in await stats.active_courses(limit, days)]

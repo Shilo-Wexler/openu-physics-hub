@@ -1,0 +1,61 @@
+/* The period switch, with the same space under it as the filters row on the inquiries screen. */
+.switch {
+  margin-block-end: var(--space-3);
+}
+
+/* The previous period's numbers while the new ones load. Dimmed only after a short delay, so a fast
+   answer swaps them without a flicker (same as the inquiries list). */
+.stale {
+  opacity: 0.5;
+  transition: opacity 0.2s ease 0.15s;
+  pointer-events: none;
+}
+
+/* The big number: a white card like a Group, so it sits with the lists under it. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-block-end: var(--space-4);
+  padding: 12px var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+}
+
+.tileLabel {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: var(--weight-regular);
+  color: var(--color-text-muted);
+}
+
+.tileNumber {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: 1.1;
+}
+
+.tileNote {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+/* A type's share, in the row's second line: a grey track with a blue fill, measured against the
+   most common type. Starts at the right in RTL, like the text. */
+.bar {
+  display: block;
+  height: 6px;
+  margin-block-start: 4px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-primary);
+}

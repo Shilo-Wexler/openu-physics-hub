@@ -20,3 +20,7 @@ create table inquiries (
 -- Console list: filter by status, newest first, paged with ?before=<id>.
 -- The "all statuses" view uses the primary key instead.
 create index inquiries_status_id_idx on inquiries (status, id desc);
+
+-- Console stats: inquiries received in a period, counted by type and by course.
+-- type and course_number are included so those counts read only the index, not the table.
+create index inquiries_created_idx on inquiries (created_at) include (type, course_number);
