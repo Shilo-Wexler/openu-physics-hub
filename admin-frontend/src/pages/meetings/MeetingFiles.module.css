@@ -1,0 +1,127 @@
+/* A white rounded group on the grey page, drawn like GroupedList's Group, but each row has room for a
+   second button ("remove") at its end, which a GroupedList Row does not have. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-block-end: var(--space-4);
+}
+
+.title,
+.footer {
+  margin: 0;
+  padding-inline: var(--space-3);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-regular);
+  color: var(--color-text-muted);
+}
+
+.group {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.item {
+  display: flex;
+  align-items: stretch;
+}
+
+.item + .item {
+  border-block-start: 1px solid var(--color-border);
+}
+
+/* The file's name and details. min-width: 0 lets a long name wrap instead of pushing the row wider
+   (in a right-to-left page, anything wider than the screen scrolls the page sideways). */
+.file {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap-size);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px var(--space-3);
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+}
+
+.interactive {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interactive:not(:disabled):active {
+  background: var(--color-surface-muted);
+}
+
+@media (hover: hover) {
+  .interactive:not(:disabled):hover {
+    background: var(--color-bg);
+  }
+}
+
+.file:disabled {
+  cursor: default;
+}
+
+.name {
+  overflow-wrap: anywhere;
+}
+
+/* Marked for removal: still listed, so the mark can be taken back before saving. */
+.gone {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.detail {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* "Add a file": blue like any action row. */
+.add {
+  color: var(--color-primary);
+}
+
+.remove,
+.undo {
+  flex: none;
+  min-width: var(--tap-size);
+  padding-inline: var(--space-3);
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.remove {
+  color: var(--color-danger);
+}
+
+.undo {
+  color: var(--color-primary);
+}
+
+.remove:disabled,
+.undo:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.file:focus-visible,
+.remove:focus-visible,
+.undo:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}

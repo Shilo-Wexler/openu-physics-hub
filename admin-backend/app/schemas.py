@@ -82,5 +82,6 @@ class MeetingIn(BaseModel):
     title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] = ""
     # "YYYY-MM-DD", the day of the meeting (not when the summary was written).
     meeting_date: date
-    # Plain text.
-    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20000)]
+    # Plain text. Optional too ("" means none): a summary may be just its attached files.
+    # The console asks for text or a file; the server cannot, because files are uploaded after the summary.
+    content: Annotated[str, StringConstraints(strip_whitespace=True, max_length=20000)] = ""
