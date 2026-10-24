@@ -14,7 +14,7 @@ from app.services.courses import CourseNotFound
 
 # Reviews per page, and replies per page of one discussion.
 PAGE_SIZE = 50
-# Same limit as the check on messages.content.
+# Same limit as the messages_content_length check on messages.content.
 MAX_LENGTH = 4000
 
 Sort = Literal["new", "top"]
@@ -22,8 +22,9 @@ Sort = Literal["new", "top"]
 # Fields shared by reviews and replies. A deleted review keeps its place (it may have
 # replies) but shows no author, avatar or text. $2 is the viewer, null for a guest.
 _FIELDS = """
-    m.id, m.user_id, m.created_at, m.edited_at, m.like_count,
+    m.id, m.created_at, m.edited_at, m.like_count,
     m.deleted_at is not null                            as deleted,
+    case when m.deleted_at is null then m.user_id end   as user_id,
     case when m.deleted_at is null then u.nickname end  as nickname,
     case when m.deleted_at is null then u.avatar end    as avatar,
     case when m.deleted_at is null then m.content end   as content,
@@ -45,11 +46,11 @@ _REVIEW_VISIBLE = """
 """
 
 # Reviews of a course with their reply counts. The cursor ($3) is the id of the last
-# review seen.
+# review seen. left join: the author of a deleted review may have deleted their account.
 _REVIEWS = f"""
     select {_FIELDS}, {_REPLY_COUNT}
       from messages m
-      join users u on u.id = m.user_id
+      left join users u on u.id = m.user_id
      where m.course_id = $1 and m.thread_id is null
        and {{filter}}
      order by {{order}}
@@ -75,6 +76,7 @@ _REVIEWS_TOP = _REVIEWS.format(
 
 # Active replies of one review, oldest first, with the quoted reply if there is one.
 # The quote is kept even when the quoted reply was deleted (the app shows "deleted").
+# An active reply always has an author, so its own join stays inner.
 # Uses messages_thread_idx; the cursor ($3) is the id of the last reply seen.
 _REPLIES = f"""
     select {_FIELDS},
@@ -96,11 +98,12 @@ _REPLIES = f"""
 # The review a shared message ($1) belongs to: the message itself when it is a review,
 # otherwise the review of its discussion. A deleted reply is not shared; a deleted
 # review follows the same rule as in the list. Two primary key lookups.
+# left join for the same reason as in _REVIEWS.
 _SHARED = f"""
     select {_FIELDS}, {_REPLY_COUNT}, m.course_id
       from messages s
       join messages m on m.id = coalesce(s.thread_id, s.id)
-      join users u on u.id = m.user_id
+      left join users u on u.id = m.user_id
      where s.id = $1
        and (s.thread_id is null or s.deleted_at is null)
        and {_REVIEW_VISIBLE}

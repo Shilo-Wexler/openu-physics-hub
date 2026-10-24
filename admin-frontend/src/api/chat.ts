@@ -49,10 +49,12 @@ export interface ActionMessage {
   message_id: number;
   course_id: number;
   course_name: string;
+  /** Empty once the author deleted their account. */
   content: string;
   created_at: string;
-  author_id: string;
-  author_nickname: string;
+  /** Both null once the author deleted their account. */
+  author_id: string | null;
+  author_nickname: string | null;
   state: MessageState;
   open_reports: number;
   all_reports: number;
@@ -82,7 +84,7 @@ export interface ModerationAction {
   can_undo: boolean;
   /** null for a user action, or when the chat backend could not be reached. */
   message: ActionMessage | null;
-  /** null for a message action, or when the chat backend could not be reached. */
+  /** null for a message action, when the chat backend could not be reached, or once the user deleted their account. */
   user: ActionUser | null;
 }
 

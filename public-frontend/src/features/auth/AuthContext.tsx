@@ -7,14 +7,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
-import { getMe, logout, logoutAll } from "../../shared/api/chat";
+import { deleteAccount as requestAccountDeletion, getMe, logout } from "../../shared/api/chat";
 import type { Me } from "../../shared/api/chat";
 
 interface Auth {
   user: Me | null; // null for a guest (and while loading)
   loading: boolean; // true until the first /me answer, so the header does not flash "sign in"
   signOut: () => Promise<void>;
-  signOutAll: () => Promise<void>; // ends the sessions on every device
+  /** Asks to delete the account (deleted a week later) and signs out on every device. */
+  deleteAccount: () => Promise<void>;
   updateUser: (changes: Partial<Me>) => void; // after a nickname or avatar change
   /** For write actions: true when signed in; for a guest, opens the sign-in dialog and returns false. */
   requireSignIn: () => boolean;
@@ -50,8 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const signOutAll = useCallback(async () => {
-    await logoutAll();
+  const deleteAccount = useCallback(async () => {
+    await requestAccountDeletion();
     setUser(null);
   }, []);
 
@@ -74,13 +75,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       signOut,
-      signOutAll,
+      deleteAccount,
       updateUser,
       requireSignIn,
       signInPromptOpen,
       closeSignInPrompt,
     }),
-    [user, loading, signOut, signOutAll, updateUser, requireSignIn, signInPromptOpen, closeSignInPrompt],
+    [user, loading, signOut, deleteAccount, updateUser, requireSignIn, signInPromptOpen, closeSignInPrompt],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

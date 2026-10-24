@@ -1,6 +1,7 @@
 /**
  * /auth/done: where the server sends the tab back after Google sign-in.
- * ?new=1 is a brand-new account, ?error=1 a failed sign-in; otherwise it is a returning user.
+ * ?new=1 is a brand-new account, ?restored=1 a sign-in that cancelled a pending account deletion,
+ * ?error=1 a failed sign-in; otherwise it is a returning user.
  * The page load itself already asked /me (AuthProvider), so the header shows the new user.
  */
 
@@ -31,8 +32,12 @@ export default function SignInDonePage() {
       setFailedFrom(returnPath);
       return;
     }
+    // A new user picks a nickname; a user whose deletion was cancelled sees that it was.
+    let target = returnPath;
+    if (params.get("new") === "1") target = "/profile?welcome=1";
+    else if (params.get("restored") === "1") target = "/profile?restored=1";
     // replace: the back button should not land on this in-between page.
-    navigate(params.get("new") === "1" ? "/profile?welcome=1" : returnPath, { replace: true });
+    navigate(target, { replace: true });
   }, [params, navigate]);
 
   if (failedFrom === null) return null; // only for a moment, until the redirect above

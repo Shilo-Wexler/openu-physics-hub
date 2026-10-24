@@ -18,6 +18,7 @@ MAX_IDS = 200
 
 # Active messages with open reports, most reported first, with the author's history:
 # how many of their messages moderators removed, and how many were ever reported.
+# An active message always has an author, so the users join stays inner.
 _REPORTED = """
     with open_reports as (
         select message_id, count(*) as report_count, max(created_at) as last_reported_at
@@ -45,6 +46,8 @@ _REPORTED = """
 
 # Any messages by id, deleted ones too, for the console's log: what was written, by whom, where,
 # what became of it (state) and its reports. Reports per message are few, so counting them is cheap.
+# left join: when the author deleted their account, author_id and author_nickname are null
+# and content is empty.
 _MESSAGES = """
     select m.id as message_id, m.course_id, c.name as course_name, m.content, m.created_at,
            m.user_id as author_id, u.nickname as author_nickname,
@@ -54,7 +57,7 @@ _MESSAGES = """
            (select count(*) from reports r where r.message_id = m.id and r.status = 'open') as open_reports,
            (select count(*) from reports r where r.message_id = m.id) as all_reports
       from messages m
-      join users u on u.id = m.user_id
+      left join users u on u.id = m.user_id
       join courses c on c.id = m.course_id
      where m.id = any($1::bigint[])
 """
@@ -129,14 +132,15 @@ async def remove(message_id: int) -> None:
 async def restore(message_id: int) -> int:
     """Undo a removal: the message is back in the chat, and the reports closed with it are open again,
     so it is back in the reports list for a new decision. Only for a message a moderator removed,
-    never one its author deleted. Returns how many reports were reopened."""
+    never one its author deleted, and not once the author deleted their account (the message
+    was emptied). Returns how many reports were reopened."""
     async with db.pool.acquire() as conn, conn.transaction():
         row = await conn.fetchrow(
-            "select deleted_by from messages where id = $1 for update", message_id
+            "select deleted_by, user_id from messages where id = $1 for update", message_id
         )
         if row is None:
             raise MessageNotFound()
-        if row["deleted_by"] != "moderator":
+        if row["deleted_by"] != "moderator" or row["user_id"] is None:
             raise NothingToUndo()
         await conn.execute(
             "update messages set deleted_at = null, deleted_by = null where id = $1", message_id
