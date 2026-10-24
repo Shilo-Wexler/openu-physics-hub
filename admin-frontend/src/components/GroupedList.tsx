@@ -34,18 +34,27 @@ interface RowProps {
   to?: string;
   /** An action row, such as sign out. Ignored when `to` is set. */
   onClick?: () => void;
-  /** Red label, for an action that removes something or ends the session. */
+  /** Red label, for an action that removes something or ends the session. Other action rows are blue. */
   danger?: boolean;
+  /** One option of a list to pick from (a status, a role): stays black like plain text, not blue. */
+  choice?: boolean;
 }
 
 /** One row of a Group: a link (to), a button (onClick) or plain text. */
-export function Row({ label, detail, value, icon, to, onClick, danger = false }: RowProps) {
+export function Row({ label, detail, value, icon, to, onClick, danger = false, choice = false }: RowProps) {
+  // Like iOS: a row that does something is coloured (red if it removes), so it reads as a button.
+  const isAction = !to && onClick !== undefined && !choice;
+  const labelClass = danger
+    ? `${styles.label} ${styles.danger}`
+    : isAction
+      ? `${styles.label} ${styles.action}`
+      : styles.label;
   const body = (
     <>
       {icon && <span className={styles.icon}>{icon}</span>}
       <span className={styles.content}>
         <span className={styles.text}>
-          <span className={danger ? `${styles.label} ${styles.danger}` : styles.label}>{label}</span>
+          <span className={labelClass}>{label}</span>
           {detail && <span className={styles.detail}>{detail}</span>}
         </span>
         {value !== undefined && <span className={styles.value}>{value}</span>}

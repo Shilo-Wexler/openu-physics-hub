@@ -13,6 +13,8 @@ export interface AdminContextValue {
   role: Level;
   /** A committee member: no managing admins, and announcements as drafts only. */
   isMember: boolean;
+  /** An admin's name by email, from the admins list; null when unknown (removed, or the list not loaded yet). */
+  nameOf: (email: string) => string | null;
   /** Goes up after every change, so lists and counters reload. */
   version: number;
   changed: () => void;

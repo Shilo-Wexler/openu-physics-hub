@@ -23,6 +23,7 @@ import BackLink from "../../components/BackLink";
 import { useConfirm } from "../../components/ConfirmSheet";
 import { Group, Row } from "../../components/GroupedList";
 import { formatDateTime } from "../../lib/format";
+import AdminLabel from "../admin/AdminLabel";
 import { actionError, useAdmin } from "../admin/context";
 import styles from "./AnnouncementEditorPage.module.css";
 import { announcementName } from "./labels";
@@ -471,6 +472,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
               label={option.label}
               value={option.value === status ? check : undefined}
               onClick={() => setStatus(option.value)}
+              choice
             />
           ))}
         </Group>
@@ -486,7 +488,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
       {saved && (
         <>
           <Group title="פרטים">
-            <Row label="נכתבה על ידי" value={<bdi dir="ltr">{saved.author_email}</bdi>} />
+            <Row label="נכתבה על ידי" value={<AdminLabel email={saved.author_email} />} />
             <Row label="נוצרה" value={formatDateTime(saved.created_at)} />
             {saved.published_at && <Row label="פורסמה" value={formatDateTime(saved.published_at)} />}
             {saved.edited_at && <Row label="נערכה" value={formatDateTime(saved.edited_at)} />}

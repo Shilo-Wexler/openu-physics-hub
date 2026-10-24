@@ -10,6 +10,7 @@ import { useConfirm } from "../../components/ConfirmSheet";
 import { Group, Row } from "../../components/GroupedList";
 import { formatDateTime } from "../../lib/format";
 import { ACTION_LABEL, STATE_LABEL, UNDO_EFFECT } from "../../lib/moderationLabels";
+import AdminLabel from "../admin/AdminLabel";
 import { actionError, useAdmin, useLoad } from "../admin/context";
 import LoadError from "../admin/LoadError";
 import styles from "./ReportPage.module.css";
@@ -80,7 +81,7 @@ export default function ActionPage() {
       <header className={styles.head}>
         <h1 className={styles.title}>{ACTION_LABEL[a.action]}</h1>
         <p className={styles.meta}>
-          <bdi dir="ltr">{a.admin_email}</bdi>
+          <AdminLabel email={a.admin_email} />
           <span>{formatDateTime(a.created_at)}</span>
         </p>
       </header>
@@ -145,7 +146,7 @@ function UndoGroup({ action: a, onUndo }: { action: ModerationAction; onUndo: ()
   if (a.undone_by !== null) {
     return (
       <Group title="בוטלה" footer="אפשר לבטל פעולה פעם אחת בלבד.">
-        <Row label="על ידי" value={<bdi dir="ltr">{a.undone_by_email}</bdi>} />
+        {a.undone_by_email && <Row label="על ידי" value={<AdminLabel email={a.undone_by_email} />} />}
         {a.undone_at && <Row label="מתי" value={formatDateTime(a.undone_at)} />}
       </Group>
     );

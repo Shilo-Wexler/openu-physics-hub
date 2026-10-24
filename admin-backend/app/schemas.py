@@ -4,12 +4,17 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, StringConstraints
 
-# Admin levels: db/migrations/004_admin_roles.sql.
+# Admin levels and names: db/migrations/004_admin_roles.sql.
 Role = Literal["super_admin", "admin", "member"]
+AdminName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=40)]
 
 
 class AdminRole(BaseModel):
     role: Role
+
+
+class AdminNameIn(BaseModel):
+    name: AdminName
 
 
 class NewAdmin(BaseModel):
@@ -17,6 +22,7 @@ class NewAdmin(BaseModel):
         str,
         StringConstraints(strip_whitespace=True, to_lower=True, min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+$"),
     ]
+    name: AdminName
     # Least privilege by default: a committee member.
     role: Role = "member"
 

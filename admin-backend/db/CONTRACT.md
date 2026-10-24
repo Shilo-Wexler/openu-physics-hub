@@ -45,7 +45,9 @@ Loaded from `shared/courses.csv`, plus `0,כללי`. A course that an inquiry po
 | `admin` | Everything | Admins and members only: never gives or touches `super_admin` |
 | `member` | Everything, announcements as drafts only | None |
 
-- Nobody changes or removes their own row. With the rule above, a super admin always remains.
+- Every admin has a name (2 to 40 characters), which the console shows instead of the email. It is required when adding an admin, also by hand in the DB.
+- Nobody changes their own level or removes themselves. With the rule above, a super admin always remains.
+- Everyone may rename themselves. Another admin's name follows the rules of their level: not by a member, and a `super_admin`'s only by a `super_admin`.
 - A new admin added without a level is a `member`. One added by hand in the DB is a `super_admin`.
 - Refused with `403`: `"requires an admin"` (a member) or `"requires a super admin"` (an admin).
 - Changes apply on the next request.

@@ -16,7 +16,7 @@ Updated 2026-10-24.
 - Inquiries: the anonymous public form, and console routes to list, filter and handle them. See `db/CONTRACT.md`.
 - Announcements: public read, console create, edit, publish and pin.
 - Chat moderation: `/api/admin/chat/...` forwards to the chat's `/internal` with `MOD_API_TOKEN`, and logs each action.
-- Admins and levels: `admins` table, `GET /api/admin/me`, add/change/remove from the console. Three levels, see `db/CONTRACT.md`.
+- Admins, names and levels: `admins` table, `GET /api/admin/me`, add, rename, change level and remove from the console. Three levels, see `db/CONTRACT.md`.
 - Sign-in: Cloudflare Access. The server checks the `Cf-Access-Jwt-Assertion` header.
 - Errors are always `{"detail": "..."}`.
 - `/docs`, `/redoc` and `/openapi.json` only when `ENV=dev`.

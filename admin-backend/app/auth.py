@@ -27,7 +27,8 @@ _jwks_client = (
 @dataclass
 class GoogleUser:
     email: str
-    name: str | None
+    # Filled in by require_admin from the admins table. Cloudflare sends no name.
+    name: str | None = None
     role: str = ""  # filled in by require_admin: super_admin, admin or member
 
     @property
@@ -45,9 +46,9 @@ def _dev_user(token: str) -> GoogleUser | None:
     if not DEV_AUTH_EMAIL:
         return None
     if token == "dev":
-        return GoogleUser(email=DEV_AUTH_EMAIL, name="Dev Admin")
+        return GoogleUser(email=DEV_AUTH_EMAIL)
     if token.startswith("dev:") and "@" in token:
-        return GoogleUser(email=token[4:].strip().lower(), name="Dev User")
+        return GoogleUser(email=token[4:].strip().lower())
     return None
 
 
@@ -74,7 +75,7 @@ def verify_access_token(token: str) -> GoogleUser:
     email = str(claims["email"]).strip().lower()
     if "@" not in email:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired token")
-    return GoogleUser(email=email, name=None)
+    return GoogleUser(email=email)
 
 
 def require_admin(
@@ -88,10 +89,11 @@ def require_admin(
         if not access_token:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing access token")
         user = verify_access_token(access_token)
-    row = conn.execute("select role from admins where email = %s", (user.email,)).fetchone()
+    row = conn.execute("select role, name from admins where email = %s", (user.email,)).fetchone()
     if row is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not an admin")
     user.role = row["role"]
+    user.name = row["name"]
     return user
 
 
