@@ -1,5 +1,4 @@
 import { useMemo, useState, type KeyboardEvent } from "react";
-import { Link, useNavigate } from "react-router";
 
 import type { Course } from "../../shared/api/chat";
 import { createCourseSearch } from "./searchCourses";
@@ -7,27 +6,16 @@ import styles from "./CourseSearch.module.css";
 
 interface Props {
   courses: Course[];
-  /**
-   * Picks a course instead of opening its page (e.g. in the inquiry form): results become
-   * buttons that call this. Without it, results are links to the course pages.
-   */
-  onSelect?: (course: Course) => void;
-  /** Text to start with, e.g. what was typed in the home page's search box. */
-  initialQuery?: string;
+  /** Called with the course the user picked (e.g. in the inquiry form). */
+  onSelect: (course: Course) => void;
 }
 
-export default function CourseSearch({ courses, onSelect, initialQuery = "" }: Props) {
-  const [query, setQuery] = useState(initialQuery);
-  const navigate = useNavigate();
+export default function CourseSearch({ courses, onSelect }: Props) {
+  const [query, setQuery] = useState("");
 
   // The index is rebuilt only when the course list itself changes, not on every keystroke.
   const search = useMemo(() => createCourseSearch(courses), [courses]);
   const results = search(query);
-
-  function choose(course: Course) {
-    if (onSelect) onSelect(course);
-    else void navigate(`/courses/${course.id}`);
-  }
 
   // Enter picks the best match, so the mouse is not needed at all. Not a <form>: the search
   // can sit inside another form (the inquiry form), and forms cannot be nested.
@@ -35,7 +23,7 @@ export default function CourseSearch({ courses, onSelect, initialQuery = "" }: P
     if (event.key !== "Enter") return;
     event.preventDefault(); // also keeps Enter from submitting a surrounding form
     const first = results[0];
-    if (first) choose(first);
+    if (first) onSelect(first);
   }
 
   return (
@@ -58,29 +46,15 @@ export default function CourseSearch({ courses, onSelect, initialQuery = "" }: P
       </p>
 
       <ul className={styles.list}>
-        {results.map((course) => {
-          const label = (
-            <>
+        {results.map((course) => (
+          <li key={course.id}>
+            <button className={styles.item} type="button" onClick={() => onSelect(course)}>
               <span className={styles.name}>{course.name}</span>
               <span className={styles.number}>{course.id}</span>
-            </>
-          );
-          return (
-            <li key={course.id}>
-              {onSelect ? (
-                <button className={styles.item} type="button" onClick={() => onSelect(course)}>
-                  {label}
-                </button>
-              ) : (
-                <Link className={styles.item} to={`/courses/${course.id}`}>
-                  {label}
-                </Link>
-              )}
-            </li>
-          );
-        })}
+            </button>
+          </li>
+        ))}
       </ul>
     </div>
   );
 }
- 
