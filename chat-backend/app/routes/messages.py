@@ -29,7 +29,9 @@ def _content_error(exc: Exception) -> HTTPException:
 def _public(row, viewer_id: UUID | None) -> dict:
     item = dict(row)
     # The author's internal id stays on the server; the page only needs "is it mine".
-    item["is_mine"] = item.pop("user_id") == viewer_id
+    # A deleted message comes without an author, and a guest has no id: neither is "mine".
+    author_id = item.pop("user_id")
+    item["is_mine"] = author_id is not None and author_id == viewer_id
     return item
 
 

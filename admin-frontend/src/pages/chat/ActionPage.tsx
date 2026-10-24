@@ -9,7 +9,7 @@ import BackLink from "../../components/BackLink";
 import { useConfirm } from "../../components/ConfirmSheet";
 import { Group, Row } from "../../components/GroupedList";
 import { formatDateTime } from "../../lib/format";
-import { ACTION_LABEL, STATE_LABEL, UNDO_EFFECT } from "../../lib/moderationLabels";
+import { ACTION_LABEL, DELETED_ACCOUNT, STATE_LABEL, UNDO_EFFECT } from "../../lib/moderationLabels";
 import AdminLabel from "../admin/AdminLabel";
 import { actionError, useAdmin, useLoad } from "../admin/context";
 import LoadError from "../admin/LoadError";
@@ -65,7 +65,8 @@ export default function ActionPage() {
       navigate(BACK, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      // 409: something changed since the screen loaded (another action, or the author deleted the message).
+      // 409: something changed since the screen loaded (another action, the author deleted the
+      // message, or the author deleted their account).
       else if (e instanceof ApiError && e.status === 409) {
         setError("אי אפשר לבטל את הפעולה הזו, כי ההודעה או המשתמש השתנו מאז.");
         changed();
@@ -86,11 +87,15 @@ export default function ActionPage() {
         </p>
       </header>
 
-      {a.message && (
-        <div className={styles.content} dir="auto">
-          {a.message.content}
-        </div>
-      )}
+      {a.message &&
+        // A deleted account's messages are emptied in the chat, so there is no text to show.
+        (a.message.author_id === null ? (
+          <p className={styles.status}>התוכן נמחק יחד עם החשבון.</p>
+        ) : (
+          <div className={styles.content} dir="auto">
+            {a.message.content}
+          </div>
+        ))}
 
       <Details action={a} />
 
@@ -107,7 +112,7 @@ function Details({ action: a }: { action: ModerationAction }) {
     const m = a.message;
     return (
       <Group title="ההודעה">
-        <Row label="כותב" value={<bdi>{m.author_nickname}</bdi>} />
+        <Row label="כותב" value={m.author_nickname === null ? DELETED_ACCOUNT : <bdi>{m.author_nickname}</bdi>} />
         <Row label="קורס" value={m.course_name} />
         <Row label="נכתבה" value={formatDateTime(m.created_at)} />
         <Row label="מצב" value={STATE_LABEL[m.state]} />
@@ -118,10 +123,15 @@ function Details({ action: a }: { action: ModerationAction }) {
     );
   }
 
-  // Neither came back: the chat backend did not answer, the log itself still loaded.
+  // Neither came back. Either the chat backend did not answer (the log itself still loaded),
+  // or the user deleted their account; the console cannot tell which.
   const u = a.user;
   if (!u) {
-    return <p className={styles.status}>הפרטים לא זמינים כרגע, כי שרת הצ'אט לא ענה. נסו שוב מאוחר יותר.</p>;
+    return (
+      <p className={styles.status}>
+        הפרטים לא זמינים. ייתכן ששרת הצ'אט לא ענה, ואז אפשר לנסות שוב מאוחר יותר, או שהמשתמש מחק את החשבון.
+      </p>
+    );
   }
 
   return (

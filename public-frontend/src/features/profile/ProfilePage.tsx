@@ -1,4 +1,8 @@
-/** /profile: the signed-in user's nickname and avatar, and sign-out. ?welcome=1 marks the first sign-in. */
+/**
+ * /profile: the signed-in user's nickname and avatar, sign-out and account deletion.
+ * ?welcome=1 marks the first sign-in, ?restored=1 a sign-in that cancelled a deletion,
+ * ?deleted=1 the guest screen right after asking to delete the account.
+ */
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
@@ -10,18 +14,22 @@ import NicknameForm from "./NicknameForm";
 import styles from "./ProfilePage.module.css";
 
 export default function ProfilePage() {
-  const { user, loading, signOut, signOutAll, requireSignIn } = useAuth();
-  const [searchParams] = useSearchParams();
+  const { user, loading, signOut, deleteAccount, requireSignIn } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const welcome = searchParams.get("welcome") === "1";
-  const [signOutError, setSignOutError] = useState(false);
-  // "Sign out everywhere" was picked once: the row now asks to confirm it, as the chat's ⋯ menu does.
-  const [confirmingAll, setConfirmingAll] = useState(false);
+  const restored = searchParams.get("restored") === "1";
+  const deleted = searchParams.get("deleted") === "1";
+  // One error line for the account actions: only one can be in progress at a time.
+  const [error, setError] = useState<string | null>(null);
+  // "Delete account" was picked once: the row now asks to confirm it, as the chat's ⋯ menu does.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const confirmButton = useRef<HTMLButtonElement>(null);
 
   // The focus moves to the confirm button when the question appears, as in the chat's menu.
   useEffect(() => {
-    if (confirmingAll) confirmButton.current?.focus();
-  }, [confirmingAll]);
+    if (confirmingDelete) confirmButton.current?.focus();
+  }, [confirmingDelete]);
 
   if (loading) return null;
 
@@ -30,7 +38,11 @@ export default function ProfilePage() {
       <section className={styles.guest}>
         <Avatar avatar={null} size={72} />
         <h1 className={styles.name}>הפרופיל שלי</h1>
-        <p className={styles.guestText}>כדי לבחור כינוי ואווטאר צריך להתחבר.</p>
+        <p className={styles.guestText}>
+          {deleted
+            ? "החשבון יימחק בעוד שבוע. התחברות מחדש לפני כן תבטל את המחיקה."
+            : "כדי לבחור כינוי ואווטאר צריך להתחבר."}
+        </p>
         <button type="button" className={styles.signIn} onClick={() => requireSignIn()}>
           התחברות
         </button>
@@ -38,20 +50,29 @@ export default function ProfilePage() {
     );
   }
 
-  // Both sign-outs share one error line: only one can be in progress at a time.
-  async function runSignOut(action: () => Promise<void>) {
-    setSignOutError(false);
+  async function runSignOut() {
+    setError(null);
     try {
-      await action();
-    } catch (error) {
-      console.error("sign-out failed", error);
-      setSignOutError(true);
+      await signOut();
+    } catch (e) {
+      console.error("sign-out failed", e);
+      setError("לא הצלחנו להתנתק.");
     }
   }
 
-  function signOutEverywhere() {
-    setConfirmingAll(false);
-    void runSignOut(signOutAll);
+  async function confirmDelete() {
+    if (deleting) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteAccount();
+      // The user is a guest now; the guest screen says when the account goes and how to keep it.
+      setSearchParams({ deleted: "1" }, { replace: true });
+    } catch (e) {
+      console.error("account deletion failed", e);
+      setError("לא הצלחנו למחוק את החשבון.");
+      setDeleting(false);
+    }
   }
 
   return (
@@ -72,6 +93,8 @@ export default function ProfilePage() {
         </p>
       )}
 
+      {restored && <p className={styles.welcome}>טוב שחזרת! מחיקת החשבון בוטלה.</p>}
+
       {/* The form's own label is this part's title. */}
       <section className={styles.section}>
         <NicknameForm current={user.nickname} />
@@ -86,30 +109,36 @@ export default function ProfilePage() {
         <h2 className={styles.sectionTitle}>חשבון</h2>
         <ul className={styles.actions}>
           <li>
-            <button
-              type="button"
-              className={styles.action}
-              onClick={() => void runSignOut(signOut)}
-            >
+            <button type="button" className={styles.action} onClick={() => void runSignOut()}>
               התנתקות
             </button>
           </li>
           <li>
-            {confirmingAll ? (
+            {confirmingDelete ? (
               // The question in place of the row: nothing covers the page, on a phone or a computer.
-              <div className={styles.confirmBox} role="group" aria-labelledby="sign-out-all-question">
-                <p id="sign-out-all-question" className={styles.question}>
-                  להתנתק מכל המכשירים, כולל זה?
+              <div className={styles.confirmBox} role="group" aria-labelledby="delete-question">
+                <p id="delete-question" className={styles.question}>
+                  למחוק את החשבון?
+                </p>
+                <p className={styles.confirmText}>
+                  המחיקה תתבצע בעוד שבוע, ועד אז אפשר לבטל אותה בהתחברות מחדש. אחרי שבוע יימחקו
+                  הכינוי, האווטאר, הדירוגים והלייקים, וההודעות שכתבת יוסרו מהאתר.
                 </p>
                 <button
                   ref={confirmButton}
                   type="button"
                   className={styles.confirm}
-                  onClick={signOutEverywhere}
+                  disabled={deleting}
+                  onClick={() => void confirmDelete()}
                 >
-                  כן, להתנתק מכולם
+                  כן, למחוק
                 </button>
-                <button type="button" className={styles.cancel} onClick={() => setConfirmingAll(false)}>
+                <button
+                  type="button"
+                  className={styles.cancel}
+                  disabled={deleting}
+                  onClick={() => setConfirmingDelete(false)}
+                >
                   ביטול
                 </button>
               </div>
@@ -117,16 +146,16 @@ export default function ProfilePage() {
               <button
                 type="button"
                 className={`${styles.action} ${styles.danger}`}
-                onClick={() => setConfirmingAll(true)}
+                onClick={() => setConfirmingDelete(true)}
               >
-                התנתקות מכל המכשירים
+                מחיקת חשבון
               </button>
             )}
           </li>
         </ul>
-        {signOutError && (
+        {error && (
           <p className={styles.error} role="alert">
-            לא הצלחנו להתנתק.
+            {error}
           </p>
         )}
       </section>

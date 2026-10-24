@@ -101,10 +101,6 @@ export function logout() {
   return request<{ status: string }>(`${BASE}/auth/logout`, { method: "POST" });
 }
 
-export function logoutAll() {
-  return request<{ status: string }>(`${BASE}/auth/logout-all`, { method: "POST" });
-}
-
 export function getMe(signal?: AbortSignal) {
   return request<Me>(`${BASE}/me`, { signal });
 }
@@ -121,6 +117,12 @@ export function changeAvatar(avatar: string) {
     method: "PUT",
     body: { avatar },
   });
+}
+
+/** Asks to delete the account: it is signed out at once and deleted a week later,
+ * unless it signs in again before that. The answer is 204, with no body. */
+export function deleteAccount() {
+  return request<void>(`${BASE}/me`, { method: "DELETE" });
 }
 
 // ---- Courses and ratings -----------------------------------------------

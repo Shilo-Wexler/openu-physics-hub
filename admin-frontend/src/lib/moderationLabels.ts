@@ -17,6 +17,9 @@ export const STATE_LABEL: Record<MessageState, string> = {
   deleted: "נמחקה על ידי הכותב",
 };
 
+/** Shown instead of the author of a message whose author deleted their account. */
+export const DELETED_ACCOUNT = "חשבון שנמחק";
+
 /** What undoing each action does, said before it is done. reopen and restore are not undone. */
 export const UNDO_EFFECT: Partial<Record<ModerationActionType, string>> = {
   dismiss: "הדיווחים על ההודעה ייפתחו מחדש, וההודעה תחזור לרשימת הדיווחים.",
@@ -25,7 +28,9 @@ export const UNDO_EFFECT: Partial<Record<ModerationActionType, string>> = {
   unblock: "החשבון ייחסם שוב: יוכל לקרוא, אבל לא לכתוב, לדרג או לדווח.",
 };
 
-/** Who the action was about: the message's author or the user. null when the chat backend was not reached. */
+/** Who the action was about: the message's author or the user.
+ * null when the chat backend was not reached, or the user of a user action deleted their account. */
 export function targetName(action: ModerationAction): string | null {
-  return action.message?.author_nickname ?? action.user?.nickname ?? null;
+  if (action.message) return action.message.author_nickname ?? DELETED_ACCOUNT;
+  return action.user?.nickname ?? null;
 }

@@ -3,10 +3,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
-from app.routes.deps import current_user_id
+from app.routes.deps import clear_session_cookie, current_user_id
 from app.services import users
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -52,3 +52,10 @@ async def change_avatar(body: AvatarChange, user_id: Annotated[UUID, Depends(cur
     except PermissionError:
         raise HTTPException(status_code=403, detail="user is blocked")
     return {"avatar": avatar}
+
+
+@router.delete("", status_code=204)
+async def delete_account(response: Response, user_id: Annotated[UUID, Depends(current_user_id)]):
+    """Ask to delete the account. It is deleted a week later unless the user signs in again."""
+    await users.request_deletion(user_id)
+    clear_session_cookie(response)

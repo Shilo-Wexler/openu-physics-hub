@@ -22,30 +22,34 @@ class GoogleSignIn(BaseModel):
     id_token: str
 
 
-async def _sign_in(id_token: str, response: Response) -> tuple[UUID, bool]:
+async def _sign_in(id_token: str, response: Response) -> tuple[UUID, bool, bool]:
     """Verify the Google token, find or create its user and set the session cookie.
 
-    Returns (user_id, is_new). Raises google_auth.InvalidGoogleToken for a bad token.
+    Signing in cancels a pending account deletion.
+    Returns (user_id, is_new, restored), where restored means a deletion was cancelled.
+    Raises google_auth.InvalidGoogleToken for a bad token.
     """
     google_user_id = await google_auth.verify_id_token(id_token)
     user_id, is_new = await users.find_or_create("google", google_user_id)
+    restored = not is_new and await users.cancel_deletion(user_id)
     set_session_cookie(response, await sessions.create(user_id))
-    return user_id, is_new
+    return user_id, is_new, restored
 
 
 @router.post("/google")
 async def sign_in_with_google(body: GoogleSignIn, response: Response):
     try:
-        user_id, is_new = await _sign_in(body.id_token, response)
+        user_id, is_new, restored = await _sign_in(body.id_token, response)
     except google_auth.InvalidGoogleToken:
         raise HTTPException(status_code=401, detail="invalid Google token")
-    # Same shape as GET /me plus is_new, so the browser needs no extra /me call after sign-in.
+    # Same shape as GET /me plus the flags, so the browser needs no extra /me call after sign-in.
     user = await users.get(user_id)
     return {
         "user_id": user["id"],
         "nickname": user["nickname"],
         "avatar": user["avatar"],
         "is_new": is_new,
+        "restored": restored,
     }
 
 
@@ -79,10 +83,16 @@ async def sign_in_with_google_redirect(
     # 303: the browser follows with a GET, not by posting the form again.
     response = Response(status_code=303)
     try:
-        _, is_new = await _sign_in(credential, response)
+        _, is_new, restored = await _sign_in(credential, response)
     except google_auth.InvalidGoogleToken:
         return Response(status_code=303, headers={"location": f"{SIGN_IN_DONE_PATH}?error=1"})
-    response.headers["location"] = f"{SIGN_IN_DONE_PATH}?new=1" if is_new else SIGN_IN_DONE_PATH
+    if is_new:
+        location = f"{SIGN_IN_DONE_PATH}?new=1"
+    elif restored:
+        location = f"{SIGN_IN_DONE_PATH}?restored=1"
+    else:
+        location = SIGN_IN_DONE_PATH
+    response.headers["location"] = location
     return response
 
 
