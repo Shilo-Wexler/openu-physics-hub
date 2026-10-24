@@ -150,7 +150,7 @@ export default function AnnouncementEditorPage() {
 }
 
 function AnnouncementEditor({ id }: { id: number | null }) {
-  const { token, changed, onAuthError } = useAdmin();
+  const { token, isMember, changed, onAuthError } = useAdmin();
   const confirm = useConfirm();
   const navigate = useNavigate();
 
@@ -198,6 +198,9 @@ function AnnouncementEditor({ id }: { id: number | null }) {
 
   // What the server has now: null until a new announcement is first saved.
   const saved = loaded?.announcement ?? null;
+  // A member writes drafts only (the server refuses the rest): no status to pick, and a published
+  // announcement opens read-only, without save or delete.
+  const readOnly = isMember && Boolean(saved?.published_at);
   const savedImage = saved?.image && !dropImage ? saved.image : null;
   const hasImage = file !== null || savedImage !== null;
   const textChanged = title.trim() !== (saved?.title ?? "") || body.trim() !== (saved?.body ?? "");
@@ -369,7 +372,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
   return (
     <>
       {back}
-      <h1 className={styles.heading}>{saved ? "עריכת הכרזה" : "הכרזה חדשה"}</h1>
+      <h1 className={styles.heading}>{readOnly ? "הכרזה" : saved ? "עריכת הכרזה" : "הכרזה חדשה"}</h1>
 
       <section className={styles.section}>
         <label htmlFor="announcement-title" className={styles.label}>
@@ -380,6 +383,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
           className={styles.field}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          readOnly={readOnly}
           maxLength={MAX_TITLE}
           dir="auto"
           placeholder="לא חובה"
@@ -395,6 +399,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
           className={`${styles.field} ${styles.text}`}
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          readOnly={readOnly}
           maxLength={MAX_BODY}
           rows={5}
           dir="auto"
@@ -428,41 +433,55 @@ function AnnouncementEditor({ id }: { id: number | null }) {
         </section>
       )}
 
-      <Group footer={!file && savedImage ? `תיאור: ${savedImage.alt}` : undefined}>
-        {preparing ? (
-          <Row label="מכין את התמונה..." />
-        ) : (
-          <Row label={hasImage ? "החלפת התמונה" : "הוספת תמונה"} onClick={() => fileInput.current?.click()} />
-        )}
-        {hasImage && !preparing && <Row label="הסרת התמונה" danger onClick={removeImage} />}
-      </Group>
-      {/* Out of sight; the row above opens it. */}
-      <input
-        ref={fileInput}
-        className={styles.fileInput}
-        type="file"
-        // Every image: what the server doesn't take is converted (see toUploadable).
-        accept="image/*"
-        tabIndex={-1}
-        aria-hidden="true"
-        onChange={(e) => void pickFile(e)}
-      />
-
-      <Group title="מצב" footer={statusNote[status]}>
-        {STATUSES.map((option) => (
-          <Row
-            key={option.value}
-            label={option.label}
-            value={option.value === status ? check : undefined}
-            onClick={() => setStatus(option.value)}
+      {!readOnly && (
+        <>
+          <Group footer={!file && savedImage ? `תיאור: ${savedImage.alt}` : undefined}>
+            {preparing ? (
+              <Row label="מכין את התמונה..." />
+            ) : (
+              <Row label={hasImage ? "החלפת התמונה" : "הוספת תמונה"} onClick={() => fileInput.current?.click()} />
+            )}
+            {hasImage && !preparing && <Row label="הסרת התמונה" danger onClick={removeImage} />}
+          </Group>
+          {/* Out of sight; the row above opens it. */}
+          <input
+            ref={fileInput}
+            className={styles.fileInput}
+            type="file"
+            // Every image: what the server doesn't take is converted (see toUploadable).
+            accept="image/*"
+            tabIndex={-1}
+            aria-hidden="true"
+            onChange={(e) => void pickFile(e)}
           />
-        ))}
-      </Group>
+        </>
+      )}
+
+      {isMember ? (
+        <p className={styles.hint}>
+          {readOnly
+            ? "ההכרזה כבר פורסמה, ולכן רק מנהל יכול לשנות או למחוק אותה."
+            : "ניתן לשמור כטיוטה, ומנהל יכול לפרסם אותה."}
+        </p>
+      ) : (
+        <Group title="מצב" footer={statusNote[status]}>
+          {STATUSES.map((option) => (
+            <Row
+              key={option.value}
+              label={option.label}
+              value={option.value === status ? check : undefined}
+              onClick={() => setStatus(option.value)}
+            />
+          ))}
+        </Group>
+      )}
 
       {error && <p className="error">{error}</p>}
-      <button type="button" className={styles.save} disabled={!dirty || saving || preparing} onClick={save}>
-        {saving ? "שומר..." : "שמירה"}
-      </button>
+      {!readOnly && (
+        <button type="button" className={styles.save} disabled={!dirty || saving || preparing} onClick={save}>
+          {saving ? "שומר..." : "שמירה"}
+        </button>
+      )}
 
       {saved && (
         <>
@@ -472,9 +491,11 @@ function AnnouncementEditor({ id }: { id: number | null }) {
             {saved.published_at && <Row label="פורסמה" value={formatDateTime(saved.published_at)} />}
             {saved.edited_at && <Row label="נערכה" value={formatDateTime(saved.edited_at)} />}
           </Group>
-          <Group>
-            <Row label="מחיקת ההכרזה" danger onClick={() => void remove()} />
-          </Group>
+          {!readOnly && (
+            <Group>
+              <Row label="מחיקת ההכרזה" danger onClick={() => void remove()} />
+            </Group>
+          )}
         </>
       )}
     </>

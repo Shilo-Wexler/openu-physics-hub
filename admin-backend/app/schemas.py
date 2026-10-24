@@ -2,22 +2,14 @@
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints, field_validator
+from pydantic import BaseModel, Field, StringConstraints
 
-Role = Literal["admin", "moderator", "inquiries", "announcements"]
-
-# The two levels the console offers. "admin" alone means everything, including managing admins.
-FULL_ADMIN_ROLES: list[Role] = ["admin"]
-STANDARD_ROLES: list[Role] = ["announcements", "inquiries", "moderator"]
+# Admin levels: db/migrations/004_admin_roles.sql.
+Role = Literal["super_admin", "admin", "member"]
 
 
-class AdminRoles(BaseModel):
-    roles: list[Role] = Field(min_length=1)
-
-    @field_validator("roles")
-    @classmethod
-    def _dedupe(cls, roles: list[str]) -> list[str]:
-        return sorted(set(roles))
+class AdminRole(BaseModel):
+    role: Role
 
 
 class NewAdmin(BaseModel):
@@ -25,13 +17,8 @@ class NewAdmin(BaseModel):
         str,
         StringConstraints(strip_whitespace=True, to_lower=True, min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+$"),
     ]
-    # Least privilege by default: everything except managing admins.
-    roles: list[Role] = Field(default_factory=lambda: list(STANDARD_ROLES), min_length=1)
-
-    @field_validator("roles")
-    @classmethod
-    def _dedupe(cls, roles: list[str]) -> list[str]:
-        return sorted(set(roles))
+    # Least privilege by default: a committee member.
+    role: Role = "member"
 
 
 # Announcements: lengths match db/migrations/005_announcements.sql.

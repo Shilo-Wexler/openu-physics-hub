@@ -20,7 +20,7 @@ The server sets `status = new`, `created_at` and `updated_at`.
 
 ### Handling in the console
 
-- Needs the `inquiries` or `admin` role.
+- Every admin level may handle them.
 - Status: `new`, `in_progress` or `closed`, in any direction.
 - `handled_by` (an admin's email):
   - set to the current admin when the status changes;
@@ -37,8 +37,17 @@ Loaded from `shared/courses.csv`, plus `0,כללי`. A course that an inquiry po
 ## Admins (`admins`)
 
 - Only emails in this table can use the console. Cloudflare Access signs them in first.
-- Roles: `admin`, `moderator`, `inquiries`, `announcements`.
-- Only `admin` can add, change or remove admins, and never their own row.
+- Every admin has one level (`role`). Every level sees every screen and the admins list:
+
+| Level | In the console | Managing admins |
+|---|---|---|
+| `super_admin` | Everything | Any admin, any level |
+| `admin` | Everything | Admins and members only: never gives or touches `super_admin` |
+| `member` | Everything, announcements as drafts only | None |
+
+- Nobody changes or removes their own row. With the rule above, a super admin always remains.
+- A new admin added without a level is a `member`. One added by hand in the DB is a `super_admin`.
+- Refused with `403`: `"requires an admin"` (a member) or `"requires a super admin"` (an admin).
 - Changes apply on the next request.
 
 ## Chat moderation (`moderation_actions`)
@@ -67,3 +76,4 @@ Loaded from `shared/courses.csv`, plus `0,כללי`. A course that an inquiry po
   - removing the only part of a published one, its image.
 - A draft may be empty: the console saves the text before it uploads the image.
 - Many can be published. At most one, a published one, is pinned to the home page.
+- A `member` creates, edits and deletes drafts (text and image). Publishing, unpublishing, pinning, and changing or deleting a published one: `403 "requires an admin"`.

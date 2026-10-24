@@ -1,5 +1,5 @@
 import { Group, Row } from "../../components/GroupedList";
-import { LEVEL_LABEL, levelOf } from "../../lib/levels";
+import { LEVEL_LABEL } from "../../lib/levels";
 import { useAdmin } from "../admin/context";
 
 /** The coloured square behind a row's icon, like iOS Settings. */
@@ -48,7 +48,7 @@ interface Props {
 
 /** Everything that does not fit the bottom bar, plus the signed-in account. New sections become rows here. */
 export default function MorePage({ onSignOut }: Props) {
-  const { email, roles } = useAdmin();
+  const { email, role } = useAdmin();
 
   return (
     <>
@@ -60,7 +60,7 @@ export default function MorePage({ onSignOut }: Props) {
 
       <Group title="החשבון שלך">
         <Row label="מייל" value={<bdi dir="ltr">{email}</bdi>} />
-        <Row label="תפקיד" value={LEVEL_LABEL[levelOf(roles)]} />
+        <Row label="תפקיד" value={LEVEL_LABEL[role]} />
       </Group>
 
       <Group>

@@ -2,15 +2,17 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 import { ApiError, isAbort, isAuthError } from "../../api/client";
 import { errorMessage } from "../../lib/errors";
+import type { Level } from "../../lib/levels";
 
 /** What every admin screen needs: the token, a "data changed" signal, and what to do on 401. */
 export interface AdminContextValue {
   token: string;
   /** The signed-in admin's email (lowercase). */
   email: string;
-  /** Roles from /me. A full admin ("admin") may also add, change and remove admins. */
-  roles: string[];
-  isFullAdmin: boolean;
+  /** The level from /me. Screens leave out what it may not do; the server checks again. */
+  role: Level;
+  /** A committee member: no managing admins, and announcements as drafts only. */
+  isMember: boolean;
   /** Goes up after every change, so lists and counters reload. */
   version: number;
   changed: () => void;

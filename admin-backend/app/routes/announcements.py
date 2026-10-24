@@ -1,7 +1,8 @@
 """Committee announcements. Two routers in one file, because both sides share the same columns and shape:
 
 - router: the public site, GET /api/announcements, the pinned one, and each announcement's image. No sign-in.
-- admin_router: the console, /api/admin/announcements. Needs the "announcements" role (or "admin").
+- admin_router: the console, /api/admin/announcements. Every admin level may use it, but a committee
+  member works on drafts only: publishing, pinning, and changing or deleting a published one need an admin.
 
 A new announcement is a draft until it is published. Any number can be published; at most one, which
 must be published, is pinned to the site's home page. Title, text and image are each optional, but a
@@ -16,7 +17,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from psycopg import Connection
 
-from ..auth import GoogleUser, require_role
+from ..auth import GoogleUser, require_admin, require_manager
 from ..config import MAX_PAGE_SIZE
 from ..db import get_conn
 from ..images import MAX_UPLOAD_BYTES, InvalidImage, prepare_image
@@ -52,12 +53,8 @@ HAS_CONTENT = "(title <> '' or body <> '' or image is not null)"
 # Any constant works: pinning takes this lock, so two admins pinning at once run one after the other.
 PIN_LOCK_KEY = 5_000_001
 
-require_announcements = require_role("announcements")
-
 router = APIRouter(prefix="/api/announcements", tags=["public"])
-admin_router = APIRouter(
-    prefix="/api/admin/announcements", tags=["admin"], dependencies=[Depends(require_announcements)]
-)
+admin_router = APIRouter(prefix="/api/admin/announcements", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 def _shape(row: dict, image_base: str = "/api/announcements") -> dict:
@@ -102,6 +99,23 @@ def _refused(conn: Connection, announcement_id: int) -> HTTPException:
     if exists is None:
         return _not_found()
     return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "announcement is empty")
+
+
+def _drafts_only_for_members(
+    announcement_id: int, user: GoogleUser = Depends(require_admin), conn: Connection = Depends(get_conn)
+) -> None:
+    """A committee member may change or delete only a draft (403 on a published one). The row stays locked
+    until the change is saved, so it cannot be published in between."""
+    if not user.is_member:
+        return
+    row = conn.execute(
+        "select published_at is not null as published from announcements where id = %s for update",
+        (announcement_id,),
+    ).fetchone()
+    if row is None:
+        raise _not_found()
+    if row["published"]:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "requires an admin")
 
 
 def _cursor(row: dict) -> str:
@@ -200,7 +214,7 @@ def list_admin(
 @admin_router.post("", status_code=status.HTTP_201_CREATED)
 def create_announcement(
     payload: AnnouncementIn,
-    user: GoogleUser = Depends(require_announcements),
+    user: GoogleUser = Depends(require_admin),
     conn: Connection = Depends(get_conn),
 ):
     """Saved as a draft, which may be empty (an image-only one gets its image next).
@@ -213,7 +227,7 @@ def create_announcement(
     return _admin_shape(row)
 
 
-@admin_router.post("/{announcement_id}")
+@admin_router.post("/{announcement_id}", dependencies=[Depends(_drafts_only_for_members)])
 def edit_announcement(announcement_id: int, payload: AnnouncementIn, conn: Connection = Depends(get_conn)):
     """Replaces the title and the text. Saving the same text again does not mark it as edited.
     A published announcement keeps something to show: emptying both with no image is refused."""
@@ -235,7 +249,9 @@ def edit_announcement(announcement_id: int, payload: AnnouncementIn, conn: Conne
     return _admin_shape(row)
 
 
-@admin_router.delete("/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT)
+@admin_router.delete(
+    "/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(_drafts_only_for_members)]
+)
 def delete_announcement(announcement_id: int, conn: Connection = Depends(get_conn)):
     """Permanently deletes the announcement and its image."""
     row = conn.execute("delete from announcements where id = %s returning id", (announcement_id,)).fetchone()
@@ -243,7 +259,7 @@ def delete_announcement(announcement_id: int, conn: Connection = Depends(get_con
         raise _not_found()
 
 
-# ---------- Console: publishing and the home page ----------
+# ---------- Console: publishing and the home page (admins only, not committee members) ----------
 
 def _pin(conn: Connection, announcement_id: int) -> None:
     """Makes this announcement the pinned one, unpinning the previous one. The caller checks it exists.
@@ -260,7 +276,7 @@ def _get_admin(conn: Connection, announcement_id: int) -> dict:
     return _admin_shape(row)
 
 
-@admin_router.post("/{announcement_id}/publish")
+@admin_router.post("/{announcement_id}/publish", dependencies=[Depends(require_manager)])
 def publish(announcement_id: int, pin: bool = False, conn: Connection = Depends(get_conn)):
     """Shows it on the site, at the top of the list (also when publishing again after unpublishing).
     pin=true also puts it on the home page, in place of the one pinned before. An empty one is refused."""
@@ -276,7 +292,7 @@ def publish(announcement_id: int, pin: bool = False, conn: Connection = Depends(
     return _get_admin(conn, announcement_id)
 
 
-@admin_router.post("/{announcement_id}/unpublish")
+@admin_router.post("/{announcement_id}/unpublish", dependencies=[Depends(require_manager)])
 def unpublish(announcement_id: int, conn: Connection = Depends(get_conn)):
     """Back to a draft: off the site and off the home page. It can be published again."""
     row = conn.execute(
@@ -288,7 +304,7 @@ def unpublish(announcement_id: int, conn: Connection = Depends(get_conn)):
     return _get_admin(conn, announcement_id)
 
 
-@admin_router.post("/{announcement_id}/pin")
+@admin_router.post("/{announcement_id}/pin", dependencies=[Depends(require_manager)])
 def pin_announcement(announcement_id: int, conn: Connection = Depends(get_conn)):
     """Puts it on the home page, in place of the one pinned before. Only a published announcement."""
     row = conn.execute(
@@ -302,7 +318,7 @@ def pin_announcement(announcement_id: int, conn: Connection = Depends(get_conn))
     return _get_admin(conn, announcement_id)
 
 
-@admin_router.post("/{announcement_id}/unpin")
+@admin_router.post("/{announcement_id}/unpin", dependencies=[Depends(require_manager)])
 def unpin_announcement(announcement_id: int, conn: Connection = Depends(get_conn)):
     """Takes it off the home page; it stays published. The home page then shows no announcement."""
     row = conn.execute(
@@ -325,7 +341,7 @@ def get_admin_image(announcement_id: int, conn: Connection = Depends(get_conn)):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "image not found")
     return _image_response(bytes(row["image"]), ADMIN_IMAGE_CACHE)
 
-@admin_router.post("/{announcement_id}/image")
+@admin_router.post("/{announcement_id}/image", dependencies=[Depends(_drafts_only_for_members)])
 def upload_image(
     announcement_id: int,
     alt: ImageAlt = Query(),
@@ -354,7 +370,7 @@ def upload_image(
     return _admin_shape(row)
 
 
-@admin_router.delete("/{announcement_id}/image")
+@admin_router.delete("/{announcement_id}/image", dependencies=[Depends(_drafts_only_for_members)])
 def delete_image(announcement_id: int, conn: Connection = Depends(get_conn)):
     """Removes the image and returns the announcement. Removing an image that is not there is not an error.
     The image of a published announcement with no title and no text is all it shows, so it stays (422)."""
