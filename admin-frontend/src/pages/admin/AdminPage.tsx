@@ -23,6 +23,7 @@ import ReportPage from "../chat/ReportPage";
 import InquiriesPage from "../inquiries/InquiriesPage";
 import InquiryDetailPage from "../inquiries/InquiryDetailPage";
 import MorePage from "../more/MorePage";
+import StatsPage from "../stats/StatsPage";
 import AdminEditorPage from "./AdminEditorPage";
 import AdminsListPage from "./AdminsListPage";
 import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./context";
@@ -236,6 +237,7 @@ function ConsoleShell({ onSignOut }: { onSignOut: () => void }) {
             <Route path="new" element={<AnnouncementEditorPage />} />
             <Route path=":id" element={<AnnouncementEditorPage />} />
           </Route>
+          <Route path="stats" element={<StatsPage />} />
           <Route path="more" element={<MorePage onSignOut={onSignOut} />} />
           <Route path="more/admins">
             <Route index element={<AdminsListPage />} />

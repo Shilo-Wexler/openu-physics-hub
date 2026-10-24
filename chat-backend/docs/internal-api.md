@@ -1,6 +1,6 @@
-# Chat moderation API
+# Chat internal API
 
-Server-to-server API for the admin console. The browser never calls it, and neither side reads the other's database.
+Server-to-server API for the admin console: moderation and stats. The browser never calls it, and neither side reads the other's database.
 
 ## Auth
 
@@ -28,6 +28,7 @@ Call the chat backend through its in-cluster Service; `/internal` is not exposed
 | GET | `/internal/users/{user_id}/removed-messages` | User's messages removed by moderators | list (below) |
 | GET | `/internal/messages?ids=1&ids=2` | Any messages by id, deleted ones too (max 200 ids) | list (below) |
 | GET | `/internal/users?ids=<uuid>&ids=<uuid>` | Users by id (max 200 ids) | list (below) |
+| GET | `/internal/stats/courses?limit=5&days=30` | Courses with the most messages in the last `days` days (no `days` = all time) | list (below) |
 
 dismiss, remove, block and unblock are safe to repeat. reopen and restore are not: once undone, there is
 nothing left to undo (`409`). Message ids are integers, user ids are UUIDs, times are ISO 8601 UTC.
@@ -38,6 +39,12 @@ Both undos put the message back in `reported-messages`, so a moderator decides a
 
 - `reopen`: only while the message is in the chat and has dismissed reports.
 - `restore`: only for a message a moderator removed; never one its author deleted.
+
+### Stats
+
+`stats/courses` counts messages still in the chat (deleted ones are left out), most first.
+The general chat is course `0` and is counted like any course. `limit` is required (1 to 20);
+`days` is optional (1 to 3650).
 
 ## Response items
 
@@ -74,10 +81,15 @@ Both undos put the message back in `reported-messages`, so a moderator decides a
 
 Ids that don't exist are left out, and the order is not the order asked.
 
+`stats/courses`:
+```json
+{"course_id": 20113, "course_name": "...", "message_count": 109}
+```
+
 ## Errors
 
 `401` bad or missing token, `404` message or user not found, `409` nothing to undo,
-`422` malformed id, no ids, or more than 200.
+`422` malformed id, no ids, more than 200 ids, or `limit`/`days` missing or out of range.
 
 ## Notes
 

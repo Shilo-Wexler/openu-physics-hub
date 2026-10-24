@@ -1,7 +1,7 @@
 /** The console's sections: one list for the bottom bar, the desktop header and the routes.
     Every admin level sees every section; what a level may not do is left out inside the screens. */
 
-export type SectionId = "inquiries" | "chat" | "announcements" | "more";
+export type SectionId = "inquiries" | "chat" | "announcements" | "stats" | "more";
 
 export interface Section {
   id: SectionId;
@@ -33,6 +33,12 @@ export const SECTIONS: Section[] = [
     label: "הכרזות",
     path: "/announcements",
     icon: ["m3 11 18-5v12L3 14v-3z", "M11.6 16.8a3 3 0 1 1-5.8-1.6"],
+  },
+  {
+    id: "stats",
+    label: "נתונים",
+    path: "/stats",
+    icon: ["M3 3v18h18", "M18 17V9", "M13 17V5", "M8 17v-3"],
   },
   {
     id: "more",

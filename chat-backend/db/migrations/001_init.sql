@@ -75,6 +75,10 @@ create index messages_thread_idx on messages (thread_id, created_at, id)
   where thread_id is not null;
 -- A user's messages, for the admin console (removed messages, report counts).
 create index messages_user_idx on messages (user_id);
+-- Active messages by time, for the console's stats (most active courses in a period).
+-- course_id is included so counting per course reads only the index, not the table.
+create index messages_created_idx on messages (created_at) include (course_id)
+  where deleted_at is null;
 
 -- Course ratings: one per user per course.
 create table ratings (
