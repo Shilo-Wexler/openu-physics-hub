@@ -1,5 +1,6 @@
 """Input models. Lengths match the DB checks: each section names the matching migration in db/migrations/."""
 
+from datetime import date
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, StringConstraints
@@ -70,4 +71,16 @@ class InquiryUpdate(BaseModel):
 
     status: InquiryStatus | None = None
     internal_note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] | None = None
-    
+
+
+# Meeting summaries: lengths match db/migrations/007_meetings.sql.
+
+class MeetingIn(BaseModel):
+    """Creating or editing a meeting summary: always every field, so the console sends what it shows."""
+
+    # Optional: "" means no title, and the console names the summary by its date.
+    title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] = ""
+    # "YYYY-MM-DD", the day of the meeting (not when the summary was written).
+    meeting_date: date
+    # Plain text.
+    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20000)]
