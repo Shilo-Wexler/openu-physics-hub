@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from .config import ALLOWED_ORIGINS, DEV_AUTH_EMAIL
 from .db import pool
-from .routes import admin, announcements, chat, inquiries, stats
+from .routes import admin, announcements, chat, inquiries, meetings, stats
 
 
 @asynccontextmanager
@@ -77,6 +77,7 @@ app.include_router(chat.router)
 app.include_router(announcements.router)
 app.include_router(announcements.admin_router)
 app.include_router(stats.router)
+app.include_router(meetings.router)
 
 
 @app.get("/health")
