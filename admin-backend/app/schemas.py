@@ -76,9 +76,10 @@ class InquiryUpdate(BaseModel):
 # Meeting summaries: lengths match db/migrations/007_meetings.sql.
 
 class MeetingIn(BaseModel):
-    """Creating or editing a meeting summary: always all three fields, so the console sends what it shows."""
+    """Creating or editing a meeting summary: always every field, so the console sends what it shows."""
 
-    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    # Optional: "" means no title, and the console names the summary by its date.
+    title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] = ""
     # "YYYY-MM-DD", the day of the meeting (not when the summary was written).
     meeting_date: date
     # Plain text.

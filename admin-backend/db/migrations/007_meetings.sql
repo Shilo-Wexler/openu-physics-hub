@@ -3,7 +3,8 @@
 
 create table meeting_summaries (
   id           bigint generated always as identity primary key,
-  title        text not null check (length(trim(title)) between 1 and 120),
+  -- Optional: '' means no title (stored trimmed), and the console names the summary by its date.
+  title        text not null default '' check (char_length(title) <= 120),
   meeting_date date not null,
   content      text not null check (length(trim(content)) between 1 and 20000),
   -- Admins' emails, kept as plain text (no foreign key), like inquiries.handled_by,

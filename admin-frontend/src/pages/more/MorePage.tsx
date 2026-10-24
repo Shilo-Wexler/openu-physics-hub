@@ -42,6 +42,15 @@ const USERS_ICON = [
   "M16 3.13a4 4 0 0 1 0 7.75",
 ];
 
+// A page with lines of text: the meeting summaries.
+const NOTES_ICON = [
+  "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z",
+  "M14 2v4a2 2 0 0 0 2 2h4",
+  "M16 13H8",
+  "M16 17H8",
+  "M10 9H8",
+];
+
 interface Props {
   onSignOut: () => void;
 }
@@ -56,6 +65,11 @@ export default function MorePage({ onSignOut }: Props) {
 
       <Group>
         <Row icon={<IconTile paths={USERS_ICON} color="var(--color-primary)" />} label="מנהלים" to="/more/admins" />
+        <Row
+          icon={<IconTile paths={NOTES_ICON} color="var(--color-primary)" />}
+          label="סיכומי ישיבות"
+          to="/more/meetings"
+        />
       </Group>
 
       {/* Opens your own admin screen, where you change your name. */}

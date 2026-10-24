@@ -22,6 +22,8 @@ import ChatPage from "../chat/ChatPage";
 import ReportPage from "../chat/ReportPage";
 import InquiriesPage from "../inquiries/InquiriesPage";
 import InquiryDetailPage from "../inquiries/InquiryDetailPage";
+import MeetingEditorPage from "../meetings/MeetingEditorPage";
+import MeetingListPage from "../meetings/MeetingListPage";
 import MorePage from "../more/MorePage";
 import StatsPage from "../stats/StatsPage";
 import AdminEditorPage from "./AdminEditorPage";
@@ -243,6 +245,11 @@ function ConsoleShell({ onSignOut }: { onSignOut: () => void }) {
             <Route index element={<AdminsListPage />} />
             <Route path="new" element={<AdminEditorPage />} />
             <Route path=":email" element={<AdminEditorPage />} />
+          </Route>
+          <Route path="more/meetings">
+            <Route index element={<MeetingListPage />} />
+            <Route path="new" element={<MeetingEditorPage />} />
+            <Route path=":id" element={<MeetingEditorPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
