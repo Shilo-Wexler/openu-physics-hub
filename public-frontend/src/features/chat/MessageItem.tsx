@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { deleteMessage, editMessage, type Reply, type Review } from "../../shared/api/chat";
-import { keepInSight } from "../../shared/browser/keyboard";
+import { keepInSight } from "../../shared/lib/keyboard";
 import Avatar from "../../shared/components/Avatar";
 import { useAuth } from "../auth/AuthContext";
 import LikeButton from "./LikeButton";

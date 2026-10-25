@@ -3,7 +3,7 @@
  * shared/api/chat.ts because it is a different server with its own API.
  */
 
-import { request } from "../../shared/api/client";
+import { request } from "./client";
 
 const BASE = "/api/inquiries";
 

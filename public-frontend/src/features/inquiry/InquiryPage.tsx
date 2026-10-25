@@ -6,7 +6,7 @@ import { GENERAL_COURSE_ID, listCourses, type Course } from "../../shared/api/ch
 import { ApiError } from "../../shared/api/client";
 import SegmentedControl, { type SegmentOption } from "../../shared/components/SegmentedControl";
 import CourseSearch from "../courses/CourseSearch";
-import { INQUIRY_TYPES, MAX_INQUIRY_LENGTH, TURNSTILE_ERRORS, sendInquiry, type InquiryType } from "./api";
+import { INQUIRY_TYPES, MAX_INQUIRY_LENGTH, TURNSTILE_ERRORS, sendInquiry, type InquiryType } from "../../shared/api/inquiries";
 import TurnstileWidget from "./TurnstileWidget";
 import styles from "./InquiryPage.module.css";
 

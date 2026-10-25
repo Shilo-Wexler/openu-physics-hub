@@ -4,9 +4,9 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
 
 from app.routes.deps import clear_session_cookie, current_user_id
+from app.schemas.me import AvatarChange, NicknameChange
 from app.services import users
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -16,10 +16,6 @@ router = APIRouter(prefix="/me", tags=["me"])
 async def me(user_id: Annotated[UUID, Depends(current_user_id)]):
     user = await users.get(user_id)
     return {"user_id": user["id"], "nickname": user["nickname"], "avatar": user["avatar"]}
-
-
-class NicknameChange(BaseModel):
-    nickname: str
 
 
 @router.put("/nickname")
@@ -37,10 +33,6 @@ async def change_nickname(
     except PermissionError:
         raise HTTPException(status_code=403, detail="user is blocked")
     return {"nickname": nickname}
-
-
-class AvatarChange(BaseModel):
-    avatar: str
 
 
 @router.put("/avatar")
