@@ -5,7 +5,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+# This file is admin-backend/app/core/settings.py, so admin-backend/ is two folders up.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 ENVIRONMENTS = ("dev", "prod")
 
@@ -74,7 +75,7 @@ def _optional_secret(name: str) -> str | None:
     return value or None
 
 
-# Chat moderation (server to server, see chat-backend/docs/moderation-api.md).
+# Chat moderation (server to server, see chat-backend/docs/internal-api.md).
 # Both optional: without them the rest of the console works and /api/admin/chat/* answers 503.
 CHAT_API_URL = os.environ.get("CHAT_API_URL", "").strip().rstrip("/") or None
 MOD_API_TOKEN = _optional_secret("MOD_API_TOKEN")

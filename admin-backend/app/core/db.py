@@ -6,7 +6,7 @@ from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from .config import DATABASE_URL
+from app.core.settings import DATABASE_URL
 
 # Times (e.g. weekly buckets) are computed in Israel time.
 pool = ConnectionPool(

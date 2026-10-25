@@ -10,7 +10,7 @@ from typing import Any
 import requests
 from fastapi import HTTPException, status
 
-from . import config
+from app.core import settings
 
 log = logging.getLogger("uvicorn.error")
 
@@ -22,15 +22,15 @@ def _send(method: str, url: str, headers: dict, timeout: float) -> requests.Resp
 
 def call(method: str, path: str) -> Any:
     """method + "/internal" + path on the chat backend. Returns the parsed JSON."""
-    if not (config.CHAT_API_URL and config.MOD_API_TOKEN):
+    if not (settings.CHAT_API_URL and settings.MOD_API_TOKEN):
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "chat moderation is not configured")
 
     try:
         response = _send(
             method,
-            f"{config.CHAT_API_URL}/internal{path}",
-            headers={"Authorization": f"Bearer {config.MOD_API_TOKEN}"},
-            timeout=config.CHAT_TIMEOUT_SECONDS,
+            f"{settings.CHAT_API_URL}/internal{path}",
+            headers={"Authorization": f"Bearer {settings.MOD_API_TOKEN}"},
+            timeout=settings.CHAT_TIMEOUT_SECONDS,
         )
     except requests.RequestException as e:
         log.warning("chat backend unreachable: %s", type(e).__name__)

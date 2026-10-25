@@ -13,13 +13,13 @@ Updated 2026-10-24.
 ## What exists
 
 **admin-backend** (Python, FastAPI, psycopg 3, Postgres):
-- Inquiries: the anonymous public form, and console routes to list, filter and handle them. See `db/CONTRACT.md`.
+- Inquiries: the anonymous public form, and console routes to list, filter and handle them. See `docs/CONTRACT.md`.
 - Announcements: public read, console create, edit, publish and pin.
 - Chat moderation: `/api/admin/chat/...` forwards to the chat's `/internal` with `MOD_API_TOKEN`, and logs each action.
 - Stats: `GET /api/admin/stats?period=7|30|all` returns the whole stats screen at once: inquiries received in the
   period vs the period before (`null` for `all`), by type, top 5 courses; and the 5 most active chat courses from
   the chat's `/internal/stats/courses` (`null` when the chat backend fails, the rest still answers).
-- Admins, names and levels: `admins` table, `GET /api/admin/me`, add, rename, change level and remove from the console. Three levels, see `db/CONTRACT.md`.
+- Admins, names and levels: `admins` table, `GET /api/admin/me`, add, rename, change level and remove from the console. Three levels, see `docs/CONTRACT.md`.
 - Sign-in: Cloudflare Access. The server checks the `Cf-Access-Jwt-Assertion` header.
 - Errors are always `{"detail": "..."}`.
 - `/docs`, `/redoc` and `/openapi.json` only when `ENV=dev`.

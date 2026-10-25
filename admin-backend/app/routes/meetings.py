@@ -15,9 +15,9 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from psycopg import Connection
 
-from ..auth import GoogleUser, require_admin, require_manager
-from ..db import get_conn
-from ..schemas import MeetingIn
+from app.routes.deps import GoogleUser, require_admin, require_manager
+from app.core.db import get_conn
+from app.schemas import MeetingIn
 
 router = APIRouter(prefix="/api/admin/meetings", tags=["admin"], dependencies=[Depends(require_admin)])
 

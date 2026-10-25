@@ -3,9 +3,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from psycopg import Connection
 
-from ..auth import GoogleUser, require_admin, require_manager
-from ..db import get_conn
-from ..schemas import AdminNameIn, AdminRole, NewAdmin
+from app.routes.deps import GoogleUser, require_admin, require_manager
+from app.core.db import get_conn
+from app.schemas import AdminNameIn, AdminRole, NewAdmin
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
