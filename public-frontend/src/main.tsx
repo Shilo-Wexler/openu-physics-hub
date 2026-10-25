@@ -8,7 +8,7 @@ import "@fontsource-variable/heebo";
 
 import App from "./App";
 import { AuthProvider } from "./features/auth/AuthContext";
-import { trackKeyboard } from "./shared/browser/keyboard";
+import { trackKeyboard } from "./shared/lib/keyboard";
 import "./shared/styles/global.css";
 
 const rootElement = document.getElementById("root");

@@ -42,7 +42,7 @@
   stroke-width: 2.2;
 }
 
-/* Keyboard open (shared/browser/keyboard.ts): out of the way while typing, like WhatsApp. */
+/* Keyboard open (shared/lib/keyboard.ts): out of the way while typing, like WhatsApp. */
 :global(html[data-keyboard="open"]) .bar {
   display: none;
 }

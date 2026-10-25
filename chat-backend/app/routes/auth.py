@@ -6,9 +6,9 @@ from urllib.parse import parse_qs
 from uuid import UUID
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
-from pydantic import BaseModel
 
 from app.routes.deps import clear_session_cookie, current_user_id, set_session_cookie
+from app.schemas.auth import GoogleSignIn
 from app.services import google_auth, sessions, users
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -16,10 +16,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # The site's page the browser lands on after a redirect sign-in. It reads the flags below
 # and takes the reader back to the page they signed in from.
 SIGN_IN_DONE_PATH = "/auth/done"
-
-
-class GoogleSignIn(BaseModel):
-    id_token: str
 
 
 async def _sign_in(id_token: str, response: Response) -> tuple[UUID, bool, bool]:

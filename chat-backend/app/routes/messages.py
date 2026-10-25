@@ -6,9 +6,9 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 
 from app.routes.deps import current_user_id, optional_user_id
+from app.schemas.messages import MessageEdit, NewMessage
 from app.services import messages
 from app.services.courses import CourseNotFound
 
@@ -84,11 +84,6 @@ async def get_shared(
     return {"course_id": course_id, "review": review, "reply_id": reply_id}
 
 
-class NewMessage(BaseModel):
-    content: str
-    reply_to_id: int | None = None
-
-
 @router.post("/courses/{course_id}/messages", status_code=201)
 async def post_message(
     course_id: int, body: NewMessage, user_id: Annotated[UUID, Depends(current_user_id)]
@@ -102,10 +97,6 @@ async def post_message(
     except (messages.InvalidContent, messages.OffensiveContent, PermissionError) as exc:
         raise _content_error(exc)
     return dict(row)
-
-
-class MessageEdit(BaseModel):
-    content: str
 
 
 @router.put("/messages/{message_id}")

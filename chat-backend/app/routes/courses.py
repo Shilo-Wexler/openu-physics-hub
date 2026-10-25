@@ -4,9 +4,9 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
 
 from app.routes.deps import current_user_id, optional_user_id
+from app.schemas.courses import Rating
 from app.services import courses
 
 router = APIRouter(prefix="/courses", tags=["courses"])
@@ -27,11 +27,6 @@ async def get_course(
     # A signed-in visitor also gets their own rating; a guest gets null.
     my_rating = await courses.get_user_rating(course_id, user_id) if user_id else None
     return {**course, "my_rating": dict(my_rating) if my_rating else None}
-
-
-class Rating(BaseModel):
-    difficulty: int = Field(ge=1, le=5)
-    recommendation: int = Field(ge=1, le=5)
 
 
 @router.put("/{course_id}/rating")

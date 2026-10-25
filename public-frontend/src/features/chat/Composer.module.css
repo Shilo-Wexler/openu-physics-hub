@@ -24,7 +24,7 @@
   }
 }
 
-/* Keyboard open (shared/browser/keyboard.ts): the bottom bar hides and the box sits
+/* Keyboard open (shared/lib/keyboard.ts): the bottom bar hides and the box sits
    right on the keyboard, also while the page scrolls. */
 :global(html[data-keyboard="open"]) .sticky {
   bottom: var(--keyboard-inset);
