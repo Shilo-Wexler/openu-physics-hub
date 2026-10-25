@@ -9,7 +9,7 @@ import logging
 import requests
 from fastapi import HTTPException, status
 
-from .config import TURNSTILE_SECRET
+from app.core.settings import TURNSTILE_SECRET
 
 VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 TIMEOUT_SECONDS = 5

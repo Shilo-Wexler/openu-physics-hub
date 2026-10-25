@@ -8,8 +8,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError, PyJWKClientConnectionError, PyJWKClientError
 from psycopg import Connection
 
-from .config import CF_ACCESS_AUD, CF_ACCESS_TEAM_DOMAIN, DEV_AUTH_EMAIL
-from .db import get_conn
+from app.core.settings import CF_ACCESS_AUD, CF_ACCESS_TEAM_DOMAIN, DEV_AUTH_EMAIL
+from app.core.db import get_conn
 
 # Adds the "Authorize" button in /docs (for the dev tokens). auto_error=False so we return our own 401.
 _bearer = HTTPBearer(auto_error=False)

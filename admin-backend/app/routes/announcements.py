@@ -17,11 +17,11 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from psycopg import Connection
 
-from ..auth import GoogleUser, require_admin, require_manager
-from ..config import MAX_PAGE_SIZE
-from ..db import get_conn
-from ..images import MAX_UPLOAD_BYTES, InvalidImage, prepare_image
-from ..schemas import AnnouncementIn, ImageAlt
+from app.routes.deps import GoogleUser, require_admin, require_manager
+from app.core.settings import MAX_PAGE_SIZE
+from app.core.db import get_conn
+from app.services.images import MAX_UPLOAD_BYTES, InvalidImage, prepare_image
+from app.schemas import AnnouncementIn, ImageAlt
 
 # Announcements per page on the public site (the pinned one comes on top of the first page).
 PUBLIC_PAGE_SIZE = 20
@@ -184,7 +184,7 @@ def get_pinned(conn: Connection = Depends(get_conn)):
 
 @router.get("/{announcement_id}/image")
 def get_image(announcement_id: int, conn: Connection = Depends(get_conn)):
-    """The image bytes, only for a published announcement. Always WebP (see app/images.py)."""
+    """The image bytes, only for a published announcement. Always WebP (see app/services/images.py)."""
     row = conn.execute(
         "select image from announcements where id = %s and image is not null and published_at is not null",
         (announcement_id,),

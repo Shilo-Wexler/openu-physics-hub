@@ -11,10 +11,10 @@ from typing import Literal, get_args
 from fastapi import APIRouter, Depends, HTTPException
 from psycopg import Connection
 
-from .. import chat_client
-from ..auth import require_admin
-from ..db import get_conn
-from ..schemas import InquiryType
+from app.services import chat_client
+from app.routes.deps import require_admin
+from app.core.db import get_conn
+from app.schemas import InquiryType
 
 # The periods the console offers, in days. "all" has no start, so nothing to compare it with.
 Period = Literal["7", "30", "all"]

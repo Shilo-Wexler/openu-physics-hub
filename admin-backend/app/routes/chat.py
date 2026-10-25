@@ -13,10 +13,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from psycopg import Connection
 
-from .. import chat_client
-from ..auth import GoogleUser, require_admin
-from ..config import MAX_PAGE_SIZE
-from ..db import get_conn
+from app.services import chat_client
+from app.routes.deps import GoogleUser, require_admin
+from app.core.settings import MAX_PAGE_SIZE
+from app.core.db import get_conn
 
 router = APIRouter(prefix="/api/admin/chat", tags=["chat moderation"], dependencies=[Depends(require_admin)])
 

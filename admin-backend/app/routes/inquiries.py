@@ -14,10 +14,10 @@ from typing import get_args
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from psycopg import Connection, errors
 
-from .. import turnstile
-from ..auth import GoogleUser, require_admin
-from ..db import get_conn, pool
-from ..schemas import InquiryStatus, InquiryType, InquiryUpdate, NewInquiry
+from app.services import turnstile
+from app.routes.deps import GoogleUser, require_admin
+from app.core.db import get_conn, pool
+from app.schemas import InquiryStatus, InquiryType, InquiryUpdate, NewInquiry
 
 log = logging.getLogger("uvicorn.error")
 
