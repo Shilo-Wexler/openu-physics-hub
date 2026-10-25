@@ -32,7 +32,7 @@ The server sets `status = new`, `created_at` and `updated_at`.
 
 ## Courses (`courses`)
 
-Loaded from `shared/courses.csv`, plus `0,כללי`. A course that an inquiry points to cannot be removed.
+Loaded from `shared/courses.csv` (row `0` is the general row) by `db/seed/courses.sql`, which runs after the migrations on every deploy. A course that an inquiry points to cannot be removed.
 
 ## Admins (`admins`)
 

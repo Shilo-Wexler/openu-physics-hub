@@ -1,6 +1,6 @@
 -- Chat DB initial schema: tables, keys, checks, indexes and the blocked-user trigger.
 -- All other logic and permission checks live in the Python backend.
--- Course data is loaded separately from shared/courses.csv (repo root).
+-- Course rows come from shared/courses.csv and are loaded by db/seed/courses.sql on every deploy.
 
 -- Users. id is an internal uuid set by the app (not the Google id).
 -- avatar is the key of a ready-made picture (e.g. 'atom'); the list of keys lives in the backend.
