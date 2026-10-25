@@ -1,4 +1,4 @@
-/** Admin management. Every level can list; admins and super admins add, change and remove (see lib/levels).
+/** Team management. Every level can list; committee and admins add, change and remove (see lib/levels).
     Everyone renames themselves; renaming someone else follows the same rules as changing their level. */
 
 import type { Level } from "../lib/levels";

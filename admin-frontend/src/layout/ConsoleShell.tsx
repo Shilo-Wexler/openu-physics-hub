@@ -37,7 +37,7 @@ export default function ConsoleShell() {
   const [access, setAccess] = useState<Access>("checking");
   const [email, setEmail] = useState("");
   // Set from /me before the console opens; the lowest level until then.
-  const [role, setRole] = useState<Level>("member");
+  const [role, setRole] = useState<Level>("team");
   const [expired, setExpired] = useState(false);
 
   // In dev, back to the email box. In production the page shows "expired" with a reload button:
@@ -93,7 +93,7 @@ export default function ConsoleShell() {
   if (!identity) {
     return (
       <PlainFrame>
-        <h1>כניסת חברי ועדה</h1>
+        <h1>כניסת צוות</h1>
         <section className="card">
           {expired && <p className="notice">ההתחברות פגה. אפשר להתחבר שוב.</p>}
           <p>הכניסה לחברי הוועדה בלבד.</p>
@@ -127,7 +127,7 @@ export default function ConsoleShell() {
                 ) : (
                   "החשבון שהתחברת איתו"
                 )}{" "}
-                אינו מוגדר כחבר ועדה. אם זו טעות, אפשר לבקש ממנהל המערכת להוסיף אותו.
+                אינו ברשימת הצוות. אם זו טעות, אפשר לבקש ממנהל להוסיף אותו.
               </p>
             </>
           ) : (
@@ -176,7 +176,7 @@ function AdminConsole({ identity, email, role, onSignOut, onAuthError }: Console
       token: identity.token,
       email,
       role,
-      isMember: role === "member",
+      isTeam: role === "team",
       nameOf,
       version,
       changed,

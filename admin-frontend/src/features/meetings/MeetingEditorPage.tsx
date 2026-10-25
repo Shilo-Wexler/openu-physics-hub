@@ -61,7 +61,7 @@ export default function MeetingEditorPage() {
 }
 
 function MeetingEditor({ id }: { id: number | null }) {
-  const { token, isMember, changed, onAuthError } = useAdmin();
+  const { token, isTeam, changed, onAuthError } = useAdmin();
   const confirm = useConfirm();
   const navigate = useNavigate();
 
@@ -285,7 +285,7 @@ function MeetingEditor({ id }: { id: number | null }) {
         saved={saved?.attachments ?? []}
         pending={pending}
         removed={removed}
-        canRemoveSaved={!isMember}
+        canRemoveSaved={!isTeam}
         disabled={saving}
         onAdd={(files) => {
           setError(null);
@@ -309,8 +309,8 @@ function MeetingEditor({ id }: { id: number | null }) {
             {edited && <Row label="נערך לאחרונה על ידי" value={<bdi>{saved.updated_by_name}</bdi>} />}
             {edited && <Row label="נערך" value={formatDateTime(saved.updated_at)} />}
           </Group>
-          {/* A committee member cannot delete (the server refuses too), so the row is not shown. */}
-          {!isMember && (
+          {/* Team cannot delete (the server refuses too), so the row is not shown. */}
+          {!isTeam && (
             <Group>
               <Row label="מחיקת הסיכום" danger onClick={() => void remove()} />
             </Group>

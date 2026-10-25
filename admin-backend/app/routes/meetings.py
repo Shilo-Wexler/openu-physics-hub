@@ -1,6 +1,6 @@
 """Meeting summaries, console only: /api/admin/meetings. Never shown on the public site.
 
-Every admin level may read, create and edit a summary; deleting one needs an admin (not a committee member).
+Every level may read, create and edit a summary; deleting one needs committee or admin (not team).
 Only GET, POST and DELETE are used (the CORS setup in main.py allows nothing else), so an edit is a POST to /{id}.
 
 A summary may have files attached, of any type: only the committee uses the console. Every level may
@@ -82,7 +82,7 @@ def edit_meeting(meeting_id: int, payload: MeetingIn, user: Admin, conn: Conn):
 
 @router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_manager)])
 def delete_meeting(meeting_id: int, conn: Conn):
-    """Admins only (403 for a committee member)."""
+    """Committee and admin only (403 for team)."""
     with http_errors(_ERRORS):
         meetings.delete(conn, meeting_id)
 
@@ -129,7 +129,7 @@ def download_attachment(meeting_id: int, attachment_id: int, conn: Conn):
     dependencies=[Depends(require_manager)],
 )
 def delete_attachment(meeting_id: int, attachment_id: int, conn: Conn):
-    """Permanently deletes one file. Admins only (403 for a committee member)."""
+    """Permanently deletes one file. Committee and admin only (403 for team)."""
     with http_errors(_ERRORS):
         meetings.delete_attachment(conn, meeting_id, attachment_id)
         

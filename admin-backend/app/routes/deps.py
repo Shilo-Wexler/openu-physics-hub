@@ -41,12 +41,12 @@ class AdminUser:
 
     email: str
     name: str | None
-    role: str  # super_admin, admin or member
+    role: str  # admin, committee or team
 
     @property
-    def is_member(self) -> bool:
-        """A committee member: no managing admins, and announcements as drafts only."""
-        return self.role == "member"
+    def is_team(self) -> bool:
+        """Team: no managing others, and announcements as drafts only."""
+        return self.role == "team"
 
 
 def _dev_email(token: str) -> str | None:
@@ -107,8 +107,8 @@ Admin = Annotated[AdminUser, Depends(require_admin)]
 
 
 def require_manager(user: Admin) -> AdminUser:
-    """An admin or a super admin: managing admins, publishing and pinning. Not a committee member."""
-    if user.is_member:
+    """Committee or admin: managing others, publishing and pinning. Not team."""
+    if user.is_team:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "requires an admin")
     return user
 

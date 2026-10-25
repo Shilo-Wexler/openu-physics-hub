@@ -47,7 +47,7 @@ export default function MorePage({ onSignOut }: Props) {
       <h1>עוד</h1>
 
       <Group>
-        <Row icon={<IconTile paths={USERS_ICON} />} label="מנהלים" to="/more/admins" />
+        <Row icon={<IconTile paths={USERS_ICON} />} label="צוות" to="/more/admins" />
         <Row icon={<IconTile paths={NOTES_ICON} />} label="סיכומי ישיבות" to="/more/meetings" />
       </Group>
 

@@ -41,7 +41,7 @@ interface Props {
   pending: PendingFile[];
   /** Saved files that "save" will delete. */
   removed: ReadonlySet<number>;
-  /** Only an admin may delete a saved file (the server refuses a committee member too). */
+  /** Only committee and admin may delete a saved file (the server refuses team too). */
   canRemoveSaved: boolean;
   /** While saving, nothing here may change. */
   disabled: boolean;

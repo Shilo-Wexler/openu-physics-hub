@@ -14,13 +14,13 @@ const BY_DETAIL: Record<string, string> = {
   // server
   "database unavailable": "השרת לא זמין כרגע. אפשר לנסות שוב בעוד רגע.",
   // levels
-  "requires an admin": "חבר ועדה לא יכול לבצע את הפעולה הזו. צריך מנהל או מנהל ראשי.",
-  "requires a super admin": "רק מנהל ראשי יכול להוסיף מנהל ראשי, או לשנות ולהסיר מנהל ראשי.",
+  "requires a committee member": "צוות לא יכול לבצע את הפעולה הזו. צריך חבר ועדה או מנהל.",
+  "requires an admin": "רק מנהל יכול להוסיף מנהל, או לשנות ולהסיר מנהל.",
   // admins
-  "already an admin": "המייל הזה כבר ברשימת המנהלים.",
-  "you cannot change or remove yourself": "אי אפשר לשנות או להסיר את עצמך. מנהל אחר יכול לעשות את זה.",
-  "404:not an admin": "המייל הזה כבר לא ברשימת המנהלים. אפשר לרענן את הדף.",
-  "403:not an admin": "אין לחשבון הזה הרשאת מנהל.",
+  "already an admin": "המייל הזה כבר ברשימת הצוות.",
+  "you cannot change or remove yourself": "אי אפשר לשנות או להסיר את עצמך. מישהו אחר יכול לעשות את זה.",
+  "404:not an admin": "המייל הזה כבר לא ברשימת הצוות. אפשר לרענן את הדף.",
+  "403:not an admin": "החשבון הזה לא ברשימת הצוות.",
   "invalid email": "כתובת המייל לא תקינה.",
   "invalid role": "התפקיד שנבחר לא תקין.",
   "missing name": "צריך שם.",
@@ -74,7 +74,7 @@ export function errorMessage(error: unknown): string {
   );
 }
 
-/** The message for data that failed to load; `what` names it, e.g. "רשימת המנהלים". */
+/** The message for data that failed to load; `what` names it, e.g. "רשימת הצוות". */
 export function loadErrorMessage(what: string, status: number | null, detail: string | null): string {
   if (status === 0) return `אין חיבור לשרת, ולכן לא הצלחנו לטעון את ${what}. אפשר לבדוק את החיבור ולרענן את הדף.`;
   // A server that is down or not set up says so itself; that is more useful than "could not load".
