@@ -81,7 +81,6 @@ CHAT_API_URL = os.environ.get("CHAT_API_URL", "").strip().rstrip("/") or None
 MOD_API_TOKEN = _optional_secret("MOD_API_TOKEN")
 if MOD_API_TOKEN is not None and len(MOD_API_TOKEN) < 32:
     raise RuntimeError("MOD_API_TOKEN must be at least 32 characters")
-CHAT_TIMEOUT_SECONDS = 5
 
 # Inquiry form anti-bot check (Cloudflare Turnstile): the widget's secret key.
 # Required when ENV=prod. In dev it may be missing, and then POST /api/inquiries answers 503.
@@ -91,5 +90,3 @@ TURNSTILE_SECRET = _optional_secret("TURNSTILE_SECRET")
 if TURNSTILE_SECRET is None and ENV == "prod":
     raise RuntimeError("Missing required environment variable: TURNSTILE_SECRET (required when ENV=prod)")
 
-# Admin list paging.
-MAX_PAGE_SIZE = 100

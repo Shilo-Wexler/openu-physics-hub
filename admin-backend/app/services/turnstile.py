@@ -7,7 +7,6 @@ https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
 import logging
 
 import requests
-from fastapi import HTTPException, status
 
 from app.core.settings import TURNSTILE_SECRET
 
@@ -20,8 +19,16 @@ SERVER_SIDE_ERRORS = {"missing-input-secret", "invalid-input-secret"}
 log = logging.getLogger("uvicorn.error")
 
 
+class Unavailable(Exception):
+    """The check cannot be made, so the inquiry must not be accepted. The message is safe to show."""
+
+
+class Rejected(Exception):
+    """Cloudflare rejected the token: a bot, or an expired or reused token."""
+
+
 def _send(secret: str, token: str) -> dict:
-    """The only network call. Tests replace it, so they never reach Cloudflare."""
+    """The only network call."""
     response = requests.post(
         VERIFY_URL,
         data={"secret": secret, "response": token},
@@ -32,19 +39,15 @@ def _send(secret: str, token: str) -> dict:
 
 
 def verify(token: str) -> None:
-    """Returns when Cloudflare accepts the token.
-
-    422 when the token is rejected (a bot, an expired or reused token).
-    503 when the check cannot be made, so an inquiry is never accepted unchecked.
-    """
+    """Returns when Cloudflare accepts the token. Fails closed: when in doubt, Unavailable."""
     if TURNSTILE_SECRET is None:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "inquiries are not configured")
+        raise Unavailable("inquiries are not configured")
 
     try:
         result = _send(TURNSTILE_SECRET, token)
     except (requests.RequestException, ValueError) as exc:
         log.warning("turnstile check unavailable: %s", exc)
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "verification unavailable, try again later")
+        raise Unavailable("verification unavailable, try again later") from exc
 
     if result.get("success") is True:
         return
@@ -52,5 +55,5 @@ def verify(token: str) -> None:
     codes = set(result.get("error-codes") or [])
     if codes & SERVER_SIDE_ERRORS:
         log.error("turnstile secret rejected by Cloudflare: %s", sorted(codes))
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "verification unavailable, try again later")
-    raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid turnstile_token")
+        raise Unavailable("verification unavailable, try again later")
+    raise Rejected()
