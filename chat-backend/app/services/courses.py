@@ -5,6 +5,7 @@ from uuid import UUID
 import asyncpg
 
 from app.core import db
+from app.services.users import UserBlocked
 
 # The general chat is stored as a course with this id (row "0,כללי" in shared/courses.csv),
 # so messages, replies, likes and moderation work for it unchanged. It is not a real course:
@@ -63,7 +64,7 @@ async def rate(course_id: int, user_id: UUID, difficulty: int, recommendation: i
             user_id, course_id, difficulty, recommendation,
         )
     except asyncpg.ForeignKeyViolationError:
-        raise CourseNotFound()
-    except asyncpg.RaiseError as exc:
+        raise CourseNotFound() from None
+    except asyncpg.RaiseError:
         # Raised by the reject_blocked_user trigger.
-        raise PermissionError(str(exc)) from exc
+        raise UserBlocked() from None

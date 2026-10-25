@@ -5,11 +5,17 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.routes.deps import current_user_id, optional_user_id
+from app.routes.deps import current_user_id, http_errors, optional_user_id
 from app.schemas.courses import Rating
 from app.services import courses
+from app.services.users import UserBlocked
 
 router = APIRouter(prefix="/courses", tags=["courses"])
+
+_ERRORS = {
+    courses.CourseNotFound: (404, "course not found"),
+    UserBlocked: (403, "user is blocked"),
+}
 
 
 @router.get("")
@@ -33,10 +39,6 @@ async def get_course(
 async def rate_course(
     course_id: int, body: Rating, user_id: Annotated[UUID, Depends(current_user_id)]
 ):
-    try:
+    with http_errors(_ERRORS):
         await courses.rate(course_id, user_id, body.difficulty, body.recommendation)
-    except courses.CourseNotFound:
-        raise HTTPException(status_code=404, detail="course not found")
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="user is blocked")
     return body

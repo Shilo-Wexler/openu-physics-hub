@@ -3,9 +3,9 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
-from app.routes.deps import require_mod_token
+from app.routes.deps import http_errors, require_mod_token
 from app.services import moderation, stats
 from app.services.messages import MessageNotFound
 
@@ -18,10 +18,11 @@ router = APIRouter(
 # and the bound keeps now() - days inside the range Postgres dates can hold.
 MAX_STATS_DAYS = 3650
 
-
-def _check_ids(ids: list) -> None:
-    if len(ids) > moderation.MAX_IDS:
-        raise HTTPException(status_code=422, detail=f"at most {moderation.MAX_IDS} ids")
+_ERRORS = {
+    MessageNotFound: (404, "message not found"),
+    moderation.UserNotFound: (404, "user not found"),
+    moderation.NothingToUndo: (409, "nothing to undo"),
+}
 
 
 @router.get("/reported-messages")
@@ -30,9 +31,9 @@ async def reported_messages():
 
 
 # ?ids=1&ids=2: any messages, deleted ones too, for the console's log.
+# More than MAX_IDS ids is a 422 ("invalid ids").
 @router.get("/messages")
-async def messages(ids: Annotated[list[int], Query()]):
-    _check_ids(ids)
+async def messages(ids: Annotated[list[int], Query(max_length=moderation.MAX_IDS)]):
     return [dict(row) for row in await moderation.messages_by_id(ids)]
 
 
@@ -43,55 +44,40 @@ async def dismiss(message_id: int):
 
 @router.post("/messages/{message_id}/reopen")
 async def reopen(message_id: int):
-    try:
+    with http_errors(_ERRORS):
         return {"reopened_reports": await moderation.reopen(message_id)}
-    except MessageNotFound:
-        raise HTTPException(status_code=404, detail="message not found")
-    except moderation.NothingToUndo:
-        raise HTTPException(status_code=409, detail="nothing to undo")
 
 
 @router.post("/messages/{message_id}/remove")
 async def remove(message_id: int):
-    try:
+    with http_errors(_ERRORS):
         await moderation.remove(message_id)
-    except MessageNotFound:
-        raise HTTPException(status_code=404, detail="message not found")
     return {"status": "ok"}
 
 
 @router.post("/messages/{message_id}/restore")
 async def restore(message_id: int):
-    try:
+    with http_errors(_ERRORS):
         return {"reopened_reports": await moderation.restore(message_id)}
-    except MessageNotFound:
-        raise HTTPException(status_code=404, detail="message not found")
-    except moderation.NothingToUndo:
-        raise HTTPException(status_code=409, detail="nothing to undo")
 
 
 # ?ids=<uuid>&ids=<uuid>: nicknames for the console's log.
 @router.get("/users")
-async def users(ids: Annotated[list[UUID], Query()]):
-    _check_ids(ids)
+async def users(ids: Annotated[list[UUID], Query(max_length=moderation.MAX_IDS)]):
     return [dict(row) for row in await moderation.users_by_id(ids)]
 
 
 @router.post("/users/{user_id}/block")
 async def block(user_id: UUID):
-    try:
+    with http_errors(_ERRORS):
         await moderation.block(user_id)
-    except moderation.UserNotFound:
-        raise HTTPException(status_code=404, detail="user not found")
     return {"status": "ok"}
 
 
 @router.post("/users/{user_id}/unblock")
 async def unblock(user_id: UUID):
-    try:
+    with http_errors(_ERRORS):
         await moderation.unblock(user_id)
-    except moderation.UserNotFound:
-        raise HTTPException(status_code=404, detail="user not found")
     return {"status": "ok"}
 
 
@@ -102,10 +88,8 @@ async def blocked_users():
 
 @router.get("/users/{user_id}/removed-messages")
 async def removed_messages(user_id: UUID):
-    try:
+    with http_errors(_ERRORS):
         rows = await moderation.removed_messages(user_id)
-    except moderation.UserNotFound:
-        raise HTTPException(status_code=404, detail="user not found")
     return [dict(row) for row in rows]
 
 
