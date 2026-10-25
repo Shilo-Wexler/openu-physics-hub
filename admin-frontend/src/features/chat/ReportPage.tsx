@@ -9,8 +9,10 @@ import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { formatDateTime } from "../../shared/lib/format";
-import { actionError, useAdmin, useLoad } from "../../layout/consoleContext";
+import { errorMessage } from "../../shared/lib/errors";
+import { useAdmin, useLoad } from "../../layout/consoleContext";
 import LoadError from "../../layout/LoadError";
+import { reportsLabel } from "./labels";
 import styles from "./ReportPage.module.css";
 
 export default function ReportPage() {
@@ -36,7 +38,7 @@ export default function ReportPage() {
       if (leave) navigate("/chat", { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -56,7 +58,7 @@ export default function ReportPage() {
     return (
       <>
         {back}
-        <p className={styles.status}>טוען...</p>
+        <p className={styles.status}>טוען…</p>
       </>
     );
   }
@@ -107,7 +109,7 @@ export default function ReportPage() {
           <bdi>{m.author_nickname}</bdi>
         </h1>
         <p className={styles.meta}>
-          <span className={styles.count}>{m.report_count === 1 ? "דיווח אחד" : `${m.report_count} דיווחים`}</span>
+          <span className={styles.count}>{reportsLabel(m.report_count)}</span>
           <span>
             {m.course_name} · {formatDateTime(m.created_at)}
           </span>
@@ -121,7 +123,7 @@ export default function ReportPage() {
       {error && <p className="error">{error}</p>}
 
       <Group footer="התעלמות: הדיווחים נסגרים וההודעה נשארת בצ'אט.">
-        <Row label="להתעלם מהדיווח" onClick={() => run(() => dismissReports(token, m.message_id), true)} />
+        <Row label="להתעלם מהדיווח" onClick={() => void run(() => dismissReports(token, m.message_id), true)} />
         <Row label="להסיר את ההודעה" danger onClick={() => void remove()} />
       </Group>
 

@@ -6,11 +6,11 @@ import { blockedUsers, moderationActions, reportedMessages } from "../../shared/
 import { ListMessage, ListRow, RowList } from "../../shared/components/ListRow";
 import SegmentedControl from "../../shared/components/SegmentedControl";
 import { formatDay } from "../../shared/lib/format";
-import { ACTION_LABEL, targetName } from "./labels";
 import AdminLabel from "../../layout/AdminLabel";
 import { useAdmin, useLoad } from "../../layout/consoleContext";
 import LoadError from "../../layout/LoadError";
 import styles from "./ChatPage.module.css";
+import { ACTION_LABEL, reportsLabel, targetName } from "./labels";
 
 type View = "reports" | "blocked" | "log";
 
@@ -47,10 +47,6 @@ export default function ChatPage() {
   );
 }
 
-function reportsLabel(count: number): string {
-  return count === 1 ? "דיווח אחד" : `${count} דיווחים`;
-}
-
 // ---------- Reports ----------
 
 function Reports() {
@@ -58,7 +54,7 @@ function Reports() {
   const reported = useLoad((signal) => reportedMessages(token, signal), [token, version]);
 
   if (reported.failed) return <LoadError loaded={reported} what="הדיווחים" />;
-  if (!reported.data) return <ListMessage>טוען...</ListMessage>;
+  if (!reported.data) return <ListMessage>טוען…</ListMessage>;
   if (reported.data.length === 0) return <ListMessage>אין דיווחים פתוחים.</ListMessage>;
 
   return (
@@ -85,7 +81,7 @@ function Blocked() {
   const users = useLoad((signal) => blockedUsers(token, signal), [token, version]);
 
   if (users.failed) return <LoadError loaded={users} what="המשתמשים החסומים" />;
-  if (!users.data) return <ListMessage>טוען...</ListMessage>;
+  if (!users.data) return <ListMessage>טוען…</ListMessage>;
   if (users.data.length === 0) return <ListMessage>אין משתמשים חסומים.</ListMessage>;
 
   return (
@@ -114,7 +110,7 @@ function Log() {
   const actions = useLoad((signal) => moderationActions(token, signal), [token, version]);
 
   if (actions.failed) return <LoadError loaded={actions} what="היומן" />;
-  if (!actions.data) return <ListMessage>טוען...</ListMessage>;
+  if (!actions.data) return <ListMessage>טוען…</ListMessage>;
   if (actions.data.length === 0) return <ListMessage>עוד לא בוצעו פעולות.</ListMessage>;
 
   return (

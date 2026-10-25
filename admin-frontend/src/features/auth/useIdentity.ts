@@ -20,7 +20,7 @@ export function useIdentity(area: Area) {
     (email: string) => {
       const next = devIdentity(email);
       if (!next) {
-        setError("ההתחברות נכשלה, כי כתובת המייל לא תקינה. נסו שוב.");
+        setError("ההתחברות נכשלה, כי כתובת המייל לא תקינה. אפשר לנסות שוב.");
         return;
       }
       setError(null);

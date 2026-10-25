@@ -7,7 +7,8 @@ import { Link } from "react-router";
 import { listAnnouncements, type AdminAnnouncement } from "../../shared/api/announcements";
 import { isAbort, isAuthError } from "../../shared/api/client";
 import { ListMessage, ListRow, LoadMore, RowList } from "../../shared/components/ListRow";
-import { actionError, useAdmin } from "../../layout/consoleContext";
+import { errorMessage } from "../../shared/lib/errors";
+import { useAdmin } from "../../layout/consoleContext";
 import styles from "./AnnouncementListPage.module.css";
 import { announcementName } from "./labels";
 import TokenImage from "./TokenImage";
@@ -35,7 +36,7 @@ export default function AnnouncementListPage() {
       .catch((e: unknown) => {
         if (isAbort(e)) return;
         if (isAuthError(e)) onAuthError();
-        else setError(actionError(e));
+        else setError(errorMessage(e));
       });
     return () => controller.abort();
   }, [token, version, onAuthError]);
@@ -55,7 +56,7 @@ export default function AnnouncementListPage() {
       });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
     } finally {
       setLoadingMore(false);
     }
@@ -78,7 +79,7 @@ export default function AnnouncementListPage() {
       {error && <p className="error">{error}</p>}
 
       {!loaded ? (
-        !error && <ListMessage>טוען...</ListMessage>
+        !error && <ListMessage>טוען…</ListMessage>
       ) : items.length === 0 ? (
         <ListMessage>עוד אין הכרזות.</ListMessage>
       ) : (
@@ -86,7 +87,7 @@ export default function AnnouncementListPage() {
           <AnnouncementGroup title="בדף הבית" items={items.filter((a) => a.pinned)} />
           <AnnouncementGroup title="טיוטות" items={items.filter((a) => !a.published_at)} />
           <AnnouncementGroup title="פורסמו" items={items.filter((a) => a.published_at && !a.pinned)} />
-          {hasMore && <LoadMore loading={loadingMore} onClick={loadMore} />}
+          {hasMore && <LoadMore loading={loadingMore} onClick={() => void loadMore()} />}
         </>
       )}
     </>

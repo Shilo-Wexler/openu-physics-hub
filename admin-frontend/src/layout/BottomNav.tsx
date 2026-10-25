@@ -6,7 +6,7 @@ import type { Section, SectionId } from "./sections";
 
 interface Props {
   sections: Section[];
-  /** A red count on a tab (new inquiries). Zero or missing = no badge. */
+  /** A red count on a tab (new inquiries, open reports). Zero or missing = no badge. */
   badges?: Partial<Record<SectionId, number>>;
 }
 

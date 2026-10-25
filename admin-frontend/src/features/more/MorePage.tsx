@@ -1,32 +1,15 @@
+/** The "more" screen: everything that does not fit the bottom bar, plus the signed-in account. */
+
 import { Group, Row } from "../../shared/components/GroupedList";
 import { LEVEL_LABEL } from "../../shared/lib/levels";
 import { useAdmin } from "../../layout/consoleContext";
+import styles from "./MorePage.module.css";
 
 /** The coloured square behind a row's icon, like iOS Settings. */
-function IconTile({ paths, color }: { paths: string[]; color: string }) {
+function IconTile({ paths }: { paths: string[] }) {
   return (
-    <span
-      style={{
-        width: 30,
-        height: 30,
-        borderRadius: 7,
-        background: color,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        width="18"
-        height="18"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
+    <span className={styles.tile}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
         {paths.map((d) => (
           <path key={d} d={d} />
         ))}
@@ -55,7 +38,7 @@ interface Props {
   onSignOut: () => void;
 }
 
-/** Everything that does not fit the bottom bar, plus the signed-in account. New sections become rows here. */
+/** New sections become rows here. */
 export default function MorePage({ onSignOut }: Props) {
   const { email, role, nameOf } = useAdmin();
 
@@ -64,12 +47,8 @@ export default function MorePage({ onSignOut }: Props) {
       <h1>עוד</h1>
 
       <Group>
-        <Row icon={<IconTile paths={USERS_ICON} color="var(--color-primary)" />} label="מנהלים" to="/more/admins" />
-        <Row
-          icon={<IconTile paths={NOTES_ICON} color="var(--color-primary)" />}
-          label="סיכומי ישיבות"
-          to="/more/meetings"
-        />
+        <Row icon={<IconTile paths={USERS_ICON} />} label="מנהלים" to="/more/admins" />
+        <Row icon={<IconTile paths={NOTES_ICON} />} label="סיכומי ישיבות" to="/more/meetings" />
       </Group>
 
       {/* Opens your own admin screen, where you change your name. */}

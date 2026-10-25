@@ -115,7 +115,7 @@ export default function CourseFilter({ value, onChange }: Props) {
 
       {open && (
         <div id={RESULTS_ID} className={styles.results}>
-          {courses.loading && <p className={styles.note}>טוען...</p>}
+          {courses.loading && <p className={styles.note}>טוען…</p>}
           {courses.failed && <p className={styles.note}>לא הצלחנו לטעון את הקורסים.</p>}
           {courses.data && results.length === 0 && <p className={styles.note}>לא נמצא קורס.</p>}
           {results.length > 0 && (

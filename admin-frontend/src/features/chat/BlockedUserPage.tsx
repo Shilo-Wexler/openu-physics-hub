@@ -9,7 +9,8 @@ import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { formatDateTime } from "../../shared/lib/format";
-import { actionError, useAdmin, useLoad } from "../../layout/consoleContext";
+import { errorMessage } from "../../shared/lib/errors";
+import { useAdmin, useLoad } from "../../layout/consoleContext";
 import LoadError from "../../layout/LoadError";
 import styles from "./ReportPage.module.css";
 
@@ -43,7 +44,7 @@ export default function BlockedUserPage() {
       navigate(BACK, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
       setBusy(false);
     }
   }
@@ -62,7 +63,7 @@ export default function BlockedUserPage() {
     return (
       <>
         {back}
-        <p className={styles.status}>טוען...</p>
+        <p className={styles.status}>טוען…</p>
       </>
     );
   }

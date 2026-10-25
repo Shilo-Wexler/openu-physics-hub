@@ -18,7 +18,10 @@ import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { formatDateTime } from "../../shared/lib/format";
-import { actionError, useAdmin } from "../../layout/consoleContext";
+import { errorMessage } from "../../shared/lib/errors";
+import { charLength } from "../../shared/lib/text";
+import { LEAVE_QUESTION, useWarnOnLeave } from "../../shared/lib/unsaved";
+import { useAdmin } from "../../layout/consoleContext";
 import MeetingFiles, { toPending, type PendingFile } from "./MeetingFiles";
 import styles from "./MeetingEditorPage.module.css";
 import { todayMeetingDate } from "./meetingDate";
@@ -29,12 +32,6 @@ const MAX_TITLE = 120;
 const MAX_CONTENT = 20000;
 
 const LIST = "/more/meetings";
-const LEAVE_QUESTION = "יש שינויים שלא נשמרו. לצאת בלי לשמור?";
-
-/** Length the way the server counts it: characters, not UTF-16 units, so an emoji counts once. */
-function length(text: string): number {
-  return [...text.trim()].length;
-}
 
 /** An empty field is right-to-left, so the cursor starts on the right like the rest of the page.
     (dir="auto" alone makes an empty field left-to-right.) Typed text then picks its own direction. */
@@ -97,7 +94,7 @@ function MeetingEditor({ id }: { id: number | null }) {
         if (isAbort(e)) return;
         if (isAuthError(e)) onAuthError();
         else if (e instanceof ApiError && e.status === 404) setMissing(true);
-        else setError(actionError(e));
+        else setError(errorMessage(e));
         setLoading(false);
       });
     return () => controller.abort();
@@ -106,28 +103,21 @@ function MeetingEditor({ id }: { id: number | null }) {
   // A new summary counts as changed once something is typed; the date alone is just the default.
   const fieldsDirty = saved
     ? title.trim() !== saved.title || meetingDate !== saved.meeting_date || content.trim() !== saved.content
-    : length(title) > 0 || length(content) > 0;
+    : charLength(title) > 0 || charLength(content) > 0;
   const dirty = fieldsDirty || pending.length > 0 || removed.size > 0;
 
   // Closing or reloading the tab with unsaved changes asks too (the browser's own question).
-  useEffect(() => {
-    if (!dirty) return;
-    function onBeforeUnload(event: BeforeUnloadEvent) {
-      event.preventDefault();
-    }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  useWarnOnLeave(dirty);
 
   /** What is wrong with the form, or null when it can be sent. */
   function problem(): string | null {
-    if (length(title) > MAX_TITLE) return `הכותרת ארוכה מדי: עד ${MAX_TITLE} תווים.`;
+    if (charLength(title) > MAX_TITLE) return `הכותרת ארוכה מדי: עד ${MAX_TITLE} תווים.`;
     if (!meetingDate) return "צריך את תאריך הישיבה.";
     // Text and files are each optional, but not both: an empty summary says nothing.
     // Only the console checks this: the server creates the summary before its files are uploaded.
     const files = pending.length + (saved?.attachments.filter((a) => !removed.has(a.id)).length ?? 0);
-    if (length(content) === 0 && files === 0) return "צריך לכתוב סיכום או לצרף קובץ.";
-    if (length(content) > MAX_CONTENT) return `הסיכום ארוך מדי: עד ${MAX_CONTENT} תווים.`;
+    if (charLength(content) === 0 && files === 0) return "צריך לכתוב סיכום או לצרף קובץ.";
+    if (charLength(content) > MAX_CONTENT) return `הסיכום ארוך מדי: עד ${MAX_CONTENT} תווים.`;
     return null;
   }
 
@@ -151,7 +141,7 @@ function MeetingEditor({ id }: { id: number | null }) {
       changed();
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
       setSaving(false);
       return;
     }
@@ -199,7 +189,7 @@ function MeetingEditor({ id }: { id: number | null }) {
       navigate(LIST, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
       setSaving(false);
     }
   }
@@ -227,7 +217,7 @@ function MeetingEditor({ id }: { id: number | null }) {
     return (
       <>
         {back}
-        {error ? <p className="error">{error}</p> : <p className={styles.status}>טוען...</p>}
+        {error ? <p className="error">{error}</p> : <p className={styles.status}>טוען…</p>}
       </>
     );
   }
@@ -308,7 +298,7 @@ function MeetingEditor({ id }: { id: number | null }) {
 
       {error && <p className="error">{error}</p>}
       <button type="button" className={styles.save} disabled={!dirty || saving} onClick={() => void save()}>
-        {saving ? "שומר..." : "שמירה"}
+        {saving ? "שומר…" : "שמירה"}
       </button>
 
       {saved && (

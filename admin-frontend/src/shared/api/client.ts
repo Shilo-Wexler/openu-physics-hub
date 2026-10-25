@@ -68,7 +68,7 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
     });
   } catch (error) {
     // A cancelled request is not a failure the page should show, so it keeps its own type.
-    if (error instanceof DOMException && error.name === "AbortError") {
+    if (isAbort(error)) {
       throw error;
     }
     throw new ApiError(0, "network error");

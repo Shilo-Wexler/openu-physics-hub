@@ -12,8 +12,11 @@ import { Group, Row } from "../../shared/components/GroupedList";
 import { formatDateTime } from "../../shared/lib/format";
 import { LEVEL_HINT, LEVEL_LABEL, levelsManagedBy, type Level } from "../../shared/lib/levels";
 import { emailError } from "../../shared/lib/validation";
+import { errorMessage } from "../../shared/lib/errors";
+import { charLength } from "../../shared/lib/text";
+import { LEAVE_QUESTION, useWarnOnLeave } from "../../shared/lib/unsaved";
 import AdminLabel from "../../layout/AdminLabel";
-import { actionError, useAdmin } from "../../layout/consoleContext";
+import { useAdmin } from "../../layout/consoleContext";
 import styles from "./AdminEditorPage.module.css";
 
 // The server's limits (004_admin_roles.sql, schemas.py), checked here first.
@@ -21,12 +24,6 @@ const MIN_NAME = 2;
 const MAX_NAME = 40;
 
 const BACK = "/more/admins";
-const LEAVE_QUESTION = "יש שינויים שלא נשמרו. לצאת בלי לשמור?";
-
-/** Length the way the server counts it: characters, not UTF-16 units. */
-function length(text: string): number {
-  return [...text.trim()].length;
-}
 
 export default function AdminEditorPage() {
   const { email } = useParams();
@@ -68,7 +65,7 @@ function AdminEditor({ email }: { email: string | null }) {
       .catch((e: unknown) => {
         if (isAbort(e)) return;
         if (isAuthError(e)) onAuthError();
-        else setError(actionError(e));
+        else setError(errorMessage(e));
       });
     return () => controller.abort();
   }, [email, token, onAuthError]);
@@ -84,14 +81,7 @@ function AdminEditor({ email }: { email: string | null }) {
   const dirty = isNew ? newEmail.trim() !== "" || name.trim() !== "" : nameChanged || levelChanged;
 
   // Closing or reloading the tab with unsaved changes asks too (the browser's own question).
-  useEffect(() => {
-    if (!dirty) return;
-    function onBeforeUnload(event: BeforeUnloadEvent) {
-      event.preventDefault();
-    }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  useWarnOnLeave(dirty);
 
   // Nobody to add for a member, so the "new" screen goes back to the list.
   if (isNew && managed.length === 0) return <Navigate to={BACK} replace />;
@@ -102,7 +92,8 @@ function AdminEditor({ email }: { email: string | null }) {
       const wrong = emailError(newEmail);
       if (wrong) return wrong;
     }
-    if (length(name) < MIN_NAME || length(name) > MAX_NAME) return `השם צריך להיות בין ${MIN_NAME} ל-${MAX_NAME} תווים.`;
+    const nameLength = charLength(name);
+    if (nameLength < MIN_NAME || nameLength > MAX_NAME) return `השם צריך להיות בין ${MIN_NAME} ל-${MAX_NAME} תווים.`;
     return null;
   }
 
@@ -128,7 +119,7 @@ function AdminEditor({ email }: { email: string | null }) {
       // A name saved before the level failed stays saved: the form now starts from it.
       changed();
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
       setSaving(false);
     }
   }
@@ -149,7 +140,7 @@ function AdminEditor({ email }: { email: string | null }) {
       navigate(BACK, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
       setSaving(false);
     }
   }
@@ -168,7 +159,7 @@ function AdminEditor({ email }: { email: string | null }) {
     return (
       <>
         {back}
-        {error ? <p className="error">{error}</p> : <p className={styles.status}>טוען...</p>}
+        {error ? <p className="error">{error}</p> : <p className={styles.status}>טוען…</p>}
       </>
     );
   }
@@ -201,9 +192,8 @@ function AdminEditor({ email }: { email: string | null }) {
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
             autoComplete="off"
-            placeholder="name@gmail.com"
           />
-          <p className={styles.hint}>חשבון הגוגל שאיתו המנהל ייכנס. הגישה נפתחת מיד.</p>
+          <p className={styles.hint}>חשבון הגוגל שאיתו המנהל ייכנס, למשל name@gmail.com. הגישה נפתחת מיד.</p>
         </section>
       )}
 
@@ -219,8 +209,8 @@ function AdminEditor({ email }: { email: string | null }) {
           readOnly={!canRename}
           maxLength={MAX_NAME}
           dir="auto"
-          placeholder="השם שיופיע בקונסולה"
         />
+        <p className={styles.hint}>השם שיופיע בקונסולה.</p>
       </section>
 
       {canManage ? (
@@ -243,8 +233,8 @@ function AdminEditor({ email }: { email: string | null }) {
 
       {error && <p className="error">{error}</p>}
       {canRename && (
-        <button type="button" className={styles.save} disabled={!dirty || saving} onClick={save}>
-          {saving ? "שומר..." : isNew ? "הוספה" : "שמירה"}
+        <button type="button" className={styles.save} disabled={!dirty || saving} onClick={() => void save()}>
+          {saving ? "שומר…" : isNew ? "הוספה" : "שמירה"}
         </button>
       )}
 

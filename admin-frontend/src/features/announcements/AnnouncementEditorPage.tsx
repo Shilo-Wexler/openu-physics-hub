@@ -23,8 +23,11 @@ import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { formatDateTime } from "../../shared/lib/format";
+import { errorMessage } from "../../shared/lib/errors";
+import { charLength } from "../../shared/lib/text";
+import { LEAVE_QUESTION, useWarnOnLeave } from "../../shared/lib/unsaved";
 import AdminLabel from "../../layout/AdminLabel";
-import { actionError, useAdmin } from "../../layout/consoleContext";
+import { useAdmin } from "../../layout/consoleContext";
 import styles from "./AnnouncementEditorPage.module.css";
 import { announcementName } from "./labels";
 import TokenImage from "./TokenImage";
@@ -40,8 +43,6 @@ const SERVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
 // and a phone uploads it much faster than the original.
 const MAX_SIDE = 2560;
 
-const LEAVE_QUESTION = "יש שינויים שלא נשמרו. לצאת בלי לשמור?";
-
 type Status = "draft" | "published" | "pinned";
 
 const STATUSES: { value: Status; label: string }[] = [
@@ -53,11 +54,6 @@ const STATUSES: { value: Status; label: string }[] = [
 function statusOf(announcement: AdminAnnouncement): Status {
   if (announcement.pinned) return "pinned";
   return announcement.published_at ? "published" : "draft";
-}
-
-/** Length the way the server counts it: characters, not UTF-16 units, so an emoji counts once. */
-function length(text: string): number {
-  return [...text.trim()].length;
 }
 
 /** Cuts a long name for a note under a group. */
@@ -192,7 +188,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
       .catch((e: unknown) => {
         if (isAbort(e)) return;
         if (isAuthError(e)) onAuthError();
-        else setError(actionError(e));
+        else setError(errorMessage(e));
       });
     return () => controller.abort();
   }, [id, token, onAuthError]);
@@ -209,14 +205,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
   const dirty = textChanged || file !== null || dropImage || statusChanged;
 
   // Closing or reloading the tab with unsaved changes asks too (the browser's own question).
-  useEffect(() => {
-    if (!dirty) return;
-    function onBeforeUnload(event: BeforeUnloadEvent) {
-      event.preventDefault();
-    }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  useWarnOnLeave(dirty);
 
   async function pickFile(event: ChangeEvent<HTMLInputElement>) {
     const picked = event.target.files?.[0] ?? null;
@@ -252,11 +241,11 @@ function AnnouncementEditor({ id }: { id: number | null }) {
 
   /** What is wrong with the form, or null when it can be sent. */
   function problem(): string | null {
-    if (length(title) === 0 && length(body) === 0 && !hasImage) return "צריך לפחות כותרת, טקסט או תמונה.";
-    if (length(title) > MAX_TITLE) return `הכותרת ארוכה מדי: עד ${MAX_TITLE} תווים.`;
-    if (length(body) > MAX_BODY) return `הטקסט ארוך מדי: עד ${MAX_BODY} תווים.`;
-    if (file && length(alt) === 0) return "צריך לתאר את התמונה במשפט קצר, בשביל מי שמשתמש בקורא מסך.";
-    if (file && length(alt) > MAX_ALT) return `תיאור התמונה ארוך מדי: עד ${MAX_ALT} תווים.`;
+    if (charLength(title) === 0 && charLength(body) === 0 && !hasImage) return "צריך לפחות כותרת, טקסט או תמונה.";
+    if (charLength(title) > MAX_TITLE) return `הכותרת ארוכה מדי: עד ${MAX_TITLE} תווים.`;
+    if (charLength(body) > MAX_BODY) return `הטקסט ארוך מדי: עד ${MAX_BODY} תווים.`;
+    if (file && charLength(alt) === 0) return "צריך לתאר את התמונה במשפט קצר, בשביל מי שמשתמש בקורא מסך.";
+    if (file && charLength(alt) > MAX_ALT) return `תיאור התמונה ארוך מדי: עד ${MAX_ALT} תווים.`;
     return null;
   }
 
@@ -314,7 +303,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
       }
       if (dropped) setDropImage(false);
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
       setSaving(false);
     }
   }
@@ -335,7 +324,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
       navigate("/announcements", { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
       setSaving(false);
     }
   }
@@ -354,7 +343,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
     return (
       <>
         {back}
-        {error ? <p className="error">{error}</p> : <p className={styles.status}>טוען...</p>}
+        {error ? <p className="error">{error}</p> : <p className={styles.status}>טוען…</p>}
       </>
     );
   }
@@ -377,7 +366,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
 
       <section className={styles.section}>
         <label htmlFor="announcement-title" className={styles.label}>
-          כותרת
+          כותרת (לא חובה)
         </label>
         <input
           id="announcement-title"
@@ -387,13 +376,12 @@ function AnnouncementEditor({ id }: { id: number | null }) {
           readOnly={readOnly}
           maxLength={MAX_TITLE}
           dir="auto"
-          placeholder="לא חובה"
         />
       </section>
 
       <section className={styles.section}>
         <label htmlFor="announcement-body" className={styles.label}>
-          טקסט
+          טקסט (לא חובה)
         </label>
         <textarea
           id="announcement-body"
@@ -404,7 +392,6 @@ function AnnouncementEditor({ id }: { id: number | null }) {
           maxLength={MAX_BODY}
           rows={5}
           dir="auto"
-          placeholder="לא חובה"
         />
       </section>
 
@@ -428,9 +415,8 @@ function AnnouncementEditor({ id }: { id: number | null }) {
             onChange={(e) => setAlt(e.target.value)}
             maxLength={MAX_ALT}
             dir="auto"
-            placeholder="למשל: לוח הבחינות של סמסטר א"
           />
-          <p className={styles.hint}>בשביל מי שמשתמש בקורא מסך.</p>
+          <p className={styles.hint}>בשביל מי שמשתמש בקורא מסך. למשל: לוח הבחינות של סמסטר א.</p>
         </section>
       )}
 
@@ -438,7 +424,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
         <>
           <Group footer={!file && savedImage ? `תיאור: ${savedImage.alt}` : undefined}>
             {preparing ? (
-              <Row label="מכין את התמונה..." />
+              <Row label="מכין את התמונה…" />
             ) : (
               <Row label={hasImage ? "החלפת התמונה" : "הוספת תמונה"} onClick={() => fileInput.current?.click()} />
             )}
@@ -481,7 +467,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
       {error && <p className="error">{error}</p>}
       {!readOnly && (
         <button type="button" className={styles.save} disabled={!dirty || saving || preparing} onClick={save}>
-          {saving ? "שומר..." : "שמירה"}
+          {saving ? "שומר…" : "שמירה"}
         </button>
       )}
 
@@ -503,3 +489,4 @@ function AnnouncementEditor({ id }: { id: number | null }) {
     </>
   );
 }
+
