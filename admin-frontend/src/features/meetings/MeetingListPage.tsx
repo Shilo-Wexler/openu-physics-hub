@@ -9,7 +9,8 @@ import { listMeetings, type MeetingListItem } from "../../shared/api/meetings";
 import BackLink from "../../shared/components/BackLink";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { ListMessage } from "../../shared/components/ListRow";
-import { actionError, useAdmin } from "../../layout/consoleContext";
+import { errorMessage } from "../../shared/lib/errors";
+import { useAdmin } from "../../layout/consoleContext";
 import styles from "./MeetingListPage.module.css";
 import { formatMeetingDate } from "./meetingDate";
 
@@ -27,7 +28,7 @@ export default function MeetingListPage() {
       .catch((e: unknown) => {
         if (isAbort(e)) return;
         if (isAuthError(e)) onAuthError();
-        else setError(actionError(e));
+        else setError(errorMessage(e));
       });
     return () => controller.abort();
   }, [token, version, onAuthError]);
@@ -47,7 +48,7 @@ export default function MeetingListPage() {
       {error && <p className="error">{error}</p>}
 
       {!items ? (
-        !error && <ListMessage>טוען...</ListMessage>
+        !error && <ListMessage>טוען…</ListMessage>
       ) : items.length === 0 ? (
         <ListMessage>עוד אין סיכומים.</ListMessage>
       ) : (

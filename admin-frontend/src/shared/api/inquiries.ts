@@ -1,4 +1,4 @@
-/** Anonymous inquiries from the public site's form. Every call needs the "inquiries" role (or "admin"). */
+/** Anonymous inquiries from the public site's form. Every level may read and change them. */
 
 import { request } from "./client";
 

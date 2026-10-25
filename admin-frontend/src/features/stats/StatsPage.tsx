@@ -9,12 +9,13 @@ import { ListMessage } from "../../shared/components/ListRow";
 import SegmentedControl from "../../shared/components/SegmentedControl";
 import { courseLabel, TYPE_LABEL } from "../../shared/lib/inquiryLabels";
 import { useAdmin, useLoad } from "../../layout/consoleContext";
+import LoadError from "../../layout/LoadError";
 import styles from "./StatsPage.module.css";
 
 const PERIODS: { value: Period; label: string }[] = [
   { value: "7", label: "7 ימים" },
   { value: "30", label: "30 יום" },
-  { value: "all", label: "הכל" },
+  { value: "all", label: "הכול" },
 ];
 
 /** What the comparison line says the count is compared with. */
@@ -54,9 +55,9 @@ export default function StatsPage() {
 
       {shown === null ? (
         stats.failed ? (
-          <p className="error">לא הצלחנו לטעון את הנתונים. נסו לרענן את הדף.</p>
+          <LoadError loaded={stats} what="הנתונים" />
         ) : (
-          <ListMessage>טוען...</ListMessage>
+          <ListMessage>טוען…</ListMessage>
         )
       ) : (
         <div className={stale ? styles.stale : undefined} aria-busy={stale}>
@@ -113,7 +114,7 @@ function StatsBody({ stats }: { stats: Stats }) {
 
       <Group title="הכי פעילים בצ'אט">
         {chatCourses === null ? (
-          <Row label="הצ'אט לא זמין כרגע, נסו שוב מאוחר יותר." />
+          <Row label="הצ'אט לא זמין כרגע. אפשר לנסות שוב מאוחר יותר." />
         ) : chatCourses.length === 0 ? (
           <Row label="אין הודעות בתקופה הזו." />
         ) : (

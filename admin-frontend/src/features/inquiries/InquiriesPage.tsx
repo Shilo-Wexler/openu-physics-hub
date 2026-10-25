@@ -14,7 +14,8 @@ import {
 import { ListMessage, ListRow, LoadMore, RowList } from "../../shared/components/ListRow";
 import SegmentedControl from "../../shared/components/SegmentedControl";
 import { courseLabel, STATUS_LABEL, TYPE_LABEL } from "../../shared/lib/inquiryLabels";
-import { actionError, useAdmin, useLoad } from "../../layout/consoleContext";
+import { errorMessage } from "../../shared/lib/errors";
+import { useAdmin, useLoad } from "../../layout/consoleContext";
 import CourseFilter from "./CourseFilter";
 import { filtersSearch, readFilters, type Filters, type View } from "./filters";
 import styles from "./InquiriesPage.module.css";
@@ -25,7 +26,7 @@ const VIEWS: { value: View; label: string }[] = [
   { value: "new", label: "חדשות" },
   { value: "in_progress", label: "בטיפול" },
   { value: "closed", label: "סגורות" },
-  { value: "all", label: "הכל" },
+  { value: "all", label: "הכול" },
 ];
 
 export default function InquiriesPage() {
@@ -123,7 +124,7 @@ function InquiryList({ filters, search }: ListProps) {
       .catch((e: unknown) => {
         if (isAbort(e)) return;
         if (isAuthError(e)) onAuthError();
-        else setError(actionError(e));
+        else setError(errorMessage(e));
         setLoading(false);
       });
     return () => controller.abort();
@@ -146,7 +147,7 @@ function InquiryList({ filters, search }: ListProps) {
       );
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
     } finally {
       setLoadingMore(false);
     }
@@ -157,7 +158,7 @@ function InquiryList({ filters, search }: ListProps) {
 
   if (!shown) {
     if (error) return <p className="error">{error}</p>;
-    return <ListMessage>{loading ? "טוען..." : "אין פניות להצגה."}</ListMessage>;
+    return <ListMessage>{loading ? "טוען…" : "אין פניות להצגה."}</ListMessage>;
   }
 
   return (

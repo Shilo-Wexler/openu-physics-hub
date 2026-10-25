@@ -38,7 +38,7 @@ export default function AdminsListPage() {
       {admins.failed ? (
         <LoadError loaded={admins} what="רשימת המנהלים" />
       ) : !rows ? (
-        <ListMessage>טוען...</ListMessage>
+        <ListMessage>טוען…</ListMessage>
       ) : (
         LEVELS.map((level) => (
           <AdminGroup key={level} title={GROUP_TITLE[level]} me={me} admins={rows.filter((a) => a.role === level)} />

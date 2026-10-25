@@ -94,7 +94,7 @@ interface LoadMoreProps {
 export function LoadMore({ loading, disabled = false, onClick }: LoadMoreProps) {
   return (
     <button type="button" className={styles.more} disabled={loading || disabled} onClick={onClick}>
-      {loading ? "טוען..." : "טען עוד"}
+      {loading ? "טוען…" : "טען עוד"}
     </button>
   );
 }

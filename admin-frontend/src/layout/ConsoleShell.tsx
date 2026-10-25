@@ -2,20 +2,19 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { Navigate, Route, Routes } from "react-router";
 
 import { listAdmins } from "../shared/api/admins";
-import { ApiError, isAbort, isAuthError } from "../shared/api/client";
 import { reportedMessages } from "../shared/api/chat";
+import { ApiError, isAbort, isAuthError } from "../shared/api/client";
 import { getInquiryCounts } from "../shared/api/inquiries";
 import { getMe } from "../shared/api/me";
+import { ConfirmProvider } from "../shared/components/ConfirmSheet";
+import type { Level } from "../shared/lib/levels";
+import AdminEditorPage from "../features/admins/AdminEditorPage";
+import AdminsListPage from "../features/admins/AdminsListPage";
+import AnnouncementEditorPage from "../features/announcements/AnnouncementEditorPage";
+import AnnouncementListPage from "../features/announcements/AnnouncementListPage";
 import { DEV_SIGN_IN, type Identity } from "../features/auth/identity";
 import SignIn from "../features/auth/SignIn";
 import { useIdentity } from "../features/auth/useIdentity";
-import { ConfirmProvider } from "../shared/components/ConfirmSheet";
-import BottomNav from "./BottomNav";
-import ConsoleHeader from "./ConsoleHeader";
-import { SECTIONS } from "./sections";
-import type { Level } from "../shared/lib/levels";
-import AnnouncementEditorPage from "../features/announcements/AnnouncementEditorPage";
-import AnnouncementListPage from "../features/announcements/AnnouncementListPage";
 import ActionPage from "../features/chat/ActionPage";
 import BlockedUserPage from "../features/chat/BlockedUserPage";
 import ChatPage from "../features/chat/ChatPage";
@@ -26,9 +25,10 @@ import MeetingEditorPage from "../features/meetings/MeetingEditorPage";
 import MeetingListPage from "../features/meetings/MeetingListPage";
 import MorePage from "../features/more/MorePage";
 import StatsPage from "../features/stats/StatsPage";
-import AdminEditorPage from "../features/admins/AdminEditorPage";
-import AdminsListPage from "../features/admins/AdminsListPage";
+import BottomNav from "./BottomNav";
+import ConsoleHeader from "./ConsoleHeader";
 import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./consoleContext";
+import { SECTIONS } from "./sections";
 
 type Access = "checking" | "ok" | "forbidden" | "error";
 
@@ -81,7 +81,7 @@ export default function ConsoleShell() {
       <PlainFrame>
         <section className="card">
           <h1>ההתחברות פגה</h1>
-          <p>רעננו את הדף כדי להתחבר שוב.</p>
+          <p>אפשר לרענן את הדף ולהתחבר שוב.</p>
           <button className="btn btn-primary" onClick={() => window.location.reload()}>
             רענון
           </button>
@@ -95,7 +95,7 @@ export default function ConsoleShell() {
       <PlainFrame>
         <h1>כניסת חברי ועדה</h1>
         <section className="card">
-          {expired && <p className="notice">ההתחברות פגה. התחברו שוב.</p>}
+          {expired && <p className="notice">ההתחברות פגה. אפשר להתחבר שוב.</p>}
           <p>הכניסה לחברי הוועדה בלבד.</p>
           <SignIn onEmail={handleEmail} />
           {signInError && <p className="error">{signInError}</p>}
@@ -107,7 +107,7 @@ export default function ConsoleShell() {
   if (access === "checking") {
     return (
       <PlainFrame>
-        <p>בודק הרשאות...</p>
+        <p>בודק הרשאות…</p>
       </PlainFrame>
     );
   }
@@ -127,11 +127,13 @@ export default function ConsoleShell() {
                 ) : (
                   "החשבון שהתחברת איתו"
                 )}{" "}
-                אינו מוגדר כחבר ועדה. אם זו טעות, בקשו ממנהל המערכת להוסיף אותו.
+                אינו מוגדר כחבר ועדה. אם זו טעות, אפשר לבקש ממנהל המערכת להוסיף אותו.
               </p>
             </>
           ) : (
-            <p className="error">לא הצלחנו לבדוק את ההרשאות שלך, כי השרת לא זמין. נסו לרענן את הדף.</p>
+            <p className="error">
+              לא הצלחנו לבדוק את ההרשאות שלך, כי השרת לא זמין. אפשר לרענן את הדף ולנסות שוב.
+            </p>
           )}
           <button className="btn" onClick={signOut}>
             התחברות עם חשבון אחר

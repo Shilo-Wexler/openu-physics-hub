@@ -122,7 +122,7 @@ export default function MeetingFiles({
                   {gone ? (
                     "יימחק בשמירה"
                   ) : downloading === file.id ? (
-                    "מוריד..."
+                    "מוריד…"
                   ) : (
                     <>
                       {formatSize(file.size_bytes)} · <bdi>{file.uploaded_by_name}</bdi>

@@ -9,10 +9,11 @@ import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { formatDateTime } from "../../shared/lib/format";
-import { ACTION_LABEL, DELETED_ACCOUNT, STATE_LABEL, UNDO_EFFECT } from "./labels";
+import { errorMessage } from "../../shared/lib/errors";
 import AdminLabel from "../../layout/AdminLabel";
-import { actionError, useAdmin, useLoad } from "../../layout/consoleContext";
+import { useAdmin, useLoad } from "../../layout/consoleContext";
 import LoadError from "../../layout/LoadError";
+import { ACTION_LABEL, DELETED_ACCOUNT, STATE_LABEL, UNDO_EFFECT } from "./labels";
 import styles from "./ReportPage.module.css";
 
 const BACK = "/chat?view=log";
@@ -41,7 +42,7 @@ export default function ActionPage() {
     return (
       <>
         {back}
-        <p className={styles.status}>טוען...</p>
+        <p className={styles.status}>טוען…</p>
       </>
     );
   }
@@ -70,7 +71,7 @@ export default function ActionPage() {
       else if (e instanceof ApiError && e.status === 409) {
         setError("אי אפשר לבטל את הפעולה הזו, כי ההודעה או המשתמש השתנו מאז.");
         changed();
-      } else setError(actionError(e));
+      } else setError(errorMessage(e));
       setBusy(false);
     }
   }

@@ -16,15 +16,15 @@ import BackLink from "../../shared/components/BackLink";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { formatDateTime } from "../../shared/lib/format";
 import { courseLabel, STATUS_LABEL, TYPE_LABEL } from "../../shared/lib/inquiryLabels";
+import { errorMessage } from "../../shared/lib/errors";
+import { LEAVE_QUESTION, useWarnOnLeave } from "../../shared/lib/unsaved";
 import AdminLabel from "../../layout/AdminLabel";
-import { actionError, useAdmin } from "../../layout/consoleContext";
+import { useAdmin } from "../../layout/consoleContext";
 import { filtersSearch, readFilters } from "./filters";
 import styles from "./InquiryDetailPage.module.css";
 
 // Same limit as the server and the inquiries table.
 const MAX_NOTE_LENGTH = 2000;
-
-const LEAVE_QUESTION = "יש שינויים שלא נשמרו. לצאת בלי לשמור?";
 
 export default function InquiryDetailPage() {
   const { id: idText } = useParams();
@@ -60,7 +60,7 @@ function InquiryDetail({ id }: { id: number }) {
       .catch((e: unknown) => {
         if (isAbort(e)) return;
         if (isAuthError(e)) onAuthError();
-        else setError(actionError(e));
+        else setError(errorMessage(e));
       });
     return () => controller.abort();
   }, [id, token, onAuthError]);
@@ -70,14 +70,7 @@ function InquiryDetail({ id }: { id: number }) {
   const dirty = statusChanged || noteChanged;
 
   // Closing or reloading the tab with unsaved changes asks too (the browser's own question).
-  useEffect(() => {
-    if (!dirty) return;
-    function onBeforeUnload(event: BeforeUnloadEvent) {
-      event.preventDefault();
-    }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  useWarnOnLeave(dirty);
 
   /** Sends only what changed, in one request, then goes back to the list (where the inquiry now sits in
       its new view). On a failure the form stays, with the error. */
@@ -94,7 +87,7 @@ function InquiryDetail({ id }: { id: number }) {
       navigate(back, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
-      else setError(actionError(e));
+      else setError(errorMessage(e));
       setSaving(false);
     }
   }
@@ -106,7 +99,7 @@ function InquiryDetail({ id }: { id: number }) {
       <BackLink to={back} label="פניות" confirm={dirty ? LEAVE_QUESTION : undefined} />
 
       {error && <p className="error">{error}</p>}
-      {!inquiry && !error && <p className={styles.status}>טוען...</p>}
+      {!inquiry && !error && <p className={styles.status}>טוען…</p>}
 
       {inquiry && (
         <>
@@ -136,7 +129,6 @@ function InquiryDetail({ id }: { id: number }) {
               maxLength={MAX_NOTE_LENGTH}
               rows={3}
               dir="auto"
-              placeholder="הוספת הערה..."
             />
           </section>
 
@@ -152,8 +144,8 @@ function InquiryDetail({ id }: { id: number }) {
             ))}
           </Group>
 
-          <button type="button" className={styles.save} disabled={!dirty || saving} onClick={save}>
-            {saving ? "שומר..." : "שמירה"}
+          <button type="button" className={styles.save} disabled={!dirty || saving} onClick={() => void save()}>
+            {saving ? "שומר…" : "שמירה"}
           </button>
 
           <Group title="פרטים">

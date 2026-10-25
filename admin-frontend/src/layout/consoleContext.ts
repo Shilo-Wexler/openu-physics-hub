@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 import { ApiError, isAbort, isAuthError } from "../shared/api/client";
-import { errorMessage } from "../shared/lib/errors";
 import type { Level } from "../shared/lib/levels";
 
 /** What every admin screen needs: the token, a "data changed" signal, and what to do on 401. */
@@ -67,6 +66,3 @@ export function useLoad<T>(load: (signal: AbortSignal) => Promise<T>, deps: unkn
 
   return state;
 }
-
-/** Message for a failed admin action: the standard wording from lib/errors. */
-export const actionError = errorMessage;

@@ -28,6 +28,11 @@ export const UNDO_EFFECT: Partial<Record<ModerationActionType, string>> = {
   unblock: "החשבון ייחסם שוב: יוכל לקרוא, אבל לא לכתוב, לדרג או לדווח.",
 };
 
+/** How many open reports a message has, shared by the reports list and the report screen. */
+export function reportsLabel(count: number): string {
+  return count === 1 ? "דיווח אחד" : `${count} דיווחים`;
+}
+
 /** Who the action was about: the message's author or the user.
  * null when the chat backend was not reached, or the user of a user action deleted their account. */
 export function targetName(action: ModerationAction): string | null {

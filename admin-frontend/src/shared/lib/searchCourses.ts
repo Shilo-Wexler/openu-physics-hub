@@ -12,7 +12,7 @@ const FINAL_LETTERS: Record<string, string> = { ך: "כ", ם: "מ", ן: "נ", ף
 const PUNCTUATION = /["'׳״`!^=$|.,\-–()]/g;
 
 /** Reduces a name to a search form in which common spelling variants are equal. */
-export function normalize(text: string): string {
+function normalize(text: string): string {
   return text
     .toLowerCase()
     .replace(NIQQUD, "")

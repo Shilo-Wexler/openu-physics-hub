@@ -1,4 +1,4 @@
-/** Committee announcements, shown on the public site. Every call needs the "announcements" role (or "admin"). */
+/** Committee announcements, shown on the public site. Every level may read and edit drafts; publishing and pinning need an admin (see lib/levels). */
 
 import { request, requestBlob } from "./client";
 
