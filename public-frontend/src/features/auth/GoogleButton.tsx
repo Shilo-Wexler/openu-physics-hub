@@ -13,7 +13,7 @@ const SCRIPT_URL = "https://accounts.google.com/gsi/client";
 // Google posts the sign-in here; the server checks it and redirects to /auth/done.
 const LOGIN_PATH = "/api/chat/auth/google/redirect";
 
-// The small part of Google Identity Services this file uses.
+// The options this file passes to renderButton.
 interface ButtonOptions {
   type: "standard";
   theme: "outline";

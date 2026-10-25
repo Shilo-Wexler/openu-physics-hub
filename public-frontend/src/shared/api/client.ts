@@ -18,31 +18,13 @@ interface RequestOptions {
   method?: Method;
   /** Sent as JSON. */
   body?: unknown;
-  /** Sent as the raw request body with its own Content-Type (an image upload). Use instead of body. */
-  file?: Blob;
-  /** Google ID token (or a dev token), sent as "Authorization: Bearer ...". */
-  token?: string;
+  /** The query string. Empty and undefined values are left out; the rest are encoded. */
   params?: Params;
   signal?: AbortSignal;
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const response = await send(path, options);
-  if (response.status === 204) {
-    return undefined as T;
-  }
-  return (await response.json()) as T;
-}
-
-/** For a file that needs the sign-in token (an image an img tag cannot fetch by itself). */
-export async function requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
-  const response = await send(path, options);
-  return response.blob();
-}
-
-/** Sends the request and returns the response; any failure becomes an ApiError. */
-async function send(path: string, options: RequestOptions): Promise<Response> {
-  const { method = "GET", body, file, token, params, signal } = options;
+  const { method = "GET", body, params, signal } = options;
 
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params ?? {})) {
@@ -51,24 +33,19 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
     }
   }
   const queryString = query.toString();
-  const url = queryString ? `${path}${path.includes("?") ? "&" : "?"}${queryString}` : path;
-
-  const headers: Record<string, string> = {};
-  if (file) headers["Content-Type"] = file.type || "application/octet-stream";
-  else if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const url = queryString ? `${path}?${queryString}` : path;
 
   let response: Response;
   try {
     response = await fetch(url, {
       method,
-      headers,
-      body: file ?? (body === undefined ? undefined : JSON.stringify(body)),
+      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
       signal,
     });
   } catch (error) {
     // A cancelled request is not a failure the page should show, so it keeps its own type.
-    if (error instanceof DOMException && error.name === "AbortError") {
+    if (isAbort(error)) {
       throw error;
     }
     throw new ApiError(0, "network error");
@@ -77,7 +54,18 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
   if (!response.ok) {
     throw new ApiError(response.status, await errorDetail(response));
   }
-  return response;
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return (await response.json()) as T;
+}
+
+/**
+ * True when something was cancelled rather than failed: a request whose component went
+ * away, or a share sheet the reader closed.
+ */
+export function isAbort(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 /** FastAPI sends {"detail": "..."}; anything else falls back to the status text. */
@@ -94,14 +82,4 @@ async function errorDetail(response: Response): Promise<string> {
     // Not JSON (for example a proxy error page).
   }
   return response.statusText;
-}
-
-/** True for errors that mean "sign in again". */
-export function isAuthError(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 401;
-}
-
-/** True when the request was cancelled because the component went away. */
-export function isAbort(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
 }

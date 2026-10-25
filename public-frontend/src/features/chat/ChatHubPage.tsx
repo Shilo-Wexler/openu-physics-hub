@@ -1,19 +1,8 @@
 /** /chat: where the reader picks the general chat or the course chats. */
 
-import { GENERAL_COURSE_ID } from "../../shared/api/chat";
-import LinkRows, { type LinkRow } from "../../shared/components/LinkRows";
-import { coursePath } from "./share";
+import LinkRows from "../../shared/components/LinkRows";
+import { COURSE_CHATS_ROW, GENERAL_CHAT_ROW } from "./chatRows";
 import styles from "./ChatHubPage.module.css";
-
-// The same rows and words as on the home page, so each chat reads the same everywhere.
-const CHATS: LinkRow[] = [
-  {
-    to: coursePath(GENERAL_COURSE_ID),
-    title: "צ'אט כללי",
-    text: "שיחה פתוחה על הכול: לימודים, מבחנים ומה שביניהם.",
-  },
-  { to: "/courses", title: "צ'אט קורסים", text: "ביקורות ודירוגים לקורסים." },
-];
 
 export default function ChatHubPage() {
   return (
@@ -24,7 +13,7 @@ export default function ChatHubPage() {
         <p className={styles.lead}>שיחה פתוחה עם כולם, או ביקורות ודירוגים של קורס מסוים.</p>
       </header>
 
-      <LinkRows rows={CHATS} label="בחירת צ'אט" />
+      <LinkRows rows={[GENERAL_CHAT_ROW, COURSE_CHATS_ROW]} label="בחירת צ'אט" />
     </>
   );
 }

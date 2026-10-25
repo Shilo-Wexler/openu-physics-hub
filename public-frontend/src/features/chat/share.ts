@@ -1,4 +1,5 @@
 import { GENERAL_COURSE_ID } from "../../shared/api/chat";
+import { isAbort } from "../../shared/api/client";
 
 /** The path of a course page; the general chat has its own (see the routes in App.tsx). */
 export function coursePath(courseId: number): string {
@@ -31,7 +32,7 @@ export async function shareLink(url: string): Promise<"shared" | "copied" | "can
       return "shared";
     } catch (error) {
       // AbortError: the reader closed the share sheet. Anything else: fall back to copying.
-      if (error instanceof DOMException && error.name === "AbortError") return "cancelled";
+      if (isAbort(error)) return "cancelled";
     }
   }
   await navigator.clipboard.writeText(url);

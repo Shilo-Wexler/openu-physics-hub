@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { listAnnouncements, type Announcement } from "../../shared/api/announcements";
+import { isAbort } from "../../shared/api/client";
 import AnnouncementCard from "./AnnouncementCard";
 import styles from "./AnnouncementsPage.module.css";
 
@@ -26,7 +27,7 @@ export default function AnnouncementsPage() {
         setPage({ status: "ready", items: result.announcements, nextBefore: result.next_before }),
       )
       .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (isAbort(error)) return;
         console.error(error);
         setPage({ status: "error" });
       });

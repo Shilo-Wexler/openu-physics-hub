@@ -7,6 +7,9 @@ const BASE = "/api/chat";
 // The general chat is stored as this course (GENERAL_COURSE_ID in app/services/courses.py).
 export const GENERAL_COURSE_ID = 0;
 
+// Same limit as MAX_LENGTH in chat-backend/app/services/messages.py, which checks it again.
+export const MAX_MESSAGE_LENGTH = 4000;
+
 // ---- Types -------------------------------------------------------------
 
 export interface Course {
@@ -29,7 +32,7 @@ export interface CourseDetails extends Course {
 export interface Me {
   user_id: string;
   nickname: string;
-  avatar: string; // a key from AVATARS in components/Avatar.tsx
+  avatar: string; // a key from AVATARS in shared/components/Avatar.tsx
 }
 
 // Fields every review and reply has.
@@ -149,14 +152,17 @@ export function listReviews(
   { sort = "new", before }: { sort?: ReviewSort; before?: number } = {},
   signal?: AbortSignal,
 ) {
-  const query = new URLSearchParams({ sort });
-  if (before !== undefined) query.set("before", String(before));
-  return request<ReviewPage>(`${BASE}/courses/${courseId}/messages?${query}`, { signal });
+  return request<ReviewPage>(`${BASE}/courses/${courseId}/messages`, {
+    params: { sort, before },
+    signal,
+  });
 }
 
 export function listReplies(reviewId: number, after?: number, signal?: AbortSignal) {
-  const query = after === undefined ? "" : `?after=${after}`;
-  return request<ReplyPage>(`${BASE}/messages/${reviewId}/replies${query}`, { signal });
+  return request<ReplyPage>(`${BASE}/messages/${reviewId}/replies`, {
+    params: { after },
+    signal,
+  });
 }
 
 /** The review of a shared message. 404 when the message was deleted or never existed. */

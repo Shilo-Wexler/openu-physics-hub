@@ -2,11 +2,18 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 
-import { GENERAL_COURSE_ID, listCourses, type Course } from "../../shared/api/chat";
+import { GENERAL_COURSE_ID, type Course } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
+import {
+  INQUIRY_TYPES,
+  MAX_INQUIRY_LENGTH,
+  TURNSTILE_ERRORS,
+  sendInquiry,
+  type InquiryType,
+} from "../../shared/api/inquiries";
 import SegmentedControl, { type SegmentOption } from "../../shared/components/SegmentedControl";
+import { loadCourses } from "../courses/courseList";
 import CourseSearch from "../courses/CourseSearch";
-import { INQUIRY_TYPES, MAX_INQUIRY_LENGTH, TURNSTILE_ERRORS, sendInquiry, type InquiryType } from "../../shared/api/inquiries";
 import TurnstileWidget from "./TurnstileWidget";
 import styles from "./InquiryPage.module.css";
 
@@ -68,15 +75,21 @@ export default function InquiryPage() {
   const needCourses = scope === "course" && courses === null && !coursesFailed;
   useEffect(() => {
     if (!needCourses) return;
-    const controller = new AbortController();
-    listCourses(controller.signal)
-      .then(setCourses)
+    // The request is shared with /courses, so it is not aborted; a page that has left ignores
+    // the answer.
+    let active = true;
+    loadCourses()
+      .then((loaded) => {
+        if (active) setCourses(loaded);
+      })
       .catch((loadError: unknown) => {
-        if (controller.signal.aborted) return;
+        if (!active) return;
         console.error(loadError);
         setCoursesFailed(true);
       });
-    return () => controller.abort();
+    return () => {
+      active = false;
+    };
   }, [needCourses]);
 
   const courseId = scope === "general" ? GENERAL_COURSE_ID : (course?.id ?? null);

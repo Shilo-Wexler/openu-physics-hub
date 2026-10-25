@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import { getPinnedAnnouncement, type Announcement } from "../../shared/api/announcements";
+import { isAbort } from "../../shared/api/client";
 import AnnouncementCard from "./AnnouncementCard";
 import styles from "./LatestAnnouncement.module.css";
 
@@ -16,7 +17,7 @@ export default function LatestAnnouncement() {
     getPinnedAnnouncement(controller.signal)
       .then(setAnnouncement)
       .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (isAbort(error)) return;
         // The home page works without it: a failure only means the section stays hidden.
         console.error(error);
       });

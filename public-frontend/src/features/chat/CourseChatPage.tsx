@@ -9,20 +9,20 @@ import {
   type SharedMessage,
 } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
-import { useAuth } from "../auth/AuthContext";
 import RatingPanel from "./RatingPanel";
 import { ReplyBarProvider } from "./replyBar";
 import ReviewCard from "./ReviewCard";
 import ReviewList from "./ReviewList";
 import ShareButton from "./ShareButton";
 import { coursePath, courseUrl, messagePath } from "./share";
+import { useViewerGeneration } from "./useViewerGeneration";
 import styles from "./CourseChatPage.module.css";
 
 type State =
   | { status: "loading" }
   | { status: "not-found" }
   | { status: "error" }
-  // loadedFor: the viewer generation the data was loaded for (see `viewer` below).
+  // loadedFor: the viewer generation the data was loaded for (see useViewerGeneration).
   | { status: "ready"; course: CourseDetails; loadedFor: number };
 
 // The message of a shared link: still loading, gone (deleted or never existed), or found.
@@ -66,17 +66,9 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   const [shared, setShared] = useState<Shared | null>(
     messageId === null ? null : { status: "loading" },
   );
-
-  const { user, loading } = useAuth();
-  const userId = user?.user_id ?? null;
-  // Goes up when someone signs in or out on this page, so the course (my_rating) and the shared
-  // review (liked_by_me) load again for the new viewer. The first /me answer does not count.
-  const [viewer, setViewer] = useState({ loading, userId, generation: 0 });
-  if (viewer.loading !== loading || viewer.userId !== userId) {
-    const changed = !viewer.loading;
-    setViewer({ loading, userId, generation: changed ? viewer.generation + 1 : viewer.generation });
-  }
-  const { generation } = viewer;
+  // A new viewer (sign-in or sign-out here) loads the course (my_rating) and the shared
+  // review (liked_by_me) again.
+  const generation = useViewerGeneration();
 
   useEffect(() => {
     const controller = new AbortController();
