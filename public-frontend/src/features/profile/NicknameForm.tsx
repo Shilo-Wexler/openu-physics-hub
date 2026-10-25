@@ -101,9 +101,9 @@ export default function NicknameForm({ current }: Props) {
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 409) return "הכינוי הזה תפוס. אפשר לבחור כינוי אחר.";
-    if (error.status === 422) return "כינוי לא תקין";
-    if (error.status === 403) return "החשבון חסום ולא ניתן לשנות כינוי";
-    if (error.status === 401) return "צריך להתחבר מחדש";
+    if (error.status === 422) return "כינוי לא תקין.";
+    if (error.status === 403) return "החשבון חסום, אז אי אפשר לשנות את הכינוי.";
+    if (error.status === 401) return "צריך להתחבר מחדש.";
   }
   return "לא הצלחנו לשמור את הכינוי.";
 }

@@ -3,11 +3,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 
+import { MAX_MESSAGE_LENGTH } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
 import styles from "./MessageEditor.module.css";
-
-// Same limit as MAX_LENGTH in chat-backend/app/services/messages.py.
-const MAX_LENGTH = 4000;
 
 interface Props {
   /** The current text of the message. */
@@ -87,7 +85,7 @@ export default function MessageEditor({ initial, onSave, onCancel }: Props) {
           setError(null);
         }}
         onKeyDown={handleKeyDown}
-        maxLength={MAX_LENGTH}
+        maxLength={MAX_MESSAGE_LENGTH}
         rows={3}
         dir="auto"
         aria-label="עריכת ההודעה"
@@ -114,10 +112,10 @@ function errorMessage(error: unknown): string {
     if (error.status === 422 && error.message === "offensive content") {
       return "יש בהודעה מילה לא ראויה. אפשר לערוך ולשמור שוב.";
     }
-    if (error.status === 422) return `ההודעה צריכה להיות באורך 1-${MAX_LENGTH} תווים`;
-    if (error.status === 404) return "ההודעה כבר נמחקה";
-    if (error.status === 403) return "החשבון חסום ולא ניתן לערוך";
-    if (error.status === 401) return "צריך להתחבר מחדש";
+    if (error.status === 422) return `ההודעה צריכה להיות באורך 1-${MAX_MESSAGE_LENGTH} תווים.`;
+    if (error.status === 404) return "ההודעה כבר נמחקה.";
+    if (error.status === 403) return "החשבון חסום, אז אי אפשר לערוך.";
+    if (error.status === 401) return "צריך להתחבר מחדש.";
   }
   return "לא הצלחנו לשמור את השינויים.";
 }

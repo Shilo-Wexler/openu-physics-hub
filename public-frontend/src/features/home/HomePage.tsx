@@ -2,13 +2,14 @@
 
 import LinkRows, { type LinkRow } from "../../shared/components/LinkRows";
 import LatestAnnouncement from "../announcements/LatestAnnouncement";
+import { COURSE_CHATS_ROW, GENERAL_CHAT_ROW } from "../chat/chatRows";
 import styles from "./HomePage.module.css";
 
 // The main areas, one row each, plus one useful site outside ours. About is not here: it
 // lives in the footer.
 const AREAS: LinkRow[] = [
-  { to: "/chat/general", title: "צ'אט כללי", text: "שיחה פתוחה על הכול: לימודים, מבחנים ומה שביניהם." },
-  { to: "/courses", title: "צ'אט קורסים", text: "ביקורות ודירוגים לקורסים." },
+  GENERAL_CHAT_ROW,
+  COURSE_CHATS_ROW,
   { to: "/announcements", title: "הכרזות", text: "עדכונים והודעות מוועדת הסטודנטים." },
   {
     to: "/inquiry",

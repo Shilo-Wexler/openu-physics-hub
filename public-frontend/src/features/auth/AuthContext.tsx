@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 
 import { deleteAccount as requestAccountDeletion, getMe, logout } from "../../shared/api/chat";
 import type { Me } from "../../shared/api/chat";
+import { isAbort } from "../../shared/api/client";
 
 interface Auth {
   user: Me | null; // null for a guest (and while loading)
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getMe(controller.signal)
       .then(setUser)
       .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (isAbort(error)) return;
         // 401 is the normal answer for a guest. Any other failure also leaves the visitor
         // as a guest: reading the site works without sign-in, so this is not worth an error.
         setUser(null);

@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import Composer from "./Composer";
 import { useReplyBar } from "./replyBar";
 import ReviewCard from "./ReviewCard";
+import { useViewerGeneration } from "./useViewerGeneration";
 import styles from "./ReviewList.module.css";
 
 const SORTS: SegmentOption<ReviewSort>[] = [
@@ -31,16 +32,15 @@ export default function ReviewList({ courseId, hiddenId = null }: Props) {
   // Reviews posted here, shown on top in every sort until the page is left.
   const [mine, setMine] = useState<MyReview[]>([]);
   const { target, setSlot } = useReplyBar();
+  const { user } = useAuth();
 
-  const { user, loading } = useAuth();
-  const userId = user?.user_id ?? null;
-  // Goes up when someone signs in or out on this page, so the list reloads with the right
-  // liked_by_me. The first /me answer does not count: the first request already sent the cookie.
-  const [viewer, setViewer] = useState({ loading, userId, generation: 0 });
-  if (viewer.loading !== loading || viewer.userId !== userId) {
-    const changed = !viewer.loading;
-    setViewer({ loading, userId, generation: changed ? viewer.generation + 1 : viewer.generation });
-    if (changed) setMine([]); // the reloaded list has them, now with the right is_mine
+  // A new viewer reloads the list (liked_by_me, is_mine). The reloaded list already has the
+  // reviews posted here, now with the right is_mine, so `mine` starts over.
+  const generation = useViewerGeneration();
+  const [mineFor, setMineFor] = useState(generation);
+  if (mineFor !== generation) {
+    setMineFor(generation);
+    setMine([]);
   }
 
   const handleSend = useCallback(
@@ -89,7 +89,7 @@ export default function ReviewList({ courseId, hiddenId = null }: Props) {
       {/* key: another signed-in user mounts a fresh list. Another sort does not: the list
           stays and is replaced once the new order arrives, so the page does not jump. */}
       <SortedReviews
-        key={viewer.generation}
+        key={generation}
         courseId={courseId}
         sort={sort}
         hiddenId={hiddenId}

@@ -27,9 +27,8 @@ export interface AnnouncementPage {
 }
 
 export function listAnnouncements(before?: string, signal?: AbortSignal) {
-  // The cursor holds a date with "+" and ":", so it must be encoded to reach the server unchanged.
-  const query = before === undefined ? "" : `?before=${encodeURIComponent(before)}`;
-  return request<AnnouncementPage>(`${BASE}${query}`, { signal });
+  // The cursor is a date with "+" and ":"; params encodes it so it reaches the server unchanged.
+  return request<AnnouncementPage>(BASE, { params: { before }, signal });
 }
 
 /** The announcement on the home page, or null when none is pinned. */

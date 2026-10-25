@@ -6,7 +6,7 @@ let pending: Promise<Course[]> | null = null;
 
 /**
  * Returns the course list. The first call starts the request; later calls get the same
- * promise, so the home page and /courses never load the list twice.
+ * promise, so /courses and the inquiry form never load the list twice.
  */
 export function loadCourses(): Promise<Course[]> {
   if (pending === null) {

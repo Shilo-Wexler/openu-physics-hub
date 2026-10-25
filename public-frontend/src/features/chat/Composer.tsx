@@ -6,19 +6,18 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 
+import { MAX_MESSAGE_LENGTH } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./Composer.module.css";
 
-// Same limit as MAX_LENGTH in chat-backend/app/services/messages.py.
-const MAX_LENGTH = 4000;
 // The counter appears only near the limit, so it does not distract while writing.
-const SHOW_COUNTER_FROM = 3500;
+const SHOW_COUNTER_FROM = MAX_MESSAGE_LENGTH - 500;
 
 interface Props {
   /** Adds the message (optimistically) and resolves when the server saved it. */
   onSend: (content: string) => Promise<void>;
-  /** Grey text inside the empty box. Optional: the course page's box has none. */
+  /** Grey text inside the empty box; a guest sees it on the box-like sign-in button. */
   placeholder?: string;
   /** Read by screen readers, since the box has no visible label. */
   label: string;
@@ -143,7 +142,7 @@ export default function Composer({
       )}
       {value.length >= SHOW_COUNTER_FROM && (
         <span className={styles.counter}>
-          {value.length}/{MAX_LENGTH}
+          {value.length}/{MAX_MESSAGE_LENGTH}
         </span>
       )}
       <div className={styles.row}>
@@ -157,7 +156,7 @@ export default function Composer({
               setError(null);
             }}
             onKeyDown={handleKeyDown}
-            maxLength={MAX_LENGTH}
+            maxLength={MAX_MESSAGE_LENGTH}
             rows={1}
             dir="auto"
             placeholder={placeholder}
@@ -196,10 +195,10 @@ function errorMessage(error: unknown): string {
     if (error.status === 422 && error.message === "offensive content") {
       return "יש בהודעה מילה לא ראויה. אפשר לערוך ולפרסם שוב.";
     }
-    if (error.status === 422) return `ההודעה צריכה להיות באורך 1-${MAX_LENGTH} תווים`;
-    if (error.status === 404) return "ההודעה שהגבת עליה נמחקה";
-    if (error.status === 403) return "החשבון חסום ולא ניתן לפרסם";
-    if (error.status === 401) return "צריך להתחבר מחדש";
+    if (error.status === 422) return `ההודעה צריכה להיות באורך 1-${MAX_MESSAGE_LENGTH} תווים.`;
+    if (error.status === 404) return "ההודעה שהגבת עליה נמחקה.";
+    if (error.status === 403) return "החשבון חסום, אז אי אפשר לפרסם.";
+    if (error.status === 401) return "צריך להתחבר מחדש.";
   }
   return "לא הצלחנו לפרסם את ההודעה.";
 }

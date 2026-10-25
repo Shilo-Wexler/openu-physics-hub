@@ -1,7 +1,6 @@
 /** One review and its thread. Replies go through the page's one writing bar (replyBar.tsx). */
 
-import type { Reply } from "../../shared/api/chat";
-import type { Review } from "../../shared/api/chat";
+import type { Reply, Review } from "../../shared/api/chat";
 import MessageItem from "./MessageItem";
 import { useReplyBar } from "./replyBar";
 import ReplyThread from "./ReplyThread";
