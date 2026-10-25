@@ -1,6 +1,9 @@
-"""Request dependencies shared by the routers: who is signed in, and the admin backend's token."""
+"""Request dependencies shared by the routers: who is signed in, the admin backend's token,
+and turning the services' exceptions into HTTP errors."""
 
 import hmac
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated
 from uuid import UUID
 
@@ -65,3 +68,19 @@ async def require_mod_token(authorization: Annotated[str | None, Header()] = Non
     # so response times do not leak the token one character at a time.
     if authorization is None or not hmac.compare_digest(authorization.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="invalid token")
+
+
+@contextmanager
+def http_errors(errors: dict[type[Exception], tuple[int, str]]) -> Iterator[None]:
+    """Turns a service's exceptions into HTTP errors, so a route needs no try/except of its own:
+
+        with http_errors(_ERRORS):
+            await messages.like(message_id, user_id)
+
+    errors maps an exception class to (status code, detail). Any other exception passes through.
+    """
+    try:
+        yield
+    except tuple(errors) as exc:
+        status_code, detail = next(v for cls, v in errors.items() if isinstance(exc, cls))
+        raise HTTPException(status_code=status_code, detail=detail) from None

@@ -5,25 +5,25 @@ Reading is open to everyone; everything else needs a signed-in user."""
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
-from app.routes.deps import current_user_id, optional_user_id
+from app.routes.deps import current_user_id, http_errors, optional_user_id
 from app.schemas.messages import MessageEdit, NewMessage
 from app.services import messages
 from app.services.courses import CourseNotFound
+from app.services.users import UserBlocked
 
 router = APIRouter(tags=["messages"])
 
-
-def _content_error(exc: Exception) -> HTTPException:
-    """Maps the content checks shared by posting and editing to HTTP errors."""
-    if isinstance(exc, messages.OffensiveContent):
-        return HTTPException(status_code=422, detail="offensive content")
-    if isinstance(exc, messages.InvalidContent):
-        return HTTPException(
-            status_code=422, detail=f"content must be 1-{messages.MAX_LENGTH} characters"
-        )
-    return HTTPException(status_code=403, detail="user is blocked")
+_ERRORS = {
+    CourseNotFound: (404, "course not found"),
+    messages.MessageNotFound: (404, "message not found"),
+    messages.ReplyTargetNotFound: (404, "replied message not found"),
+    messages.InvalidContent: (422, f"content must be 1-{messages.MAX_LENGTH} characters"),
+    messages.OffensiveContent: (422, "offensive content"),
+    messages.AlreadyReported: (409, "already reported"),
+    UserBlocked: (403, "user is blocked"),
+}
 
 
 def _public(row, viewer_id: UUID | None) -> dict:
@@ -42,10 +42,8 @@ async def list_reviews(
     sort: messages.Sort = "new",
     before: int | None = None,
 ):
-    try:
+    with http_errors(_ERRORS):
         rows = await messages.list_reviews(course_id, viewer_id, sort, before)
-    except CourseNotFound:
-        raise HTTPException(status_code=404, detail="course not found")
     items = [_public(row, viewer_id) for row in rows]
     # A full page may have more reviews behind it; pass this as ?before= to get them.
     next_before = items[-1]["id"] if len(items) == messages.PAGE_SIZE else None
@@ -58,10 +56,8 @@ async def list_replies(
     viewer_id: Annotated[UUID | None, Depends(optional_user_id)],
     after: int | None = None,
 ):
-    try:
+    with http_errors(_ERRORS):
         rows = await messages.list_replies(review_id, viewer_id, after)
-    except messages.MessageNotFound:
-        raise HTTPException(status_code=404, detail="message not found")
     items = [_public(row, viewer_id) for row in rows]
     # A full page may have newer replies after it; pass this as ?after= to get them.
     next_after = items[-1]["id"] if len(items) == messages.PAGE_SIZE else None
@@ -74,10 +70,8 @@ async def get_shared(
 ):
     """For a shared link: the review to show on top, and the reply to point at if the
     link is to a reply (its discussion opens on the page)."""
-    try:
+    with http_errors(_ERRORS):
         row = await messages.get_shared(message_id, viewer_id)
-    except messages.MessageNotFound:
-        raise HTTPException(status_code=404, detail="message not found")
     review = _public(row, viewer_id)
     course_id = review.pop("course_id")
     reply_id = message_id if message_id != review["id"] else None
@@ -88,14 +82,8 @@ async def get_shared(
 async def post_message(
     course_id: int, body: NewMessage, user_id: Annotated[UUID, Depends(current_user_id)]
 ):
-    try:
+    with http_errors(_ERRORS):
         row = await messages.post(course_id, user_id, body.content, body.reply_to_id)
-    except CourseNotFound:
-        raise HTTPException(status_code=404, detail="course not found")
-    except messages.ReplyTargetNotFound:
-        raise HTTPException(status_code=404, detail="replied message not found")
-    except (messages.InvalidContent, messages.OffensiveContent, PermissionError) as exc:
-        raise _content_error(exc)
     return dict(row)
 
 
@@ -103,32 +91,22 @@ async def post_message(
 async def edit_message(
     message_id: int, body: MessageEdit, user_id: Annotated[UUID, Depends(current_user_id)]
 ):
-    try:
+    with http_errors(_ERRORS):
         row = await messages.edit(message_id, user_id, body.content)
-    except messages.MessageNotFound:
-        raise HTTPException(status_code=404, detail="message not found")
-    except (messages.InvalidContent, messages.OffensiveContent, PermissionError) as exc:
-        raise _content_error(exc)
     return dict(row)
 
 
 @router.delete("/messages/{message_id}")
 async def delete_message(message_id: int, user_id: Annotated[UUID, Depends(current_user_id)]):
-    try:
+    with http_errors(_ERRORS):
         await messages.delete(message_id, user_id)
-    except messages.MessageNotFound:
-        raise HTTPException(status_code=404, detail="message not found")
     return {"status": "ok"}
 
 
 @router.put("/messages/{message_id}/like")
 async def like_message(message_id: int, user_id: Annotated[UUID, Depends(current_user_id)]):
-    try:
+    with http_errors(_ERRORS):
         await messages.like(message_id, user_id)
-    except messages.MessageNotFound:
-        raise HTTPException(status_code=404, detail="message not found")
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="user is blocked")
     return {"liked": True}
 
 
@@ -140,12 +118,6 @@ async def unlike_message(message_id: int, user_id: Annotated[UUID, Depends(curre
 
 @router.post("/messages/{message_id}/report", status_code=201)
 async def report_message(message_id: int, user_id: Annotated[UUID, Depends(current_user_id)]):
-    try:
+    with http_errors(_ERRORS):
         await messages.report(message_id, user_id)
-    except messages.MessageNotFound:
-        raise HTTPException(status_code=404, detail="message not found")
-    except messages.AlreadyReported:
-        raise HTTPException(status_code=409, detail="already reported")
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="user is blocked")
     return {"status": "ok"}

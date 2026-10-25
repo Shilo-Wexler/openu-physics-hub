@@ -3,13 +3,20 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, Response
 
-from app.routes.deps import clear_session_cookie, current_user_id
+from app.routes.deps import clear_session_cookie, current_user_id, http_errors
 from app.schemas.me import AvatarChange, NicknameChange
 from app.services import users
 
 router = APIRouter(prefix="/me", tags=["me"])
+
+_ERRORS = {
+    users.InvalidNickname: (422, "nickname must be 3-30 letters, digits, spaces, _ - ."),
+    users.NicknameTaken: (409, "nickname taken"),
+    users.InvalidAvatar: (422, "unknown avatar"),
+    users.UserBlocked: (403, "user is blocked"),
+}
 
 
 @router.get("")
@@ -22,27 +29,15 @@ async def me(user_id: Annotated[UUID, Depends(current_user_id)]):
 async def change_nickname(
     body: NicknameChange, user_id: Annotated[UUID, Depends(current_user_id)]
 ):
-    try:
+    with http_errors(_ERRORS):
         nickname = await users.set_nickname(user_id, body.nickname)
-    except users.InvalidNickname:
-        raise HTTPException(
-            status_code=422, detail="nickname must be 3-30 letters, digits, spaces, _ - ."
-        )
-    except users.NicknameTaken:
-        raise HTTPException(status_code=409, detail="nickname taken")
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="user is blocked")
     return {"nickname": nickname}
 
 
 @router.put("/avatar")
 async def change_avatar(body: AvatarChange, user_id: Annotated[UUID, Depends(current_user_id)]):
-    try:
+    with http_errors(_ERRORS):
         avatar = await users.set_avatar(user_id, body.avatar)
-    except users.InvalidAvatar:
-        raise HTTPException(status_code=422, detail="unknown avatar")
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="user is blocked")
     return {"avatar": avatar}
 
 

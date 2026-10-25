@@ -39,6 +39,23 @@ _AVATAR_CHOICES = sorted(AVATARS)
 DELETION_DELAY = timedelta(days=7)
 
 
+class UserBlocked(Exception):
+    """A blocked user tried to write. Raised here and by the services whose writes the
+    reject_blocked_user trigger refuses (messages, likes, ratings, reports)."""
+
+
+class InvalidNickname(Exception):
+    pass
+
+
+class NicknameTaken(Exception):
+    pass
+
+
+class InvalidAvatar(Exception):
+    pass
+
+
 def _random_nickname() -> str:
     return f"student{secrets.randbelow(900000) + 100000}"
 
@@ -91,18 +108,6 @@ async def find_or_create(provider: str, provider_user_id: str) -> tuple[UUID, bo
     raise RuntimeError("could not find a free nickname")
 
 
-class InvalidNickname(Exception):
-    pass
-
-
-class NicknameTaken(Exception):
-    pass
-
-
-class InvalidAvatar(Exception):
-    pass
-
-
 async def get(user_id: UUID) -> asyncpg.Record | None:
     return await db.pool.fetchrow("select id, nickname, avatar from users where id = $1", user_id)
 
@@ -122,9 +127,9 @@ async def set_nickname(user_id: UUID, nickname: str) -> str:
             user_id, nickname,
         )
     except asyncpg.UniqueViolationError:
-        raise NicknameTaken()
+        raise NicknameTaken() from None
     if updated is None:
-        raise PermissionError("user is blocked")
+        raise UserBlocked()
     return updated
 
 
@@ -137,7 +142,7 @@ async def set_avatar(user_id: UUID, avatar: str) -> str:
         user_id, avatar,
     )
     if updated is None:
-        raise PermissionError("user is blocked")
+        raise UserBlocked()
     return updated
 
 

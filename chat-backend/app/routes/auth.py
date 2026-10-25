@@ -1,21 +1,29 @@
 """Sign-in and sign-out. A successful sign-in sets the session cookie."""
 
 import hmac
+import logging
 from typing import Annotated
 from urllib.parse import parse_qs
 from uuid import UUID
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Cookie, Depends, Request, Response
 
-from app.routes.deps import clear_session_cookie, current_user_id, set_session_cookie
+from app.routes.deps import clear_session_cookie, current_user_id, http_errors, set_session_cookie
 from app.schemas.auth import GoogleSignIn
 from app.services import google_auth, sessions, users
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+log = logging.getLogger("uvicorn.error")
+
 # The site's page the browser lands on after a redirect sign-in. It reads the flags below
 # and takes the reader back to the page they signed in from.
 SIGN_IN_DONE_PATH = "/auth/done"
+
+_ERRORS = {
+    google_auth.InvalidGoogleToken: (401, "invalid Google token"),
+    google_auth.KeysUnavailable: (503, "sign-in keys unavailable"),
+}
 
 
 async def _sign_in(id_token: str, response: Response) -> tuple[UUID, bool, bool]:
@@ -23,7 +31,7 @@ async def _sign_in(id_token: str, response: Response) -> tuple[UUID, bool, bool]
 
     Signing in cancels a pending account deletion.
     Returns (user_id, is_new, restored), where restored means a deletion was cancelled.
-    Raises google_auth.InvalidGoogleToken for a bad token.
+    Raises google_auth.InvalidGoogleToken or google_auth.KeysUnavailable.
     """
     google_user_id = await google_auth.verify_id_token(id_token)
     user_id, is_new = await users.find_or_create("google", google_user_id)
@@ -34,10 +42,8 @@ async def _sign_in(id_token: str, response: Response) -> tuple[UUID, bool, bool]
 
 @router.post("/google")
 async def sign_in_with_google(body: GoogleSignIn, response: Response):
-    try:
+    with http_errors(_ERRORS):
         user_id, is_new, restored = await _sign_in(body.id_token, response)
-    except google_auth.InvalidGoogleToken:
-        raise HTTPException(status_code=401, detail="invalid Google token")
     # Same shape as GET /me plus the flags, so the browser needs no extra /me call after sign-in.
     user = await users.get(user_id)
     return {
@@ -58,6 +64,8 @@ async def sign_in_with_google_redirect(
     No popup window, which some phone browsers (Chrome on iPhone) leave white. The answer is
     always a redirect back to the site, so the reader never sees a bare error from here.
     """
+    failed = Response(status_code=303, headers={"location": f"{SIGN_IN_DONE_PATH}?error=1"})
+
     # A plain form (credential, g_csrf_token). Parsed by hand: one small body is not worth
     # adding python-multipart as a dependency.
     form = parse_qs((await request.body()).decode())
@@ -74,14 +82,17 @@ async def sign_in_with_google_redirect(
         and form_csrf
         and hmac.compare_digest(g_csrf_token.encode(), form_csrf.encode())
     ):
-        return Response(status_code=303, headers={"location": f"{SIGN_IN_DONE_PATH}?error=1"})
+        return failed
 
     # 303: the browser follows with a GET, not by posting the form again.
     response = Response(status_code=303)
     try:
         _, is_new, restored = await _sign_in(credential, response)
     except google_auth.InvalidGoogleToken:
-        return Response(status_code=303, headers={"location": f"{SIGN_IN_DONE_PATH}?error=1"})
+        return failed
+    except google_auth.KeysUnavailable:
+        log.warning("Google signing keys unavailable")
+        return failed
     if is_new:
         location = f"{SIGN_IN_DONE_PATH}?new=1"
     elif restored:

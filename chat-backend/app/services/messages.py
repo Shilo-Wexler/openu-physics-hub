@@ -11,6 +11,7 @@ import asyncpg
 from app.core import db
 from app.services import profanity
 from app.services.courses import CourseNotFound
+from app.services.users import UserBlocked
 
 # Reviews per page, and replies per page of one discussion.
 PAGE_SIZE = 50
@@ -204,10 +205,10 @@ async def post(
             course_id, user_id, thread_id, quote_id, content,
         )
     except asyncpg.ForeignKeyViolationError:
-        raise CourseNotFound()
-    except asyncpg.RaiseError as exc:
+        raise CourseNotFound() from None
+    except asyncpg.RaiseError:
         # Raised by the reject_blocked_user trigger.
-        raise PermissionError(str(exc)) from exc
+        raise UserBlocked() from None
 
 
 async def edit(message_id: int, user_id: UUID, content: str) -> asyncpg.Record:
@@ -221,8 +222,8 @@ async def edit(message_id: int, user_id: UUID, content: str) -> asyncpg.Record:
             """,
             message_id, user_id, content,
         )
-    except asyncpg.RaiseError as exc:
-        raise PermissionError(str(exc)) from exc
+    except asyncpg.RaiseError:
+        raise UserBlocked() from None
     if row is None:
         raise MessageNotFound()
     return row
@@ -260,8 +261,8 @@ async def like(message_id: int, user_id: UUID) -> None:
                 """,
                 user_id, message_id,
             )
-        except asyncpg.RaiseError as exc:
-            raise PermissionError(str(exc)) from exc
+        except asyncpg.RaiseError:
+            raise UserBlocked() from None
         if added:
             await conn.execute(
                 "update messages set like_count = like_count + 1 where id = $1", message_id
@@ -293,8 +294,9 @@ async def report(message_id: int, user_id: UUID) -> None:
         )
     except asyncpg.UniqueViolationError:
         # reports_one_per_user: this user already reported this message.
-        raise AlreadyReported()
-    except asyncpg.RaiseError as exc:
-        raise PermissionError(str(exc)) from exc
+        raise AlreadyReported() from None
+    except asyncpg.RaiseError:
+        raise UserBlocked() from None
     if report_id is None:
         raise MessageNotFound()
+    

@@ -16,6 +16,10 @@ class InvalidGoogleToken(Exception):
     pass
 
 
+class KeysUnavailable(Exception):
+    """Google's signing keys could not be fetched: a server problem, not a bad token."""
+
+
 def _verify(token: str) -> str:
     key = _GOOGLE_KEYS.get_signing_key_from_jwt(token)
     claims = jwt.decode(
@@ -30,12 +34,14 @@ def _verify(token: str) -> str:
 
 
 async def verify_id_token(token: str) -> str:
-    """Return the Google user id (sub) of a valid token, or raise InvalidGoogleToken."""
+    """Return the Google user id (sub) of a valid token.
+
+    Raises InvalidGoogleToken for a bad token, KeysUnavailable when Google cannot be reached."""
     try:
         # Runs in a thread: fetching keys is a blocking network call when the cache is empty.
         return await asyncio.to_thread(_verify, token)
-    except jwt.PyJWKClientConnectionError:
-        # Google is unreachable: a server problem, not a bad token.
-        raise
+    # Checked first: it is a subclass of PyJWTError.
+    except jwt.PyJWKClientConnectionError as exc:
+        raise KeysUnavailable() from exc
     except jwt.PyJWTError as exc:
         raise InvalidGoogleToken(str(exc)) from exc
