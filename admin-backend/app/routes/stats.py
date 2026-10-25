@@ -7,10 +7,8 @@ from datetime import timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends
-from psycopg import Connection
 
-from app.core.db import get_conn
-from app.routes.deps import require_admin
+from app.routes.deps import Conn, require_admin
 from app.services import stats
 
 # The periods the console offers, in days. "all" has no start, so nothing to compare it with.
@@ -21,7 +19,7 @@ router = APIRouter(prefix="/api/admin/stats", tags=["admin"], dependencies=[Depe
 
 
 @router.get("")
-def get_stats(period: Period, conn: Connection = Depends(get_conn)):
+def get_stats(period: Period, conn: Conn):
     days = PERIOD_DAYS[period]
     span = timedelta(days=days) if days is not None else None
     return {

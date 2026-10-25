@@ -8,14 +8,11 @@ The rules and the SQL are in services/announcements.py. Only GET, POST and DELET
 setup in main.py allows nothing else), so every change is a POST to /{id} or /{id}/<action>.
 """
 
-from collections.abc import Iterator
-from contextlib import contextmanager
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from psycopg import Connection
 
-from app.core.db import get_conn
-from app.routes.deps import GoogleUser, require_admin, require_manager
+from app.routes.deps import Admin, Conn, http_errors, require_admin, require_manager
 from app.schemas.announcements import AnnouncementIn, ImageAlt
 from app.services import announcements
 from app.services.images import MAX_UPLOAD_BYTES, InvalidImage
@@ -33,7 +30,7 @@ router = APIRouter(prefix="/api/announcements", tags=["public"])
 admin_router = APIRouter(prefix="/api/admin/announcements", tags=["admin"], dependencies=[Depends(require_admin)])
 
 # What each error of the services means for the client. None: the error's own message is the detail.
-_ERRORS: dict[type[Exception], tuple[int, str | None]] = {
+_ERRORS = {
     announcements.NotFound: (status.HTTP_404_NOT_FOUND, "announcement not found"),
     announcements.ImageNotFound: (status.HTTP_404_NOT_FOUND, "image not found"),
     announcements.Empty: (status.HTTP_422_UNPROCESSABLE_ENTITY, "announcement is empty"),
@@ -42,15 +39,6 @@ _ERRORS: dict[type[Exception], tuple[int, str | None]] = {
     announcements.InvalidCursor: (status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid before"),
     InvalidImage: (status.HTTP_422_UNPROCESSABLE_ENTITY, None),
 }
-
-
-@contextmanager
-def _http_errors() -> Iterator[None]:
-    try:
-        yield
-    except tuple(_ERRORS) as exc:
-        code, detail = _ERRORS[type(exc)]
-        raise HTTPException(code, detail or str(exc)) from None
 
 
 def _shape(row: dict, image_base: str = "/api/announcements") -> dict:
@@ -84,12 +72,10 @@ def _image_response(data: bytes, cache: str) -> Response:
     )
 
 
-def _drafts_only_for_members(
-    announcement_id: int, user: GoogleUser = Depends(require_admin), conn: Connection = Depends(get_conn)
-) -> None:
+def _drafts_only_for_members(announcement_id: int, user: Admin, conn: Conn) -> None:
     """A committee member may change or delete only a draft (403 on a published one)."""
     if user.is_member:
-        with _http_errors():
+        with http_errors(_ERRORS):
             announcements.lock_draft_for_member(conn, announcement_id)
 
 
@@ -106,27 +92,24 @@ async def _raw_body(request: Request) -> bytes:
 # ---------- Public site ----------
 
 @router.get("")
-def list_public(
-    before: str | None = Query(None, max_length=100),
-    conn: Connection = Depends(get_conn),
-):
+def list_public(conn: Conn, before: Annotated[str | None, Query(max_length=100)] = None):
     """Published announcements, newest first, a page at a time; the first page starts with the pinned one.
     Later pages: before=next_before. next_before is null on the last page."""
-    with _http_errors():
+    with http_errors(_ERRORS):
         rows, next_before = announcements.list_public(conn, before)
     return {"announcements": [_shape(row) for row in rows], "next_before": next_before}
 
 
 @router.get("/pinned")
-def get_pinned(conn: Connection = Depends(get_conn)):
+def get_pinned(conn: Conn):
     """The announcement on the home page, or null when none is pinned."""
     row = announcements.get_pinned(conn)
     return _shape(row) if row else None
 
 
 @router.get("/{announcement_id}/image")
-def get_image(announcement_id: int, conn: Connection = Depends(get_conn)):
-    with _http_errors():
+def get_image(announcement_id: int, conn: Conn):
+    with http_errors(_ERRORS):
         return _image_response(announcements.public_image(conn, announcement_id), PUBLIC_IMAGE_CACHE)
 
 
@@ -134,9 +117,9 @@ def get_image(announcement_id: int, conn: Connection = Depends(get_conn)):
 
 @admin_router.get("")
 def list_admin(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(25, ge=1, le=MAX_PAGE_SIZE),
-    conn: Connection = Depends(get_conn),
+    conn: Conn,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 25,
 ):
     """Every announcement, drafts included, with its author."""
     rows, total = announcements.list_admin(conn, page, page_size)
@@ -144,80 +127,76 @@ def list_admin(
 
 
 @admin_router.post("", status_code=status.HTTP_201_CREATED)
-def create_announcement(
-    payload: AnnouncementIn,
-    user: GoogleUser = Depends(require_admin),
-    conn: Connection = Depends(get_conn),
-):
+def create_announcement(payload: AnnouncementIn, user: Admin, conn: Conn):
     """Saved as a draft. The image (POST /{id}/image) and publishing (POST /{id}/publish) come next."""
     return _admin_shape(announcements.create(conn, user.email, payload.model_dump()))
 
 
 @admin_router.post("/{announcement_id}", dependencies=[Depends(_drafts_only_for_members)])
-def edit_announcement(announcement_id: int, payload: AnnouncementIn, conn: Connection = Depends(get_conn)):
-    with _http_errors():
+def edit_announcement(announcement_id: int, payload: AnnouncementIn, conn: Conn):
+    with http_errors(_ERRORS):
         return _admin_shape(announcements.edit(conn, announcement_id, payload.model_dump()))
 
 
 @admin_router.delete(
     "/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(_drafts_only_for_members)]
 )
-def delete_announcement(announcement_id: int, conn: Connection = Depends(get_conn)):
-    with _http_errors():
+def delete_announcement(announcement_id: int, conn: Conn):
+    with http_errors(_ERRORS):
         announcements.delete(conn, announcement_id)
 
 
 # ---------- Console: publishing and the home page (admins only, not committee members) ----------
 
 @admin_router.post("/{announcement_id}/publish", dependencies=[Depends(require_manager)])
-def publish(announcement_id: int, pin: bool = False, conn: Connection = Depends(get_conn)):
+def publish(announcement_id: int, conn: Conn, pin: bool = False):
     """pin=true also puts it on the home page, in place of the one pinned before."""
-    with _http_errors():
+    with http_errors(_ERRORS):
         return _admin_shape(announcements.publish(conn, announcement_id, also_pin=pin))
 
 
 @admin_router.post("/{announcement_id}/unpublish", dependencies=[Depends(require_manager)])
-def unpublish(announcement_id: int, conn: Connection = Depends(get_conn)):
-    with _http_errors():
+def unpublish(announcement_id: int, conn: Conn):
+    with http_errors(_ERRORS):
         return _admin_shape(announcements.unpublish(conn, announcement_id))
 
 
 @admin_router.post("/{announcement_id}/pin", dependencies=[Depends(require_manager)])
-def pin_announcement(announcement_id: int, conn: Connection = Depends(get_conn)):
-    with _http_errors():
+def pin_announcement(announcement_id: int, conn: Conn):
+    with http_errors(_ERRORS):
         return _admin_shape(announcements.pin(conn, announcement_id))
 
 
 @admin_router.post("/{announcement_id}/unpin", dependencies=[Depends(require_manager)])
-def unpin_announcement(announcement_id: int, conn: Connection = Depends(get_conn)):
-    with _http_errors():
+def unpin_announcement(announcement_id: int, conn: Conn):
+    with http_errors(_ERRORS):
         return _admin_shape(announcements.unpin(conn, announcement_id))
 
 
 # ---------- Console: the image ----------
 
 @admin_router.get("/{announcement_id}/image")
-def get_admin_image(announcement_id: int, conn: Connection = Depends(get_conn)):
-    with _http_errors():
+def get_admin_image(announcement_id: int, conn: Conn):
+    with http_errors(_ERRORS):
         return _image_response(announcements.admin_image(conn, announcement_id), ADMIN_IMAGE_CACHE)
 
 
 @admin_router.post("/{announcement_id}/image", dependencies=[Depends(_drafts_only_for_members)])
 def upload_image(
     announcement_id: int,
-    alt: ImageAlt = Query(),
+    alt: Annotated[ImageAlt, Query()],
     # The body is the image file itself (sent as image/jpeg, image/png or image/webp), so no
     # multipart library is needed. The Content-Type is not trusted: prepare_image checks the bytes.
-    data: bytes = Depends(_raw_body),
-    conn: Connection = Depends(get_conn),
+    data: Annotated[bytes, Depends(_raw_body)],
+    conn: Conn,
 ):
     """Adds or replaces the image. 422 with the reason when it is not an image the site accepts."""
-    with _http_errors():
+    with http_errors(_ERRORS):
         return _admin_shape(announcements.set_image(conn, announcement_id, data, alt))
 
 
 @admin_router.delete("/{announcement_id}/image", dependencies=[Depends(_drafts_only_for_members)])
-def delete_image(announcement_id: int, conn: Connection = Depends(get_conn)):
+def delete_image(announcement_id: int, conn: Conn):
     """Removes the image and returns the announcement."""
-    with _http_errors():
+    with http_errors(_ERRORS):
         return _admin_shape(announcements.delete_image(conn, announcement_id))

@@ -9,13 +9,12 @@ back as a download, never shown inside the console, so even an HTML file cannot 
 The rules and the SQL are in services/meetings.py.
 """
 
+from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from psycopg import Connection
 
-from app.core.db import get_conn
-from app.routes.deps import GoogleUser, require_admin, require_manager
+from app.routes.deps import Admin, Conn, http_errors, require_admin, require_manager
 from app.schemas.meetings import MeetingIn
 from app.services import meetings
 
@@ -29,13 +28,12 @@ MAX_CONTENT_TYPE = 200
 # A file never changes (a new upload is a new id), so the browser may keep it. "private": no shared cache.
 ATTACHMENT_CACHE = "private, max-age=31536000, immutable"
 
-
-def _not_found() -> HTTPException:
-    return HTTPException(status.HTTP_404_NOT_FOUND, "meeting summary not found")
-
-
-def _attachment_not_found() -> HTTPException:
-    return HTTPException(status.HTTP_404_NOT_FOUND, "attachment not found")
+# What each error of services/meetings.py means for the console.
+_ERRORS = {
+    meetings.NotFound: (status.HTTP_404_NOT_FOUND, "meeting summary not found"),
+    meetings.AttachmentNotFound: (status.HTTP_404_NOT_FOUND, "attachment not found"),
+    meetings.EmptyFileName: (status.HTTP_422_UNPROCESSABLE_ENTITY, "file name is empty"),
+}
 
 
 def _content_type(request: Request) -> str:
@@ -61,47 +59,32 @@ async def _raw_file(request: Request) -> bytes:
 
 
 @router.get("")
-def list_meetings(conn: Connection = Depends(get_conn)):
+def list_meetings(conn: Conn):
     return {"items": meetings.list_all(conn)}
 
 
 @router.get("/{meeting_id}")
-def get_meeting(meeting_id: int, conn: Connection = Depends(get_conn)):
-    try:
+def get_meeting(meeting_id: int, conn: Conn):
+    with http_errors(_ERRORS):
         return meetings.get(conn, meeting_id)
-    except meetings.NotFound:
-        raise _not_found() from None
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_meeting(
-    payload: MeetingIn,
-    user: GoogleUser = Depends(require_admin),
-    conn: Connection = Depends(get_conn),
-):
+def create_meeting(payload: MeetingIn, user: Admin, conn: Conn):
     return meetings.create(conn, user.email, payload.model_dump())
 
 
 @router.post("/{meeting_id}")
-def edit_meeting(
-    meeting_id: int,
-    payload: MeetingIn,
-    user: GoogleUser = Depends(require_admin),
-    conn: Connection = Depends(get_conn),
-):
-    try:
+def edit_meeting(meeting_id: int, payload: MeetingIn, user: Admin, conn: Conn):
+    with http_errors(_ERRORS):
         return meetings.edit(conn, meeting_id, user.email, payload.model_dump())
-    except meetings.NotFound:
-        raise _not_found() from None
 
 
 @router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_manager)])
-def delete_meeting(meeting_id: int, conn: Connection = Depends(get_conn)):
+def delete_meeting(meeting_id: int, conn: Conn):
     """Admins only (403 for a committee member)."""
-    try:
+    with http_errors(_ERRORS):
         meetings.delete(conn, meeting_id)
-    except meetings.NotFound:
-        raise _not_found() from None
 
 
 # ---------- Attachments ----------
@@ -110,28 +93,22 @@ def delete_meeting(meeting_id: int, conn: Connection = Depends(get_conn)):
 def upload_attachment(
     meeting_id: int,
     request: Request,
-    name: str = Query(min_length=1, max_length=1000),
+    name: Annotated[str, Query(min_length=1, max_length=1000)],
     # The body is the file itself, sent with its own Content-Type.
-    data: bytes = Depends(_raw_file),
-    user: GoogleUser = Depends(require_admin),
-    conn: Connection = Depends(get_conn),
+    data: Annotated[bytes, Depends(_raw_file)],
+    user: Admin,
+    conn: Conn,
 ):
     """404 when the summary does not exist, 422 when the file is empty or over the size limit."""
-    try:
+    with http_errors(_ERRORS):
         return meetings.add_attachment(conn, meeting_id, user.email, name, _content_type(request), data)
-    except meetings.EmptyFileName:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "file name is empty") from None
-    except meetings.NotFound:
-        raise _not_found() from None
 
 
 @router.get("/{meeting_id}/attachments/{attachment_id}")
-def download_attachment(meeting_id: int, attachment_id: int, conn: Connection = Depends(get_conn)):
+def download_attachment(meeting_id: int, attachment_id: int, conn: Conn):
     """The file itself, always as a download with its original name."""
-    try:
+    with http_errors(_ERRORS):
         row = meetings.get_attachment(conn, meeting_id, attachment_id)
-    except meetings.AttachmentNotFound:
-        raise _attachment_not_found() from None
     # filename* carries the real (often Hebrew) name; filename is the plain fallback for old clients.
     disposition = f"attachment; filename=\"download\"; filename*=UTF-8''{quote(row['file_name'], safe='')}"
     return Response(
@@ -151,9 +128,8 @@ def download_attachment(meeting_id: int, attachment_id: int, conn: Connection = 
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_manager)],
 )
-def delete_attachment(meeting_id: int, attachment_id: int, conn: Connection = Depends(get_conn)):
+def delete_attachment(meeting_id: int, attachment_id: int, conn: Conn):
     """Permanently deletes one file. Admins only (403 for a committee member)."""
-    try:
+    with http_errors(_ERRORS):
         meetings.delete_attachment(conn, meeting_id, attachment_id)
-    except meetings.AttachmentNotFound:
-        raise _attachment_not_found() from None
+        
