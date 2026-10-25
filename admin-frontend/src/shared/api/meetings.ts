@@ -1,5 +1,5 @@
 /** Meeting summaries, console only (never on the public site). Every level may read, create and edit;
- *  deleting needs an admin (the server answers 403 to a committee member). The same goes for the files
+ *  deleting needs committee or admin (the server answers 403 to team). The same goes for the files
  *  attached to a summary: every level may upload and download one, only an admin may delete one. */
 
 import { request, requestBlob } from "./client";

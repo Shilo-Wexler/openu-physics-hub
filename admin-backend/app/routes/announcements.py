@@ -1,8 +1,8 @@
 """Committee announcements. Two routers in one file, because both sides share the same columns and shape:
 
 - router: the public site, GET /api/announcements, the pinned one, and each announcement's image. No sign-in.
-- admin_router: the console, /api/admin/announcements. Every admin level may use it, but a committee
-  member works on drafts only: publishing, pinning, and changing or deleting a published one need an admin.
+- admin_router: the console, /api/admin/announcements. Every admin level may use it, but a team
+  member works on drafts only: publishing, pinning, and changing or deleting a published one need committee or admin.
 
 The rules and the SQL are in services/announcements.py. Only GET, POST and DELETE are used (the CORS
 setup in main.py allows nothing else), so every change is a POST to /{id} or /{id}/<action>.
@@ -35,7 +35,7 @@ _ERRORS = {
     announcements.ImageNotFound: (status.HTTP_404_NOT_FOUND, "image not found"),
     announcements.Empty: (status.HTTP_422_UNPROCESSABLE_ENTITY, "announcement is empty"),
     announcements.NotPublished: (status.HTTP_409_CONFLICT, "announcement is not published"),
-    announcements.PublishedNeedsManager: (status.HTTP_403_FORBIDDEN, "requires an admin"),
+    announcements.PublishedNeedsManager: (status.HTTP_403_FORBIDDEN, "requires a committee member"),
     announcements.InvalidCursor: (status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid before"),
     InvalidImage: (status.HTTP_422_UNPROCESSABLE_ENTITY, None),
 }
@@ -72,11 +72,11 @@ def _image_response(data: bytes, cache: str) -> Response:
     )
 
 
-def _drafts_only_for_members(announcement_id: int, user: Admin, conn: Conn) -> None:
-    """A committee member may change or delete only a draft (403 on a published one)."""
-    if user.is_member:
+def _drafts_only_for_team(announcement_id: int, user: Admin, conn: Conn) -> None:
+    """Team may change or delete only a draft (403 on a published one)."""
+    if user.is_team:
         with http_errors(_ERRORS):
-            announcements.lock_draft_for_member(conn, announcement_id)
+            announcements.lock_draft_for_team(conn, announcement_id)
 
 
 async def _raw_body(request: Request) -> bytes:
@@ -132,21 +132,21 @@ def create_announcement(payload: AnnouncementIn, user: Admin, conn: Conn):
     return _admin_shape(announcements.create(conn, user.email, payload.model_dump()))
 
 
-@admin_router.post("/{announcement_id}", dependencies=[Depends(_drafts_only_for_members)])
+@admin_router.post("/{announcement_id}", dependencies=[Depends(_drafts_only_for_team)])
 def edit_announcement(announcement_id: int, payload: AnnouncementIn, conn: Conn):
     with http_errors(_ERRORS):
         return _admin_shape(announcements.edit(conn, announcement_id, payload.model_dump()))
 
 
 @admin_router.delete(
-    "/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(_drafts_only_for_members)]
+    "/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(_drafts_only_for_team)]
 )
 def delete_announcement(announcement_id: int, conn: Conn):
     with http_errors(_ERRORS):
         announcements.delete(conn, announcement_id)
 
 
-# ---------- Console: publishing and the home page (admins only, not committee members) ----------
+# ---------- Console: publishing and the home page (committee and admin, not team) ----------
 
 @admin_router.post("/{announcement_id}/publish", dependencies=[Depends(require_manager)])
 def publish(announcement_id: int, conn: Conn, pin: bool = False):
@@ -181,7 +181,7 @@ def get_admin_image(announcement_id: int, conn: Conn):
         return _image_response(announcements.admin_image(conn, announcement_id), ADMIN_IMAGE_CACHE)
 
 
-@admin_router.post("/{announcement_id}/image", dependencies=[Depends(_drafts_only_for_members)])
+@admin_router.post("/{announcement_id}/image", dependencies=[Depends(_drafts_only_for_team)])
 def upload_image(
     announcement_id: int,
     alt: Annotated[ImageAlt, Query()],
@@ -195,7 +195,7 @@ def upload_image(
         return _admin_shape(announcements.set_image(conn, announcement_id, data, alt))
 
 
-@admin_router.delete("/{announcement_id}/image", dependencies=[Depends(_drafts_only_for_members)])
+@admin_router.delete("/{announcement_id}/image", dependencies=[Depends(_drafts_only_for_team)])
 def delete_image(announcement_id: int, conn: Conn):
     """Removes the image and returns the announcement."""
     with http_errors(_ERRORS):

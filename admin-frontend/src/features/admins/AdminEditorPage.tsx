@@ -43,7 +43,7 @@ function AdminEditor({ email }: { email: string | null }) {
   // The form, sent together by "save".
   const [newEmail, setNewEmail] = useState("");
   const [name, setName] = useState("");
-  const [level, setLevel] = useState<Level>("member");
+  const [level, setLevel] = useState<Level>("team");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -83,7 +83,7 @@ function AdminEditor({ email }: { email: string | null }) {
   // Closing or reloading the tab with unsaved changes asks too (the browser's own question).
   useWarnOnLeave(dirty);
 
-  // Nobody to add for a member, so the "new" screen goes back to the list.
+  // Nobody to add for team, so the "new" screen goes back to the list.
   if (isNew && managed.length === 0) return <Navigate to={BACK} replace />;
 
   /** What is wrong with the form, or null when it can be sent. */
@@ -128,7 +128,7 @@ function AdminEditor({ email }: { email: string | null }) {
     if (!saved) return;
     const ok = await confirm({
       message: `${saved.name} יאבד מיד את הגישה לקונסולה.`,
-      action: "הסרת המנהל",
+      action: "הסרה מהצוות",
       danger: true,
     });
     if (!ok) return;
@@ -145,13 +145,13 @@ function AdminEditor({ email }: { email: string | null }) {
     }
   }
 
-  const back = <BackLink to={BACK} label="מנהלים" confirm={dirty ? LEAVE_QUESTION : undefined} />;
+  const back = <BackLink to={BACK} label="צוות" confirm={dirty ? LEAVE_QUESTION : undefined} />;
 
   if (missing) {
     return (
       <>
         {back}
-        <p className={styles.status}>המנהל הזה כבר לא ברשימה. אולי הוא הוסר.</p>
+        <p className={styles.status}>חבר הצוות הזה כבר לא ברשימה. אולי הוא הוסר.</p>
       </>
     );
   }
@@ -167,17 +167,17 @@ function AdminEditor({ email }: { email: string | null }) {
   const check = <span className={styles.check}>✓</span>;
   // Why the level can't be changed here, under the level.
   const levelNote = isSelf
-    ? "את התפקיד שלך יכול לשנות רק מנהל אחר."
+    ? "את התפקיד שלך יכול לשנות רק מישהו אחר."
     : !canManage
-      ? myRole === "member"
-        ? "רק מנהל יכול לשנות תפקידים."
-        : "רק מנהל ראשי יכול לשנות מנהל ראשי."
+      ? myRole === "team"
+        ? "רק חבר ועדה או מנהל יכולים לשנות תפקידים."
+        : "רק מנהל יכול לשנות מנהל."
       : LEVEL_HINT[level];
 
   return (
     <>
       {back}
-      <h1 className={styles.heading}>{isNew ? "מנהל חדש" : saved?.name}</h1>
+      <h1 className={styles.heading}>{isNew ? "חבר צוות חדש" : saved?.name}</h1>
 
       {isNew && (
         <section className={styles.section}>
@@ -193,7 +193,7 @@ function AdminEditor({ email }: { email: string | null }) {
             onChange={(e) => setNewEmail(e.target.value)}
             autoComplete="off"
           />
-          <p className={styles.hint}>חשבון הגוגל שאיתו המנהל ייכנס, למשל name@gmail.com. הגישה נפתחת מיד.</p>
+          <p className={styles.hint}>חשבון הגוגל שאיתו חבר הצוות ייכנס, למשל name@gmail.com. הגישה נפתחת מיד.</p>
         </section>
       )}
 
@@ -247,7 +247,7 @@ function AdminEditor({ email }: { email: string | null }) {
           </Group>
           {canManage && (
             <Group>
-              <Row label="הסרת המנהל" danger onClick={() => void remove()} />
+              <Row label="הסרה מהצוות" danger onClick={() => void remove()} />
             </Group>
           )}
         </>

@@ -1,4 +1,4 @@
-/** The admins, grouped by level: super admins, admins, committee members. A row opens the admin's screen;
+/** The team, grouped by level: admins, committee members, team. A row opens the person's screen;
     the round "+" (for those who may add admins) starts a new one. Every level sees the list. */
 
 import { Link } from "react-router";
@@ -11,9 +11,9 @@ import LoadError from "../../layout/LoadError";
 import styles from "./AdminsListPage.module.css";
 
 const GROUP_TITLE: Record<Level, string> = {
-  super_admin: "מנהלים ראשיים",
   admin: "מנהלים",
-  member: "חברי ועדה",
+  committee: "חברי ועדה",
+  team: "צוות",
 };
 
 export default function AdminsListPage() {
@@ -25,9 +25,9 @@ export default function AdminsListPage() {
   return (
     <>
       <header className={styles.head}>
-        <h1>מנהלים</h1>
+        <h1>צוות</h1>
         {canAdd && (
-          <Link to="/more/admins/new" className={styles.add} aria-label="מנהל חדש">
+          <Link to="/more/admins/new" className={styles.add} aria-label="חבר צוות חדש">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
@@ -36,7 +36,7 @@ export default function AdminsListPage() {
       </header>
 
       {admins.failed ? (
-        <LoadError loaded={admins} what="רשימת המנהלים" />
+        <LoadError loaded={admins} what="רשימת הצוות" />
       ) : !rows ? (
         <ListMessage>טוען…</ListMessage>
       ) : (

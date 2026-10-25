@@ -1,7 +1,7 @@
 """The admins table: who may use the console, and at which level.
 
-Every level sees the list; admins and super admins change it; only a super admin gives, changes
-or removes the super admin level. Nobody changes or removes their own row, so a super admin always
+Every level sees the list; committee and admins change it; only an admin gives, changes
+or removes the admin level. Nobody changes or removes their own row, so an admin always
 remains. Renaming yourself is the one exception: every level may do it.
 """
 
@@ -22,17 +22,17 @@ class OwnRow(Exception):
     """Changing the level of, or removing, your own row."""
 
 
-class NeedsSuperAdmin(Exception):
-    """Giving or touching the super admin level without being one."""
+class NeedsAdmin(Exception):
+    """Giving or touching the admin level without being one."""
 
 
 class NeedsManager(Exception):
-    """A member changing another admin."""
+    """Team changing someone else."""
 
 
-def _guard_super_admin(actor_role: str, *roles: str) -> None:
-    if "super_admin" in roles and actor_role != "super_admin":
-        raise NeedsSuperAdmin()
+def _guard_admin(actor_role: str, *roles: str) -> None:
+    if "admin" in roles and actor_role != "admin":
+        raise NeedsAdmin()
 
 
 def _lock_target(conn: Connection, actor_email: str, actor_role: str, email: str) -> str:
@@ -43,7 +43,7 @@ def _lock_target(conn: Connection, actor_email: str, actor_role: str, email: str
     row = conn.execute("select email, role from admins where email = %s for update", (target,)).fetchone()
     if row is None:
         raise NotAnAdmin()
-    _guard_super_admin(actor_role, row["role"])
+    _guard_admin(actor_role, row["role"])
     return row["email"]
 
 
@@ -58,7 +58,7 @@ def find(conn: Connection, email: str) -> dict | None:
 
 def add(conn: Connection, actor_email: str, actor_role: str, email: str, name: str, role: str) -> dict:
     """Takes effect at once: access is checked against this table on every request."""
-    _guard_super_admin(actor_role, role)
+    _guard_admin(actor_role, role)
     row = conn.execute(
         f"insert into admins (email, name, role, added_by) values (%s, %s, %s, %s) on conflict (email) do nothing "
         f"returning {COLUMNS}",
@@ -72,7 +72,7 @@ def add(conn: Connection, actor_email: str, actor_role: str, email: str, name: s
 def set_role(conn: Connection, actor_email: str, actor_role: str, email: str, role: str) -> dict:
     """Takes effect on the admin's next request."""
     target = _lock_target(conn, actor_email, actor_role, email)
-    _guard_super_admin(actor_role, role)
+    _guard_admin(actor_role, role)
     return conn.execute(
         f"update admins set role = %s where email = %s returning {COLUMNS}", (role, target)
     ).fetchone()
@@ -82,7 +82,7 @@ def set_name(conn: Connection, actor_email: str, actor_role: str, email: str, na
     """Your own name: any level. Another admin's name follows the rules of changing their level."""
     target = email.strip().lower()
     if target != actor_email:
-        if actor_role == "member":
+        if actor_role == "team":
             raise NeedsManager()
         target = _lock_target(conn, actor_email, actor_role, target)
     row = conn.execute(

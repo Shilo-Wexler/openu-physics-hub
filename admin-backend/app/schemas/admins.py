@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, StringConstraints
 
-Role = Literal["super_admin", "admin", "member"]
+Role = Literal["admin", "committee", "team"]
 AdminName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=40)]
 
 
@@ -22,5 +22,5 @@ class NewAdmin(BaseModel):
         StringConstraints(strip_whitespace=True, to_lower=True, min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+$"),
     ]
     name: AdminName
-    # Least privilege by default: a committee member.
-    role: Role = "member"
+    # Least privilege by default: team.
+    role: Role = "team"

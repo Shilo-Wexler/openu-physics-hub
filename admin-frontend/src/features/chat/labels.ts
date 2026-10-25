@@ -13,7 +13,7 @@ export const ACTION_LABEL: Record<ModerationActionType, string> = {
 
 export const STATE_LABEL: Record<MessageState, string> = {
   active: "בצ'אט",
-  removed: "הוסרה על ידי מנהל",
+  removed: "הוסרה על ידי הצוות",
   deleted: "נמחקה על ידי הכותב",
 };
 

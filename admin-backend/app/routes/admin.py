@@ -13,8 +13,8 @@ _ERRORS = {
     admins.NotAnAdmin: (status.HTTP_404_NOT_FOUND, "not an admin"),
     admins.AlreadyAnAdmin: (status.HTTP_409_CONFLICT, "already an admin"),
     admins.OwnRow: (status.HTTP_409_CONFLICT, "you cannot change or remove yourself"),
-    admins.NeedsSuperAdmin: (status.HTTP_403_FORBIDDEN, "requires a super admin"),
-    admins.NeedsManager: (status.HTTP_403_FORBIDDEN, "requires an admin"),
+    admins.NeedsAdmin: (status.HTTP_403_FORBIDDEN, "requires an admin"),
+    admins.NeedsManager: (status.HTTP_403_FORBIDDEN, "requires a committee member"),
 }
 
 

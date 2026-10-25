@@ -10,8 +10,8 @@ export interface AdminContextValue {
   email: string;
   /** The level from /me. Screens leave out what it may not do; the server checks again. */
   role: Level;
-  /** A committee member: no managing admins, and announcements as drafts only. */
-  isMember: boolean;
+  /** Team: no managing others, and announcements as drafts only. */
+  isTeam: boolean;
   /** An admin's name by email, from the admins list; null when unknown (removed, or the list not loaded yet). */
   nameOf: (email: string) => string | null;
   /** Goes up after every change, so lists and counters reload. */

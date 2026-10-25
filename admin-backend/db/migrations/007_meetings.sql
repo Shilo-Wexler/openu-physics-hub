@@ -1,5 +1,5 @@
 -- Meeting summaries, written and read in the admin console only. Never exposed to the public site.
--- Every level can create and edit; only admin and super_admin can delete (checked by the backend).
+-- Every level can create and edit; only committee and admin can delete (checked by the backend).
 
 create table meeting_summaries (
   id           bigint generated always as identity primary key,

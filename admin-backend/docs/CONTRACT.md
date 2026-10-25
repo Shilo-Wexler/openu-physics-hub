@@ -41,15 +41,15 @@ Loaded from `shared/courses.csv` (row `0` is the general row) by `db/seed/course
 
 | Level | In the console | Managing admins |
 |---|---|---|
-| `super_admin` | Everything | Any admin, any level |
-| `admin` | Everything | Admins and members only: never gives or touches `super_admin` |
-| `member` | Everything, announcements as drafts only | None |
+| `admin` | Everything | Anyone, any level |
+| `committee` | Everything | Committee and team only: never gives or touches `admin` |
+| `team` | Everything, announcements as drafts only | None |
 
 - Every admin has a name (2 to 40 characters), which the console shows instead of the email. It is required when adding an admin, also by hand in the DB.
-- Nobody changes their own level or removes themselves. With the rule above, a super admin always remains.
-- Everyone may rename themselves. Another admin's name follows the rules of their level: not by a member, and a `super_admin`'s only by a `super_admin`.
-- A new admin added without a level is a `member`. One added by hand in the DB is a `super_admin`.
-- Refused with `403`: `"requires an admin"` (a member) or `"requires a super admin"` (an admin).
+- Nobody changes their own level or removes themselves. With the rule above, an admin always remains.
+- Everyone may rename themselves. Someone else's name follows the rules of their level: not by team, and an `admin`'s only by an `admin`.
+- Someone added without a level is `team`. One added by hand in the DB is an `admin`.
+- Refused with `403`: `"requires a committee member"` (team) or `"requires an admin"` (committee).
 - Changes apply on the next request.
 
 ## Chat moderation (`moderation_actions`)
@@ -78,4 +78,4 @@ Loaded from `shared/courses.csv` (row `0` is the general row) by `db/seed/course
   - removing the only part of a published one, its image.
 - A draft may be empty: the console saves the text before it uploads the image.
 - Many can be published. At most one, a published one, is pinned to the home page.
-- A `member` creates, edits and deletes drafts (text and image). Publishing, unpublishing, pinning, and changing or deleting a published one: `403 "requires an admin"`.
+- `team` creates, edits and deletes drafts (text and image). Publishing, unpublishing, pinning, and changing or deleting a published one: `403 "requires a committee member"`.

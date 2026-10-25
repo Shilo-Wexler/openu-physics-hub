@@ -147,7 +147,7 @@ export default function AnnouncementEditorPage() {
 }
 
 function AnnouncementEditor({ id }: { id: number | null }) {
-  const { token, isMember, changed, onAuthError } = useAdmin();
+  const { token, isTeam, changed, onAuthError } = useAdmin();
   const confirm = useConfirm();
   const navigate = useNavigate();
 
@@ -195,9 +195,9 @@ function AnnouncementEditor({ id }: { id: number | null }) {
 
   // What the server has now: null until a new announcement is first saved.
   const saved = loaded?.announcement ?? null;
-  // A member writes drafts only (the server refuses the rest): no status to pick, and a published
+  // Team writes drafts only (the server refuses the rest): no status to pick, and a published
   // announcement opens read-only, without save or delete.
-  const readOnly = isMember && Boolean(saved?.published_at);
+  const readOnly = isTeam && Boolean(saved?.published_at);
   const savedImage = saved?.image && !dropImage ? saved.image : null;
   const hasImage = file !== null || savedImage !== null;
   const textChanged = title.trim() !== (saved?.title ?? "") || body.trim() !== (saved?.body ?? "");
@@ -444,11 +444,11 @@ function AnnouncementEditor({ id }: { id: number | null }) {
         </>
       )}
 
-      {isMember ? (
+      {isTeam ? (
         <p className={styles.hint}>
           {readOnly
-            ? "ההכרזה כבר פורסמה, ולכן רק מנהל יכול לשנות או למחוק אותה."
-            : "ניתן לשמור כטיוטה, ומנהל יכול לפרסם אותה."}
+            ? "ההכרזה כבר פורסמה, ולכן רק חבר ועדה או מנהל יכולים לשנות או למחוק אותה."
+            : "ניתן לשמור כטיוטה, וחבר ועדה או מנהל יכולים לפרסם אותה."}
         </p>
       ) : (
         <Group title="מצב" footer={statusNote[status]}>

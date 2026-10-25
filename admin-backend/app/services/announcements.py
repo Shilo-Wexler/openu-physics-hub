@@ -4,7 +4,7 @@ A new announcement is a draft until it is published. Any number can be published
 must be published, is pinned. Title, text and image are each optional, but a published announcement
 always has at least one of them: publishing an empty one, or emptying a published one, raises Empty.
 A draft may be empty, because the console saves the text before it uploads the image.
-A committee member works on drafts only (lock_draft_for_member).
+Team works on drafts only (lock_draft_for_team).
 """
 
 from datetime import datetime
@@ -55,7 +55,7 @@ class NotPublished(Exception):
 
 
 class PublishedNeedsManager(Exception):
-    """A committee member tried to change or delete a published announcement."""
+    """Team tried to change or delete a published announcement."""
 
 
 class InvalidCursor(Exception):
@@ -133,8 +133,8 @@ def public_image(conn: Connection, announcement_id: int) -> bytes:
 
 # ---------- Console: the list and the text ----------
 
-def lock_draft_for_member(conn: Connection, announcement_id: int) -> None:
-    """For a committee member, who may change or delete only a draft. The row stays locked until the
+def lock_draft_for_team(conn: Connection, announcement_id: int) -> None:
+    """For team, who may change or delete only a draft. The row stays locked until the
     change is saved, so it cannot be published in between."""
     row = conn.execute(
         "select published_at is not null as published from announcements where id = %s for update",
