@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from psycopg_pool import PoolTimeout
 
 from app.core.settings import ALLOWED_ORIGINS, DEV_AUTH_EMAIL
 from app.core.db import pool
@@ -53,6 +54,13 @@ async def validation_error(_: Request, exc: RequestValidationError):
     field = names[-1] if names else "request"
     kind = "missing" if first.get("type") == "missing" else "invalid"
     return UTF8JSONResponse(status_code=422, content={"detail": f"{kind} {field}"})
+
+
+@app.exception_handler(PoolTimeout)
+async def database_busy(_: Request, exc: PoolTimeout):
+    """No free DB connection in time (all busy, or the DB is down): a short 503 instead of a hanging request."""
+    log.warning("no database connection: %s", exc)
+    return UTF8JSONResponse(status_code=503, content={"detail": "database unavailable"})
 
 
 @app.exception_handler(Exception)
