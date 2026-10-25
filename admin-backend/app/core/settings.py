@@ -1,4 +1,8 @@
-"""Settings read from environment variables (or a .env file in admin-backend/)."""
+"""Settings read from environment variables (or a .env file in admin-backend/).
+
+A secret (DATABASE_URL, MOD_API_TOKEN, TURNSTILE_SECRET) may instead come from a file:
+set NAME_FILE to its path, as a Kubernetes secret mounted into the pod.
+"""
 
 import os
 from pathlib import Path
@@ -11,10 +15,30 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 ENVIRONMENTS = ("dev", "prod")
 
 
+# ---------- Readers ----------
+
 def _required(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
         raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
+
+def _optional_secret(name: str) -> str | None:
+    """A secret from the file named in NAME_FILE, or else from NAME. None when neither is set."""
+    path = os.environ.get(f"{name}_FILE", "").strip()
+    if path:
+        with open(path) as f:
+            value = f.read().strip()
+    else:
+        value = os.environ.get(name, "").strip()
+    return value or None
+
+
+def _required_secret(name: str) -> str:
+    value = _optional_secret(name)
+    if value is None:
+        raise RuntimeError(f"Missing required environment variable: {name} (or {name}_FILE)")
     return value
 
 
@@ -49,8 +73,10 @@ def _team_domain(value: str | None) -> str | None:
     return value.removeprefix("https://").rstrip("/")
 
 
+# ---------- Settings ----------
+
 ENV = _environment()
-DATABASE_URL = _required("DATABASE_URL")
+DATABASE_URL = _required_secret("DATABASE_URL")
 ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 
 # Console sign-in: Cloudflare Access sits in front of the console and adds a signed JWT to every request.
@@ -62,18 +88,6 @@ CF_ACCESS_AUD = _required_in_prod("CF_ACCESS_AUD", ENV)
 # DEV ONLY. When set, the bearer token "dev" acts as this email and "dev:<email>" as any email,
 # without Cloudflare. Lets you test endpoints from /docs. Only allowed when ENV=dev.
 DEV_AUTH_EMAIL = _dev_auth_email(ENV)
-
-
-def _optional_secret(name: str) -> str | None:
-    """A secret from the file named in NAME_FILE, or else from NAME. None when neither is set."""
-    path = os.environ.get(f"{name}_FILE", "").strip()
-    if path:
-        with open(path) as f:
-            value = f.read().strip()
-    else:
-        value = os.environ.get(name, "").strip()
-    return value or None
-
 
 # Chat moderation (server to server, see chat-backend/docs/internal-api.md).
 # Both optional: without them the rest of the console works and /api/admin/chat/* answers 503.
@@ -89,4 +103,3 @@ if MOD_API_TOKEN is not None and len(MOD_API_TOKEN) < 32:
 TURNSTILE_SECRET = _optional_secret("TURNSTILE_SECRET")
 if TURNSTILE_SECRET is None and ENV == "prod":
     raise RuntimeError("Missing required environment variable: TURNSTILE_SECRET (required when ENV=prod)")
-

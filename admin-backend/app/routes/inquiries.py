@@ -9,12 +9,12 @@ Only GET and POST are used (as in announcements), so a change is a POST to /{id}
 """
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from psycopg import Connection
 
-from app.core.db import get_conn, pool
-from app.routes.deps import GoogleUser, require_admin
+from app.core.db import pool
+from app.routes.deps import Admin, Conn, http_errors, require_admin
 from app.schemas.inquiries import InquiryStatus, InquiryType, InquiryUpdate, NewInquiry
 from app.services import inquiries, turnstile
 
@@ -26,9 +26,14 @@ HONEYPOT_ID = 0
 router = APIRouter(prefix="/api", tags=["public"])
 admin_router = APIRouter(prefix="/api/admin/inquiries", tags=["admin"], dependencies=[Depends(require_admin)])
 
-
-def _not_found() -> HTTPException:
-    return HTTPException(status.HTTP_404_NOT_FOUND, "inquiry not found")
+# What each error of the services means for the client. None: the error's own message is the detail.
+_ERRORS = {
+    turnstile.Unavailable: (status.HTTP_503_SERVICE_UNAVAILABLE, None),
+    turnstile.Rejected: (status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid turnstile_token"),
+    inquiries.UnknownCourse: (status.HTTP_422_UNPROCESSABLE_ENTITY, "unknown course"),
+    inquiries.InvalidValue: (status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid field value"),
+    inquiries.NotFound: (status.HTTP_404_NOT_FOUND, "inquiry not found"),
+}
 
 
 # ---------- Public site ----------
@@ -42,23 +47,13 @@ def create_inquiry(payload: NewInquiry):
 
     if not payload.turnstile_token:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "missing turnstile_token")
-    try:
+    with http_errors(_ERRORS):
         turnstile.verify(payload.turnstile_token)
-    except turnstile.Unavailable as exc:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from None
-    except turnstile.Rejected:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid turnstile_token") from None
 
     # The connection is taken only after Turnstile: the check can wait on Cloudflare for seconds,
     # and a flood must not hold every pool connection while it waits.
-    with pool.connection() as conn:
-        try:
-            inquiry_id = inquiries.create(conn, payload.course_id, payload.type, payload.content)
-        except inquiries.UnknownCourse:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unknown course") from None
-        except inquiries.InvalidValue:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid field value") from None
-
+    with pool.connection() as conn, http_errors(_ERRORS):
+        inquiry_id = inquiries.create(conn, payload.course_id, payload.type, payload.content)
     return {"id": inquiry_id}
 
 
@@ -66,12 +61,12 @@ def create_inquiry(payload: NewInquiry):
 
 @admin_router.get("")
 def list_inquiries(
+    conn: Conn,
     # "status" and "type" in the URL; other names in Python so they don't hide fastapi.status or type().
-    status_filter: InquiryStatus | None = Query(None, alias="status"),
-    type_filter: InquiryType | None = Query(None, alias="type"),
-    course: int | None = Query(None, ge=0),
-    before: int | None = Query(None, ge=1),
-    conn: Connection = Depends(get_conn),
+    status_filter: Annotated[InquiryStatus | None, Query(alias="status")] = None,
+    type_filter: Annotated[InquiryType | None, Query(alias="type")] = None,
+    course: Annotated[int | None, Query(ge=0)] = None,
+    before: Annotated[int | None, Query(ge=1)] = None,
 ):
     """Newest first, a page at a time. Next page: before=next_before; null on the last page."""
     return inquiries.list_page(conn, status_filter, type_filter, course, before)
@@ -79,26 +74,19 @@ def list_inquiries(
 
 # Declared before /{inquiry_id}, so "counts" is not taken for an id.
 @admin_router.get("/counts")
-def count_inquiries(conn: Connection = Depends(get_conn)):
+def count_inquiries(conn: Conn):
     """How many inquiries are in each status, for the console's tabs."""
     return inquiries.counts(conn)
 
 
 @admin_router.get("/{inquiry_id}")
-def get_inquiry(inquiry_id: int, conn: Connection = Depends(get_conn)):
-    try:
+def get_inquiry(inquiry_id: int, conn: Conn):
+    with http_errors(_ERRORS):
         return inquiries.get(conn, inquiry_id)
-    except inquiries.NotFound:
-        raise _not_found() from None
 
 
 @admin_router.post("/{inquiry_id}")
-def update_inquiry(
-    inquiry_id: int,
-    payload: InquiryUpdate,
-    user: GoogleUser = Depends(require_admin),
-    conn: Connection = Depends(get_conn),
-):
+def update_inquiry(inquiry_id: int, payload: InquiryUpdate, user: Admin, conn: Conn):
     """Changes the status and/or the internal note; a field left out stays as it is.
     Returns the inquiry as it is now."""
     sent = payload.model_fields_set
@@ -106,7 +94,6 @@ def update_inquiry(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "nothing to update")
     if "status" in sent and payload.status is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid status")
-    try:
+    with http_errors(_ERRORS):
         return inquiries.update(conn, inquiry_id, user.email, payload.model_dump(include=sent))
-    except inquiries.NotFound:
-        raise _not_found() from None
+    

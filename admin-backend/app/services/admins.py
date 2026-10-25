@@ -51,6 +51,11 @@ def list_all(conn: Connection) -> list[dict]:
     return conn.execute(f"select {COLUMNS} from admins order by created_at, email").fetchall()
 
 
+def find(conn: Connection, email: str) -> dict | None:
+    """The role and name of a signed-in email, or None when it is not an admin. Checked on every request."""
+    return conn.execute("select role, name from admins where email = %s", (email,)).fetchone()
+
+
 def add(conn: Connection, actor_email: str, actor_role: str, email: str, name: str, role: str) -> dict:
     """Takes effect at once: access is checked against this table on every request."""
     _guard_super_admin(actor_role, role)
