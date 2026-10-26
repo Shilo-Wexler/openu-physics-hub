@@ -50,8 +50,33 @@ backends:
       user: admin_app
       secretName: admin-db
     server:
-      # Turned on in the admin backend step.
-      enabled: false
+      enabled: true
+      image: admin-backend
+      replicas: 1
+      port: 8000
+      env:
+        ENV: "prod"
+        FORWARDED_ALLOW_IPS: "*"
+        # Moderation calls go to the chat backend's Service, inside the cluster only.
+        CHAT_API_URL: "http://chat-backend:8000"
+        # Cloudflare Access app in front of the console; set per environment.
+        CF_ACCESS_TEAM_DOMAIN: ""
+        CF_ACCESS_AUD: ""
+      secretName: admin-backend
+      secretFiles:
+        DATABASE_URL: database-url
+        MOD_API_TOKEN: mod-api-token
+        TURNSTILE_SECRET: turnstile-secret
+      probes:
+        live: /health/live
+        ready: /health/ready
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          # Pillow converts announcement images to WebP in memory, so more room than chat.
+          memory: 384Mi
 
 migrate:
   resources:

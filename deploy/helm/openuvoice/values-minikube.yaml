@@ -1,9 +1,20 @@
 # Values for the local minikube cluster, layered on top of values.yaml:
 #   helm upgrade --install ... -f deploy/helm/openuvoice/values-minikube.yaml
 # Only what differs from the defaults goes here. No secrets: those live in Secrets made by hand.
+
+# Images are built straight into minikube, so never try to pull them.
+image:
+  pullPolicy: Never
+
 backends:
   chat:
     server:
       env:
         # The dev OAuth client (the same one as in chat-backend/.env). Not a secret.
-        GOOGLE_CLIENT_ID: "706995094901-6dh21nu0flkhr96ogka8ga9fl1lqhgj3.apps.googleusercontent.com"
+        GOOGLE_CLIENT_ID: "PASTE-DEV-CLIENT-ID.apps.googleusercontent.com"
+  admin:
+    server:
+      env:
+        # The "admin-dev" Access application (admin-dev.openuvoice.com). Identifiers, not secrets.
+        CF_ACCESS_TEAM_DOMAIN: "dark-frog-20e8.cloudflareaccess.com"
+        CF_ACCESS_AUD: "ba8232895c7506668fe695c1cf25e65fca1b513189f26cfeae7cb359116e9828"
