@@ -1,8 +1,8 @@
-fastapi==0.115.*
-uvicorn[standard]==0.32.*
-psycopg[binary]==3.2.*
-psycopg-pool==3.2.*
-requests==2.*
-python-dotenv==1.*
-Pillow==12.*
-PyJWT[crypto]==2.*
+fastapi==0.115.14
+uvicorn[standard]==0.32.1
+psycopg[binary]==3.2.13
+psycopg-pool==3.2.8
+requests==2.34.2
+python-dotenv==1.2.4
+Pillow==12.3.0
+PyJWT[crypto]==2.15.1

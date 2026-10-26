@@ -1,4 +1,4 @@
-# Allowlist: send only what the image needs, so .env, tests and caches never reach it.
+# Allowlist: send only what the image needs, so secrets like .env never reach it.
 *
 !requirements.txt
 !app/

@@ -1,0 +1,11 @@
+# Allowlist: send only what the build needs.
+# .env stays out on purpose: Vite would read it at build time; it only holds dev settings.
+# node_modules stays out too: it holds macOS binaries, the image installs its own with npm ci.
+*
+!package.json
+!package-lock.json
+!tsconfig.json
+!vite.config.ts
+!index.html
+!src/
+!nginx.conf
