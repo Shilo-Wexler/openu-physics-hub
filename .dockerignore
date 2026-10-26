@@ -1,0 +1,7 @@
+# Used only by builds whose context is the repo root (the migrations images).
+# Allowlist: ignore everything, then let in only what those images copy.
+*
+!deploy/migrate/
+!chat-backend/db/
+!admin-backend/db/
+!shared/courses.csv
