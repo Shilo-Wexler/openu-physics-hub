@@ -1,0 +1,24 @@
+{{- range $name, $backend := .Values.backends }}
+{{- $server := $backend.server }}
+{{- if $server.enabled }}
+{{- $component := printf "%s-backend" $name }}
+{{- $ctx := dict "root" $ "component" $component }}
+---
+# Internal address of the backend: http://<name>-backend:<port>. Reached by the Ingress
+# and by other backends (the admin backend calls chat's /internal through it).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $component }}
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "openuvoice.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $server.port }}
+      targetPort: http
+{{- end }}
+{{- end }}

@@ -1,0 +1,9 @@
+# Values for the local minikube cluster, layered on top of values.yaml:
+#   helm upgrade --install ... -f deploy/helm/openuvoice/values-minikube.yaml
+# Only what differs from the defaults goes here. No secrets: those live in Secrets made by hand.
+backends:
+  chat:
+    server:
+      env:
+        # The dev OAuth client (the same one as in chat-backend/.env). Not a secret.
+        GOOGLE_CLIENT_ID: "706995094901-6dh21nu0flkhr96ogka8ga9fl1lqhgj3.apps.googleusercontent.com"

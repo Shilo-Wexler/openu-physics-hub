@@ -1,0 +1,72 @@
+{{- range $name, $backend := .Values.backends }}
+{{- $server := $backend.server }}
+{{- if $server.enabled }}
+{{- $component := printf "%s-backend" $name }}
+{{- $ctx := dict "root" $ "component" $component }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $component }}
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+spec:
+  replicas: {{ $server.replicas }}
+  # Start the new pod and wait until it is ready before stopping the old one: no downtime on deploy.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "openuvoice.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "openuvoice.labels" $ctx | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "openuvoice.podSecurityContext" $ | nindent 8 }}
+      containers:
+        - name: server
+          image: {{ include "openuvoice.image" (dict "root" $ "name" $server.image) }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $server.port }}
+          env:
+            {{- include "openuvoice.serverEnv" (dict "server" $server) | nindent 12 }}
+          securityContext:
+            {{- include "openuvoice.containerSecurityContext" $ | nindent 12 }}
+          # Up to 60s to start (opening the DB pool). Liveness and readiness wait until it passes.
+          startupProbe:
+            httpGet:
+              path: {{ $server.probes.live }}
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          # Not ready = no traffic from the Service, but no restart. Covers a DB that is down for a while.
+          readinessProbe:
+            httpGet:
+              path: {{ $server.probes.ready }}
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          # Restart only when the process itself stops answering. Never checks the DB.
+          livenessProbe:
+            httpGet:
+              path: {{ $server.probes.live }}
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml $server.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "openuvoice.serverVolumeMounts" $ | nindent 12 }}
+      volumes:
+        {{- include "openuvoice.serverVolumes" (dict "server" $server) | nindent 8 }}
+{{- end }}
+{{- end }}

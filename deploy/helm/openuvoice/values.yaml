@@ -1,5 +1,6 @@
 # Images are built per commit and tagged with the short git hash:
-#   helm upgrade --install openuvoice deploy/helm/openuvoice -n openuvoice --set image.tag=$(git rev-parse --short HEAD)
+#   helm upgrade --install openuvoice deploy/helm/openuvoice -n openuvoice \
+#     -f deploy/helm/openuvoice/values-minikube.yaml --set image.tag=$(git rev-parse --short HEAD)
 # registry is empty on minikube (images are built straight into the cluster);
 # later it becomes e.g. "ghcr.io/shilo-wexler/".
 image:
@@ -7,8 +8,11 @@ image:
   tag: ""
   pullPolicy: IfNotPresent
 
-# One entry per backend. Each gets a migrations Job now, and a Deployment in the next steps.
+# One entry per backend: its database (used by the migrations Job) and its server.
 # database must match the entry in the openuvoice-db chart.
+# server.env holds plain settings; values that differ per environment are set in values-<env>.yaml.
+# server.secretFiles maps a setting to a key of server.secretName. The Secret is mounted as files
+# and the app reads <SETTING>_FILE, so secrets never appear in env vars.
 backends:
   chat:
     database:
@@ -16,12 +20,38 @@ backends:
       name: chat_db
       user: chat_app
       secretName: chat-db
+    server:
+      enabled: true
+      image: chat-backend
+      replicas: 1
+      port: 8000
+      env:
+        ENV: "prod"
+        # Only the Ingress reaches the pods, so its X-Forwarded-* headers are trusted.
+        FORWARDED_ALLOW_IPS: "*"
+        GOOGLE_CLIENT_ID: ""
+      secretName: chat-backend
+      secretFiles:
+        DATABASE_URL: database-url
+        MOD_API_TOKEN: mod-api-token
+      probes:
+        live: /health/live
+        ready: /health/ready
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 256Mi
   admin:
     database:
       host: admin-db
       name: admin_db
       user: admin_app
       secretName: admin-db
+    server:
+      # Turned on in the admin backend step.
+      enabled: false
 
 migrate:
   resources:
@@ -30,3 +60,8 @@ migrate:
       memory: 64Mi
     limits:
       memory: 128Mi
+
+# Daily job that deletes chat accounts whose week of grace has passed.
+purge:
+  schedule: "0 3 * * *"
+  timeZone: Asia/Jerusalem
