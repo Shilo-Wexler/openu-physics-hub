@@ -1,0 +1,48 @@
+{{- $server := .Values.backends.chat.server }}
+{{- if $server.enabled }}
+{{- $ctx := dict "root" $ "component" "chat-purge" }}
+# Deletes chat accounts whose week of grace has passed (app/jobs/purge_accounts.py).
+# Same image, settings and secrets as the chat server.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: chat-purge
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+spec:
+  schedule: {{ .Values.purge.schedule | quote }}
+  timeZone: {{ .Values.purge.timeZone }}
+  # Never two runs at once, and a run missed by more than an hour waits for the next day.
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            {{- include "openuvoice.labels" $ctx | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            {{- include "openuvoice.podSecurityContext" $ | nindent 12 }}
+          containers:
+            - name: purge
+              image: {{ include "openuvoice.image" (dict "root" $ "name" $server.image) }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["python", "-m", "app.jobs.purge_accounts"]
+              env:
+                {{- include "openuvoice.serverEnv" (dict "server" $server) | nindent 16 }}
+              securityContext:
+                {{- include "openuvoice.containerSecurityContext" $ | nindent 16 }}
+              resources:
+                {{- toYaml $server.resources | nindent 16 }}
+              volumeMounts:
+                {{- include "openuvoice.serverVolumeMounts" $ | nindent 16 }}
+          volumes:
+            {{- include "openuvoice.serverVolumes" (dict "server" $server) | nindent 12 }}
+{{- end }}
