@@ -11,7 +11,7 @@ from psycopg_pool import PoolTimeout
 
 from app.core.settings import ALLOWED_ORIGINS, DEV_AUTH_EMAIL
 from app.core.db import pool
-from app.routes import admin, announcements, chat, inquiries, meetings, stats
+from app.routes import admin, announcements, chat, health, inquiries, meetings, stats
 
 
 @asynccontextmanager
@@ -78,6 +78,10 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+# Unprefixed on purpose: Kubernetes probes call the pod directly, and the Ingress only
+# forwards /api paths, so these are never reachable from outside.
+app.include_router(health.router)
+
 app.include_router(inquiries.router)
 app.include_router(inquiries.admin_router)
 app.include_router(admin.router)
@@ -86,8 +90,3 @@ app.include_router(announcements.router)
 app.include_router(announcements.admin_router)
 app.include_router(stats.router)
 app.include_router(meetings.router)
-
-
-@app.get("/health")
-def health():
-    return {"ok": True}
