@@ -1,0 +1,31 @@
+# Postgres image shared by every database below.
+image:
+  repository: postgres
+  tag: "17-alpine"
+  pullPolicy: IfNotPresent
+
+# One Postgres per backend. Each entry becomes its own StatefulSet, Service and disk.
+# secretName points to a Secret created by hand (never in git) with two keys:
+#   postgres-password  for the postgres superuser (admin work only)
+#   app-password       for appUser, the user the backend and migrations connect as
+databases:
+  - name: chat
+    database: chat_db
+    appUser: chat_app
+    secretName: chat-db
+    storage: 1Gi
+  - name: admin
+    database: admin_db
+    appUser: admin_app
+    secretName: admin-db
+    storage: 1Gi
+
+# Empty means the cluster's default StorageClass (on minikube: "standard").
+storageClass: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
