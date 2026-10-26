@@ -4,6 +4,8 @@
 # Safe to run on every deploy: applied migrations are skipped and the seed is an upsert.
 set -eu
 
+export PGOPTIONS="-c client_min_messages=warning"
+
 MIGRATIONS_DIR=/db/migrations
 SEED_FILE=/db/seed/courses.sql
 COURSES_CSV=/db/courses.csv
