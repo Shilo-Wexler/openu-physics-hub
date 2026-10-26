@@ -1,0 +1,57 @@
+{{- range $name, $backend := .Values.backends }}
+{{- $component := printf "%s-migrate" $name }}
+{{- $ctx := dict "root" $ "component" $component }}
+---
+# Brings this backend's database up to date before any new pod of the release starts.
+# If it fails, the install or upgrade fails and the running version keeps serving.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $component }}
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    # Delete the previous run only when a new one starts, so the last run's logs stay readable.
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        {{- include "openuvoice.labels" $ctx | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "openuvoice.podSecurityContext" $ | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "openuvoice.image" (dict "root" $ "name" $component) }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          env:
+            - name: PGHOST
+              value: {{ $backend.database.host }}
+            - name: PGDATABASE
+              value: {{ $backend.database.name }}
+            - name: PGUSER
+              value: {{ $backend.database.user }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $backend.database.secretName }}
+                  key: app-password
+            - name: PGCONNECT_TIMEOUT
+              value: "5"
+          securityContext:
+            {{- include "openuvoice.containerSecurityContext" $ | nindent 12 }}
+          resources:
+            {{- toYaml $.Values.migrate.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

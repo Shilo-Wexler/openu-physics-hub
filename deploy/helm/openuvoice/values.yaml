@@ -1,0 +1,32 @@
+# Images are built per commit and tagged with the short git hash:
+#   helm upgrade --install openuvoice deploy/helm/openuvoice -n openuvoice --set image.tag=$(git rev-parse --short HEAD)
+# registry is empty on minikube (images are built straight into the cluster);
+# later it becomes e.g. "ghcr.io/shilo-wexler/".
+image:
+  registry: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# One entry per backend. Each gets a migrations Job now, and a Deployment in the next steps.
+# database must match the entry in the openuvoice-db chart.
+backends:
+  chat:
+    database:
+      host: chat-db
+      name: chat_db
+      user: chat_app
+      secretName: chat-db
+  admin:
+    database:
+      host: admin-db
+      name: admin_db
+      user: admin_app
+      secretName: admin-db
+
+migrate:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi

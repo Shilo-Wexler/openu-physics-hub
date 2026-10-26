@@ -1,0 +1,6 @@
+apiVersion: v2
+name: openuvoice
+description: OpenUVoice site, admin console and their two backends.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
