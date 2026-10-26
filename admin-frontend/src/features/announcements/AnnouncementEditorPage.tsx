@@ -59,7 +59,7 @@ function statusOf(announcement: AdminAnnouncement): Status {
 /** Cuts a long name for a note under a group. */
 function clip(text: string, max = 60): string {
   const chars = [...text];
-  return chars.length > max ? `${chars.slice(0, max).join("")}...` : text;
+  return chars.length > max ? `${chars.slice(0, max).join("")}…` : text;
 }
 
 /** What the screen needs: the announcement (null for a new one) and the one now on the home page. */
@@ -489,4 +489,3 @@ function AnnouncementEditor({ id }: { id: number | null }) {
     </>
   );
 }
-
