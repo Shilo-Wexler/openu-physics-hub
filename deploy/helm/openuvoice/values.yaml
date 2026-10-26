@@ -90,3 +90,44 @@ migrate:
 purge:
   schedule: "0 3 * * *"
   timeZone: Asia/Jerusalem
+
+# The two static sites (nginx serving the built files). Each gets <name>-frontend.
+frontends:
+  public:
+    image: public-frontend
+    replicas: 1
+    port: 8080
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 64Mi
+  admin:
+    image: admin-frontend
+    replicas: 1
+    port: 8080
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 64Mi
+
+# One host for the site and one for the console; set per environment.
+# annotations are specific to the Ingress controller (ingress-nginx here), so they live in values:
+# switching controller means changing these, not the templates.
+ingress:
+  className: nginx
+  hosts:
+    public: ""
+    admin: ""
+  annotations:
+    public: {}
+    admin:
+      # Meeting attachments are up to 25MB (checked again by the backend); the default is 1MB.
+      nginx.ingress.kubernetes.io/proxy-body-size: "26m"
+    # A separate Ingress for POST /api/inquiries, so the limit applies to that path only.
+    inquiries:
+      nginx.ingress.kubernetes.io/limit-rpm: "5"
+      nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
