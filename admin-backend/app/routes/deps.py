@@ -109,7 +109,7 @@ Admin = Annotated[AdminUser, Depends(require_admin)]
 def require_manager(user: Admin) -> AdminUser:
     """Committee or admin: managing others, publishing and pinning. Not team."""
     if user.is_team:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "requires an admin")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "requires a committee member")
     return user
 
 
