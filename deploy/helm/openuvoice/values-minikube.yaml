@@ -18,3 +18,9 @@ backends:
         # The "admin-dev" Access application (admin-dev.openuvoice.com). Identifiers, not secrets.
         CF_ACCESS_TEAM_DOMAIN: "dark-frog-20e8.cloudflareaccess.com"
         CF_ACCESS_AUD: "ba8232895c7506668fe695c1cf25e65fca1b513189f26cfeae7cb359116e9828"
+
+# Local names, reached from inside the VM with curl -H "Host: ...". The tunnel step adds real hosts.
+ingress:
+  hosts:
+    public: openuvoice.local
+    admin: admin.openuvoice.local

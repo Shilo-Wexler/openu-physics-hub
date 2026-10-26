@@ -1,0 +1,59 @@
+{{- range $name, $site := .Values.frontends }}
+{{- $component := printf "%s-frontend" $name }}
+{{- $ctx := dict "root" $ "component" $component }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $component }}
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+spec:
+  replicas: {{ $site.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "openuvoice.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "openuvoice.labels" $ctx | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "openuvoice.podSecurityContext" $ | nindent 8 }}
+      containers:
+        - name: nginx
+          image: {{ include "openuvoice.image" (dict "root" $ "name" $site.image) }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $site.port }}
+          securityContext:
+            {{- include "openuvoice.containerSecurityContext" $ | nindent 12 }}
+          # nginx answers /healthz itself (see nginx.conf); no backend behind it to check.
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            {{- toYaml $site.resources | nindent 12 }}
+          # The unprivileged nginx image keeps its pid file and temp files in /tmp.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

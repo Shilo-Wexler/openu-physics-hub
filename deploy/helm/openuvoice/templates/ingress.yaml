@@ -1,0 +1,103 @@
+{{- $publicHost := required "Set ingress.hosts.public" .Values.ingress.hosts.public }}
+{{- $adminHost := required "Set ingress.hosts.admin" .Values.ingress.hosts.admin }}
+{{- $chatPort := .Values.backends.chat.server.port }}
+{{- $adminPort := .Values.backends.admin.server.port }}
+{{- $ctx := dict "root" $ "component" "ingress" }}
+# The only way in from outside. Each path below is the complete list of what is public:
+# /internal, /health and the databases are never routed, so they stay inside the cluster.
+---
+# The site: its files, the chat API, and the two public routes of the admin backend.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openuvoice-public
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+  {{- with .Values.ingress.annotations.public }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ $publicHost | quote }}
+      http:
+        paths:
+          - path: /api/chat
+            pathType: Prefix
+            backend:
+              service:
+                name: chat-backend
+                port:
+                  number: {{ $chatPort }}
+          - path: /api/announcements
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-backend
+                port:
+                  number: {{ $adminPort }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: public-frontend
+                port:
+                  number: {{ .Values.frontends.public.port }}
+---
+# POST /api/inquiries on its own Ingress, so the rate limit applies to this path only.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openuvoice-inquiries
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+  {{- with .Values.ingress.annotations.inquiries }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ $publicHost | quote }}
+      http:
+        paths:
+          - path: /api/inquiries
+            pathType: Exact
+            backend:
+              service:
+                name: admin-backend
+                port:
+                  number: {{ $adminPort }}
+---
+# The console: its files and the admin API. Cloudflare Access sits in front of this host.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openuvoice-admin
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+  {{- with .Values.ingress.annotations.admin }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ $adminHost | quote }}
+      http:
+        paths:
+          - path: /api/admin
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-backend
+                port:
+                  number: {{ $adminPort }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-frontend
+                port:
+                  number: {{ .Values.frontends.admin.port }}
