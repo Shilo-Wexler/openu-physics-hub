@@ -12,6 +12,8 @@ import {
   type InquiryType,
 } from "../../shared/api/inquiries";
 import SegmentedControl, { type SegmentOption } from "../../shared/components/SegmentedControl";
+// Public by design (it is in the page anyway); the matching secret lives only on the server.
+import { TURNSTILE_SITE_KEY } from "../../shared/lib/config";
 import { loadCourses } from "../courses/courseList";
 import CourseSearch from "../courses/CourseSearch";
 import TurnstileWidget from "./TurnstileWidget";
@@ -24,9 +26,6 @@ const TYPE_LABELS: Record<InquiryType, string> = {
   admin: "מנהלה ותוכנית לימודים",
   other: "אחר",
 };
-
-// Public by design (it is in the page anyway); the matching secret lives only on the server.
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 // The counter appears only near the limit, as in the chat's writing box.
 const SHOW_COUNTER_FROM = MAX_INQUIRY_LENGTH - 300;

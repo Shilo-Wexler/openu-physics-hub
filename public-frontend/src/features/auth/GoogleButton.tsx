@@ -6,9 +6,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { GOOGLE_CLIENT_ID } from "../../shared/lib/config";
 import { saveReturnPath } from "./signInReturn";
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+const CLIENT_ID = GOOGLE_CLIENT_ID;
 const SCRIPT_URL = "https://accounts.google.com/gsi/client";
 // Google posts the sign-in here; the server checks it and redirects to /auth/done.
 const LOGIN_PATH = "/api/chat/auth/google/redirect";
@@ -46,7 +47,7 @@ let googlePromise: Promise<GoogleIdentity> | null = null;
 function loadGoogle(): Promise<GoogleIdentity> {
   googlePromise ??= new Promise<GoogleIdentity>((resolve, reject) => {
     if (!CLIENT_ID) {
-      reject(new Error("VITE_GOOGLE_CLIENT_ID is not set"));
+      reject(new Error("Google client ID is not set (config.js, or VITE_GOOGLE_CLIENT_ID in dev)"));
       return;
     }
     const script = document.createElement("script");
