@@ -1,0 +1,30 @@
+# The one Application applied by hand. It points Argo CD at deploy/argocd/apps/: every file there
+# is an Application, so adding a file (and merging) adds something Argo CD keeps in sync.
+#
+# First install on a fresh cluster (once; after this, everything comes from git):
+#   1. helm repo add argo https://argoproj.github.io/argo-helm
+#      helm install argocd argo/argo-cd --version 10.11.6 -n argocd --create-namespace \
+#        -f deploy/argocd/values.yaml
+#   2. A read-only GitHub deploy key, stored as a repository Secret in the argocd namespace
+#      (the private key lives only in that Secret).
+#   3. kubectl apply -f deploy/argocd/root.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
+    targetRevision: main
+    path: deploy/argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      # A file removed from apps/ removes its Application too.
+      prune: true
+      # A change made by hand in the cluster is put back to what git says.
+      selfHeal: true

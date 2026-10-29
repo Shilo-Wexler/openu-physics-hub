@@ -1,0 +1,32 @@
+# Argo CD managing itself: the official chart, with our values from this repo.
+# To upgrade Argo CD, change targetRevision below (and the version in root.yaml's install note).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://argoproj.github.io/argo-helm
+      chart: argo-cd
+      targetRevision: 10.11.6
+      helm:
+        # Same release name as the first install, so Argo CD adopts those resources as they are.
+        releaseName: argocd
+        valueFiles:
+          - $values/deploy/argocd/values.yaml
+    - repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+      # Never delete anything here automatically: a bad commit must not be able to remove Argo CD.
+      prune: false
+    syncOptions:
+      # Argo CD's own CRDs are too large for a client-side apply.
+      - ServerSideApply=true
