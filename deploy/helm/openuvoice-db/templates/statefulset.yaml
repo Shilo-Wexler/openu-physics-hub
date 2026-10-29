@@ -28,12 +28,6 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-        # On Ubuntu 26.04 hosts containerd's AppArmor profile ends up stacked, and its rules then
-        # block signals between Postgres's own processes, so Postgres never finishes starting
-        # (containerd/containerd#14485). The rest of this pod's hardening still applies.
-        # Remove once the k3s release we run ships containerd's fix.
-        appArmorProfile:
-          type: Unconfined
       containers:
         - name: postgres
           image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
