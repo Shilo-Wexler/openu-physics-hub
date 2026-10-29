@@ -24,6 +24,7 @@ spec:
         {{- include "openuvoice.labels" $ctx | nindent 8 }}
     spec:
       automountServiceAccountToken: false
+      {{- include "openuvoice.imagePullSecrets" $ | nindent 6 }}
       securityContext:
         {{- include "openuvoice.podSecurityContext" $ | nindent 8 }}
       containers:

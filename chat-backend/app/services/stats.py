@@ -4,7 +4,6 @@ Called only through the /internal routes, by the admin backend (not by browsers)
 """
 
 import asyncpg
-
 from app.core import db
 
 # Most courses one request may ask for. The console shows a short top list, never all courses.

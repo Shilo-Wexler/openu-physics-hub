@@ -4,7 +4,7 @@ Fails the render when image.tag is missing, so an unknown version is never insta
 Called with (dict "root" $ "name" "chat-migrate").
 */}}
 {{- define "openuvoice.image" -}}
-{{- $tag := required "Set image.tag, e.g. --set image.tag=$(git rev-parse --short HEAD)" .root.Values.image.tag -}}
+{{- $tag := required "Set image.tag, e.g. --set-string image.tag=$(git rev-parse --short HEAD)" .root.Values.image.tag -}}
 {{- printf "%s%s:%s" .root.Values.image.registry .name $tag -}}
 {{- end -}}
 
@@ -46,4 +46,16 @@ allowPrivilegeEscalation: false
 readOnlyRootFilesystem: true
 capabilities:
   drop: ["ALL"]
+{{- end -}}
+
+{{/*
+The Secret that lets every pod pull our private images (from GHCR). Renders nothing when
+image.pullSecret is empty, as on minikube, where the images are built straight into the cluster.
+Called with the root context, inside a pod spec.
+*/}}
+{{- define "openuvoice.imagePullSecrets" -}}
+{{- with .Values.image.pullSecret }}
+imagePullSecrets:
+  - name: {{ . }}
+{{- end }}
 {{- end -}}

@@ -25,7 +25,7 @@ def ready():
         with pool.connection(timeout=READY_TIMEOUT) as conn:
             conn.execute(f"set local statement_timeout = {READY_TIMEOUT * 1000}")
             row = conn.execute("select exists (select 1 from courses) as has_courses").fetchone()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - any failure means not ready
         return JSONResponse(
             status_code=503, content={"status": "not ready", "reason": type(exc).__name__}
         )

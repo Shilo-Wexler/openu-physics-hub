@@ -6,11 +6,15 @@ from typing import Annotated
 from urllib.parse import parse_qs
 from uuid import UUID
 
-from fastapi import APIRouter, Cookie, Depends, Request, Response
-
-from app.routes.deps import clear_session_cookie, current_user_id, http_errors, set_session_cookie
+from app.routes.deps import (
+    clear_session_cookie,
+    current_user_id,
+    http_errors,
+    set_session_cookie,
+)
 from app.schemas.auth import GoogleSignIn
 from app.services import google_auth, sessions, users
+from fastapi import APIRouter, Cookie, Depends, Request, Response
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

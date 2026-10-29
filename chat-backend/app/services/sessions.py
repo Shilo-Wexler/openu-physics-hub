@@ -2,7 +2,7 @@
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from app.core import db, settings
@@ -34,7 +34,7 @@ async def get_user_id(token: str) -> UUID | None:
     )
     if row is None:
         return None
-    idle = datetime.now(timezone.utc) - row["last_seen_at"]
+    idle = datetime.now(UTC) - row["last_seen_at"]
     if idle > _MAX_IDLE:
         await db.pool.execute("delete from sessions where token_hash = $1", token_hash)
         return None

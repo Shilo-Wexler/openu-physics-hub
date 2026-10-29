@@ -1,9 +1,8 @@
 """Health probes for Kubernetes: live = process answers, ready = can serve requests."""
 
+from app.core import db, settings
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-
-from app.core import db, settings
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -23,7 +22,7 @@ async def ready():
             has_courses = await conn.fetchval(
                 "select exists (select 1 from courses)", timeout=settings.READY_TIMEOUT
             )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - any failure means not ready
         return JSONResponse(
             status_code=503, content={"status": "not ready", "reason": type(exc).__name__}
         )

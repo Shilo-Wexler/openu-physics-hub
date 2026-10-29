@@ -28,6 +28,7 @@ spec:
         spec:
           restartPolicy: Never
           automountServiceAccountToken: false
+          {{- include "openuvoice.imagePullSecrets" $ | nindent 10 }}
           securityContext:
             {{- include "openuvoice.podSecurityContext" $ | nindent 12 }}
           containers:

@@ -3,7 +3,6 @@
 from uuid import UUID
 
 import asyncpg
-
 from app.core import db
 from app.services.users import UserBlocked
 

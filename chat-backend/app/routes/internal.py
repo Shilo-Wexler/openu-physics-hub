@@ -3,11 +3,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
-
 from app.routes.deps import http_errors, require_mod_token
 from app.services import moderation, stats
 from app.services.messages import MessageNotFound
+from fastapi import APIRouter, Depends, Query
 
 # The dependency on the router protects every route here, including ones added later.
 router = APIRouter(

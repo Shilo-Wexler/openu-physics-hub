@@ -13,7 +13,6 @@ from datetime import timedelta
 from uuid import UUID
 
 import asyncpg
-
 from app.core import db
 
 # 3-30 characters: Hebrew or English letters, digits, space, underscore, hyphen, dot.

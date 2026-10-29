@@ -1,7 +1,6 @@
 """Postgres connection pool shared by all requests."""
 
 import asyncpg
-
 from app.core import settings
 
 pool: asyncpg.Pool | None = None
