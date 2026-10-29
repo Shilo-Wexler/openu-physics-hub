@@ -1,7 +1,8 @@
 /// <reference types="vite/client" />
 
-// The VITE_* variables the site reads. Vite puts them into the build, so they are public by design:
-// only keys meant for the browser go here, never a secret.
+// The VITE_* variables the site reads, only under `npm run dev` (from .env). The image is built
+// without them: there the same settings come from /config.js at runtime (src/shared/lib/config.ts).
+// Only keys meant for the browser go here, never a secret.
 interface ImportMetaEnv {
   // Google sign-in for the chat (OAuth client ID, public by design).
   readonly VITE_GOOGLE_CLIENT_ID?: string;

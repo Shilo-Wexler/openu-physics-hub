@@ -1,5 +1,6 @@
 # Allowlist: send only what the build needs.
-# .env stays out on purpose: Vite would bake it into the bundle, build values come from --build-arg instead.
+# .env stays out on purpose: Vite would bake it into the bundle. In the image the public settings
+# come from /config.js at runtime instead (docker/config.sh).
 # node_modules stays out too: it holds macOS binaries, the image installs its own with npm ci.
 *
 !package.json
@@ -9,5 +10,6 @@
 !index.html
 !src/
 !public/
+!docker/
 !nginx.conf
 !Dockerfile

@@ -33,6 +33,14 @@ spec:
           ports:
             - name: http
               containerPort: {{ $site.port }}
+          {{- with $site.env }}
+          # Public per-environment settings; the image turns them into /config.js at startup.
+          env:
+            {{- range $key, $value := . }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
           securityContext:
             {{- include "openuvoice.containerSecurityContext" $ | nindent 12 }}
           # nginx answers /healthz itself (see nginx.conf); no backend behind it to check.
@@ -49,7 +57,8 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml $site.resources | nindent 12 }}
-          # The unprivileged nginx image keeps its pid file and temp files in /tmp.
+          # The unprivileged nginx image keeps its pid file and temp files in /tmp,
+          # and config.js is written there too.
           volumeMounts:
             - name: tmp
               mountPath: /tmp

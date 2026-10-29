@@ -9,6 +9,9 @@
   <body>
     <div id="root"></div>
     <noscript>כדי להשתמש באתר צריך להפעיל JavaScript בדפדפן.</noscript>
+    <!-- Per-environment public settings (see src/shared/lib/config.ts). A classic script, so it
+         runs before the app below. -->
+    <script src="/config.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

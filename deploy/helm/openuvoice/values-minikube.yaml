@@ -21,6 +21,15 @@ backends:
         CF_ACCESS_TEAM_DOMAIN: "dark-frog-20e8.cloudflareaccess.com"
         CF_ACCESS_AUD: "ba8232895c7506668fe695c1cf25e65fca1b513189f26cfeae7cb359116e9828"
 
+frontends:
+  public:
+    env:
+      # Same client as the chat backend above.
+      GOOGLE_CLIENT_ID: "706995094901-6dh21nu0flkhr96ogka8ga9fl1lqhgj3.apps.googleusercontent.com"
+      # Cloudflare's test key, which always passes; the local admin-backend Secret holds the
+      # matching test secret.
+      TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
+
 # Real names, served by the "openuvoice-minikube" Cloudflare tunnel running on the VM,
 # which reaches Traefik on port 80 of the minikube node (http://192.168.49.2:80).
 # Both sit behind Cloudflare Access. Traefik trusts X-Forwarded-* only from the VM's side of

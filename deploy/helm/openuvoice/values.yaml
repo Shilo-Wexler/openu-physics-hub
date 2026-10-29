@@ -93,11 +93,19 @@ purge:
   timeZone: Asia/Jerusalem
 
 # The two static sites (nginx serving the built files). Each gets <name>-frontend.
+# env becomes container env vars (the public site turns them into /config.js at startup).
 frontends:
   public:
     image: public-frontend
     replicas: 1
     port: 8080
+    # Set per environment; the pod refuses to start while either is empty.
+    env:
+      # Must be the same client as backends.chat.server.env.GOOGLE_CLIENT_ID: the chat backend
+      # accepts only sign-ins issued to that client.
+      GOOGLE_CLIENT_ID: ""
+      # Pairs with the turnstile-secret key in the admin-backend Secret.
+      TURNSTILE_SITE_KEY: ""
     resources:
       requests:
         cpu: 10m
