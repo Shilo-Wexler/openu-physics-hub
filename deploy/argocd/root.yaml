@@ -8,6 +8,10 @@
 #   2. A read-only GitHub deploy key, stored as a repository Secret in the argocd namespace
 #      (the private key lives only in that Secret).
 #   3. kubectl apply -f deploy/argocd/root.yaml
+#
+# Argo CD looks at git once an hour (deploy/argocd/values.yaml). To deploy a merge at once, run
+# on the server (defined once in ~/.zshrc):
+#   argo-refresh() { kubectl -n argocd get applications -o name | xargs -I{} kubectl -n argocd annotate {} argocd.argoproj.io/refresh=normal --overwrite; }
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -28,3 +32,4 @@ spec:
       prune: true
       # A change made by hand in the cluster is put back to what git says.
       selfHeal: true
+      

@@ -11,3 +11,13 @@ dex:
 # Nothing to notify yet (no Slack/email set up).
 notifications:
   enabled: false
+
+configs:
+  cm:
+    # Look at git once an hour instead of every 3 minutes. Right after a merge, refresh by hand
+    # on the server (the argo-refresh function in root.yaml's header) to deploy at once.
+    # Drift inside the cluster is still fixed at once: selfHeal reacts to cluster events.
+    # The controller reads these only when it starts, so a change needs a restart of
+    # statefulset/argocd-application-controller.
+    timeout.reconciliation: 1h
+    timeout.reconciliation.jitter: 5m

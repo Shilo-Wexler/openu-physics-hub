@@ -1,0 +1,41 @@
+# Values for staging on the Oracle server (k3s), layered on top of values.yaml.
+# ArgoCD (deploy/argocd/apps/staging-app.yaml) adds tag-staging.yaml last, which CI writes
+# after every merge to main. Prod gets its own values-prod.yaml that differs only in names and
+# keys: same images, same settings.
+# No secrets: those live in Secrets made by hand in the openuvoice-staging namespace.
+
+# Private images built by CI. The ghcr Secret holds a read-only (read:packages) token.
+image:
+  registry: "ghcr.io/shilo-wexler/"
+  pullSecret: ghcr
+
+backends:
+  chat:
+    server:
+      env:
+        # The "chat staging" OAuth client. Not a secret. Its Google settings list
+        # https://staging.openuvoice.com as an origin and redirect target.
+        GOOGLE_CLIENT_ID: "706995094901-9vgppljvu796m2p2e4qfip0g0m31h4e1.apps.googleusercontent.com"
+  admin:
+    server:
+      env:
+        # The "staging" Access application, which covers staging and admin-staging.
+        # Identifiers, not secrets.
+        CF_ACCESS_TEAM_DOMAIN: "dark-frog-20e8.cloudflareaccess.com"
+        CF_ACCESS_AUD: "e495dfbfb447850874f522fac1cb884a8e6741f2ad08697594985a13e0abfc38"
+
+frontends:
+  public:
+    env:
+      # Same client as the chat backend above.
+      GOOGLE_CLIENT_ID: "706995094901-9vgppljvu796m2p2e4qfip0g0m31h4e1.apps.googleusercontent.com"
+      # The "openuvoice-staging" Turnstile widget; its secret is in the admin-backend Secret.
+      TURNSTILE_SITE_KEY: "0x4AAAAAAFrq4kFvX_yTp6LU"
+
+# Served by the "openuvoice-staging" Cloudflare tunnel (cloudflared runs in the cluster, see
+# deploy/cluster/k3s/cloudflared.yaml), which reaches Traefik inside the cluster.
+# Both hosts sit behind the "staging" Access application.
+ingress:
+  hosts:
+    public: staging.openuvoice.com
+    admin: admin-staging.openuvoice.com
