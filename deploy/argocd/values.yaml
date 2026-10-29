@@ -1,0 +1,13 @@
+# Our values for the official Argo CD chart (argo/argo-cd 10.11.6 = Argo CD v3.5.6).
+# Used twice: once by hand for the first install (see root.yaml), then by apps/argocd.yaml,
+# through which Argo CD keeps itself in sync with this file. To upgrade Argo CD, change the
+# chart version in apps/argocd.yaml and merge.
+
+# No single sign-on: the only login is the built-in admin, and the UI is reached only through
+# an SSH port-forward, never from the internet.
+dex:
+  enabled: false
+
+# Nothing to notify yet (no Slack/email set up).
+notifications:
+  enabled: false

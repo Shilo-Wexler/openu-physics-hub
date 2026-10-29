@@ -1,0 +1,21 @@
+# Cluster-wide settings for the k3s server: everything in deploy/cluster/k3s/
+# (today the Traefik settings that k3s applies on top of its own chart).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-k3s
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
+    targetRevision: main
+    path: deploy/cluster/k3s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      # A file removed from deploy/cluster/k3s/ is removed from the cluster too.
+      prune: true
+      selfHeal: true
