@@ -7,6 +7,11 @@
 image:
   tag: v3.7.13
 
+# Chart 40.1.0 refuses Traefik newer than v3.7.1, the version it was released with. k3s ships the
+# same chart repackaged with that ceiling raised for the v3.7.x patches. This value only feeds the
+# chart's version checks; the image above is still what runs.
+versionOverride: v3.7.1
+
 # Nothing to balance on minikube; the tunnel on the VM reaches Traefik through the node's port 80.
 service:
   spec:
