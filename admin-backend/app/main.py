@@ -9,8 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from psycopg_pool import PoolTimeout
 
-from app.core.settings import ALLOWED_ORIGINS, DEV_AUTH_EMAIL
 from app.core.db import pool
+from app.core.settings import ALLOWED_ORIGINS, DEV_AUTH_EMAIL
 from app.routes import admin, announcements, chat, health, inquiries, meetings, stats
 
 

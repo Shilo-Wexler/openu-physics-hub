@@ -12,7 +12,11 @@ from typing import Annotated
 import jwt
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jwt.exceptions import InvalidTokenError, PyJWKClientConnectionError, PyJWKClientError
+from jwt.exceptions import (
+    InvalidTokenError,
+    PyJWKClientConnectionError,
+    PyJWKClientError,
+)
 from psycopg import Connection
 
 from app.core.db import get_conn

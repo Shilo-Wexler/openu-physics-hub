@@ -7,7 +7,6 @@ Called only through the /internal routes, by the admin backend (not by browsers)
 from uuid import UUID
 
 import asyncpg
-
 from app.core import db
 from app.services.messages import MessageNotFound
 

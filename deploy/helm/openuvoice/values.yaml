@@ -8,6 +8,8 @@ image:
   registry: ""
   tag: ""
   pullPolicy: IfNotPresent
+  # Secret with a read-only GHCR token, made by hand in each namespace. Empty: none (minikube).
+  pullSecret: ""
 
 # One entry per backend: its database (used by the migrations Job) and its server.
 # database must match the entry in the openuvoice-db chart.

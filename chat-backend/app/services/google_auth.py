@@ -3,7 +3,6 @@
 import asyncio
 
 import jwt
-
 from app.core import settings
 
 # Google's public signing keys. PyJWKClient caches them in memory,

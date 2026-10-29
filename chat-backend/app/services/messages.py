@@ -7,7 +7,6 @@ from typing import Literal
 from uuid import UUID
 
 import asyncpg
-
 from app.core import db
 from app.services import profanity
 from app.services.courses import CourseNotFound

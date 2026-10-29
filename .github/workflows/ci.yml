@@ -1,0 +1,150 @@
+# Checks every pull request and every push to main. On main it then builds the six images for
+# arm64 (the Oracle server's architecture), pushes them to GHCR tagged with the short commit hash,
+# and writes that tag to deploy/helm/openuvoice/tag-staging.yaml, which Argo CD deploys to staging.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Read-only unless a job asks for more.
+permissions:
+  contents: read
+
+env:
+  # GHCR names must be lowercase.
+  REGISTRY: ghcr.io/shilo-wexler
+
+jobs:
+  frontends:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [public-frontend, admin-frontend]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm ci
+      # tsc --noEmit (type check), then vite build.
+      - run: npm run build
+
+  backends:
+    name: Lint backends
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      # Pinned: a newer ruff can bring new default rules, so upgrading it is a deliberate change.
+      - run: pip install ruff==0.17.3
+      - run: ruff check chat-backend admin-backend
+
+  helm:
+    name: Render charts
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with:
+          version: v4.3.0
+      - run: helm lint deploy/helm/openuvoice-db
+      - run: >-
+          helm lint deploy/helm/openuvoice
+          -f deploy/helm/openuvoice/values-minikube.yaml --set-string image.tag=ci
+
+  images:
+    name: Image ${{ matrix.name }}
+    if: github.event_name == 'push'
+    needs: [frontends, backends, helm]
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - name: chat-backend
+            context: chat-backend
+          - name: admin-backend
+            context: admin-backend
+          - name: public-frontend
+            context: public-frontend
+          - name: admin-frontend
+            context: admin-frontend
+          # The migration images build from the repo root (deploy/migrate/Dockerfile).
+          - name: chat-migrate
+            context: .
+            file: deploy/migrate/Dockerfile
+            service: chat-backend
+          - name: admin-migrate
+            context: .
+            file: deploy/migrate/Dockerfile
+            service: admin-backend
+    steps:
+      - uses: actions/checkout@v7
+      - run: echo "TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          build-args: ${{ matrix.service && format('SERVICE={0}', matrix.service) || '' }}
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ matrix.name }}:${{ env.TAG }}
+          # Layers kept between runs, per image: an image whose files did not change builds in seconds.
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,scope=${{ matrix.name }},mode=max
+
+  staging-tag:
+    name: Deploy to staging
+    needs: images
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+    # One at a time, so two quick merges never write the file at once.
+    concurrency:
+      group: staging-tag
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Write the tag
+        run: |
+          TAG="${GITHUB_SHA::7}"
+          FILE=deploy/helm/openuvoice/tag-staging.yaml
+          # A newer commit on main (other than our own tag commits) will deploy itself; never
+          # replace its tag with this older one.
+          if [ -n "$(git log --format=%H "$GITHUB_SHA..HEAD" -- . ":!$FILE")" ]; then
+            echo "main has newer code than $TAG; leaving the tag to its run"
+            exit 0
+          fi
+          cat > "$FILE" <<EOF
+          # Written by CI after every merge to main (.github/workflows/ci.yml); do not edit by hand.
+          # The image tag Argo CD deploys to staging. Promoting to production copies it to tag-prod.yaml.
+          image:
+            tag: "$TAG"
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "Deploy $TAG to staging"
+          git push

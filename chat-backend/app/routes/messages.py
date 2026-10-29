@@ -5,13 +5,12 @@ Reading is open to everyone; everything else needs a signed-in user."""
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
-
 from app.routes.deps import current_user_id, http_errors, optional_user_id
 from app.schemas.messages import MessageEdit, NewMessage
 from app.services import messages
 from app.services.courses import CourseNotFound
 from app.services.users import UserBlocked
+from fastapi import APIRouter, Depends
 
 router = APIRouter(tags=["messages"])
 

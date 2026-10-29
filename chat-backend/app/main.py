@@ -4,12 +4,11 @@ import logging
 from contextlib import asynccontextmanager
 
 import asyncpg
+from app.core import db, settings
+from app.routes import auth, courses, health, internal, me, messages
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-
-from app.core import db, settings
-from app.routes import auth, courses, health, internal, me, messages
 
 # Public routes live under this prefix, the same path the Ingress forwards to this service.
 API_PREFIX = "/api/chat"

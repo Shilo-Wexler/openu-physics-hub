@@ -3,11 +3,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response
-
 from app.routes.deps import clear_session_cookie, current_user_id, http_errors
 from app.schemas.me import AvatarChange, NicknameChange
 from app.services import users
+from fastapi import APIRouter, Depends, Response
 
 router = APIRouter(prefix="/me", tags=["me"])
 

@@ -7,10 +7,9 @@ from contextlib import contextmanager
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Cookie, Depends, Header, HTTPException, Response
-
 from app.core import settings
 from app.services import sessions
+from fastapi import Cookie, Depends, Header, HTTPException, Response
 
 SESSION_COOKIE = "session"
 # The browser sends the cookie only to the chat API, not to other services on the same domain

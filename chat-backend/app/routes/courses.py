@@ -3,12 +3,11 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-
 from app.routes.deps import current_user_id, http_errors, optional_user_id
 from app.schemas.courses import Rating
 from app.services import courses
 from app.services.users import UserBlocked
+from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
