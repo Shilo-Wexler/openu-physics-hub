@@ -1,0 +1,36 @@
+# The staging app: both backends, both sites, the migrations Job and the purge CronJob
+# (chart deploy/helm/openuvoice). Image tags come from tag-staging.yaml, which CI writes after
+# every merge to main; the rest of the settings from values-staging.yaml.
+# The chat-backend, admin-backend and ghcr Secrets are made by hand in openuvoice-staging first.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: staging-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
+    targetRevision: main
+    path: deploy/helm/openuvoice
+    helm:
+      releaseName: openuvoice
+      # Later files win, so the tag CI writes is applied last.
+      valueFiles:
+        - values-staging.yaml
+        - tag-staging.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openuvoice-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # The migrations Job (a Helm pre-upgrade hook, which Argo CD runs before the rest) fails while
+    # the databases are still starting, so a failed sync is tried again for a few minutes.
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

@@ -1,0 +1,24 @@
+# The staging databases: one Postgres per backend (chart deploy/helm/openuvoice-db).
+# The chart's defaults fit staging: k3s's default StorageClass (local-path) keeps the data on the
+# server's disk. The chat-db and admin-db Secrets are made by hand in openuvoice-staging first.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: staging-db
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
+    targetRevision: main
+    path: deploy/helm/openuvoice-db
+    helm:
+      releaseName: openuvoice-db
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openuvoice-staging
+  syncPolicy:
+    automated:
+      # Never delete a database because a file changed: removing one is done by hand, on purpose.
+      prune: false
+      selfHeal: true
