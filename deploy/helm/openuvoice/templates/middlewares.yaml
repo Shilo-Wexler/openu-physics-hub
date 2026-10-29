@@ -1,0 +1,44 @@
+{{- $ctx := dict "root" $ "component" "ingress" }}
+# Traefik Middlewares used by the Ingresses in ingress.yaml.
+# Traefik has no request body limit of its own, so every Ingress gets one here.
+# buffering also holds each response until it is complete: the CRD that k3s ships has no
+# disableResponseBuffer yet, and inside the cluster the delay is negligible.
+---
+# The site and the chat API: chat messages and inquiries are small (ingress-nginx allowed 1MB).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: openuvoice-public-body
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+spec:
+  buffering:
+    maxRequestBodyBytes: 1048576
+---
+# The console: meeting attachments are up to 25MB (checked again by the backend).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: openuvoice-admin-body
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+spec:
+  buffering:
+    maxRequestBodyBytes: 27262976
+---
+# POST /api/inquiries: 5 a minute per person, with room for a burst of 10. Over the limit gets 429.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: openuvoice-inquiries-rate
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+spec:
+  rateLimit:
+    average: 5
+    period: 1m
+    burst: 10
+    sourceCriterion:
+      # The visitor's real IP, set by Cloudflare. The tunnel is the only way in, so it cannot be
+      # forged; requests without the header all share one bucket.
+      requestHeaderName: Cf-Connecting-IP
