@@ -21,10 +21,13 @@ backends:
         CF_ACCESS_TEAM_DOMAIN: "dark-frog-20e8.cloudflareaccess.com"
         CF_ACCESS_AUD: "ba8232895c7506668fe695c1cf25e65fca1b513189f26cfeae7cb359116e9828"
 
-# Real names, served by the "openuvoice-minikube" Cloudflare tunnel running on the VM.
-# Both sit behind Cloudflare Access, and the tunnel is the only way in, which is what
-# makes use-forwarded-headers on the ingress controller safe here.
+# Real names, served by the "openuvoice-minikube" Cloudflare tunnel running on the VM,
+# which reaches Traefik on port 80 of the minikube node (http://192.168.49.2:80).
+# Both sit behind Cloudflare Access. Traefik trusts X-Forwarded-* only from the VM's side of
+# the minikube network (deploy/cluster/minikube/traefik-values.yaml), so the real visitor IP
+# and https reach the backends.
 ingress:
   hosts:
     public: k8s.openuvoice.com
     admin: admin-k8s.openuvoice.com
+    

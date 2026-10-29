@@ -1,6 +1,7 @@
 # Images are built per commit and tagged with the short git hash:
 #   helm upgrade --install openuvoice deploy/helm/openuvoice -n openuvoice \
-#     -f deploy/helm/openuvoice/values-minikube.yaml --set image.tag=$(git rev-parse --short HEAD)
+#     -f deploy/helm/openuvoice/values-minikube.yaml --set-string image.tag=$(git rev-parse --short HEAD)
+# --set-string, not --set: a hash made only of digits would otherwise become a number.
 # registry is empty on minikube (images are built straight into the cluster);
 # later it becomes e.g. "ghcr.io/shilo-wexler/".
 image:
@@ -115,19 +116,11 @@ frontends:
         memory: 64Mi
 
 # One host for the site and one for the console; set per environment.
-# annotations are specific to the Ingress controller (ingress-nginx here), so they live in values:
-# switching controller means changing these, not the templates.
+# The Ingress controller is Traefik everywhere (k3s ships it; minikube installs the same version).
+# Body size limits and the inquiries rate limit are Traefik Middlewares, in templates/middlewares.yaml.
 ingress:
-  className: nginx
+  className: traefik
   hosts:
     public: ""
     admin: ""
-  annotations:
-    public: {}
-    admin:
-      # Meeting attachments are up to 25MB (checked again by the backend); the default is 1MB.
-      nginx.ingress.kubernetes.io/proxy-body-size: "26m"
-    # A separate Ingress for POST /api/inquiries, so the limit applies to that path only.
-    inquiries:
-      nginx.ingress.kubernetes.io/limit-rpm: "5"
-      nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+    

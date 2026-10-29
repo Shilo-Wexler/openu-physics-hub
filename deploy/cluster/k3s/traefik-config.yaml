@@ -1,0 +1,22 @@
+# Our settings on top of the Traefik chart that k3s installs itself. On the server:
+#   kubectl apply -f deploy/cluster/k3s/traefik-config.yaml
+# k3s then upgrades its Traefik release with these values.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    # servicelb is disabled and nothing comes in from outside: cloudflared runs in the cluster
+    # and reaches Traefik through its Service.
+    service:
+      spec:
+        type: ClusterIP
+    ports:
+      web:
+        forwardedHeaders:
+          # The pod network, where cloudflared runs. Traefik keeps X-Forwarded-* only from there,
+          # so the backends see the real visitor and https.
+          trustedIPs:
+            - 10.42.0.0/16

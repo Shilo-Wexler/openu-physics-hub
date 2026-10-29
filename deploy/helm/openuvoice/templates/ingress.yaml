@@ -3,8 +3,11 @@
 {{- $chatPort := .Values.backends.chat.server.port }}
 {{- $adminPort := .Values.backends.admin.server.port }}
 {{- $ctx := dict "root" $ "component" "ingress" }}
+{{- /* Traefik names a Middleware from another resource as <namespace>-<name>@kubernetescrd. */}}
+{{- $mw := printf "%s-%%s@kubernetescrd" .Release.Namespace }}
 # The only way in from outside. Each path below is the complete list of what is public:
 # /internal, /health and the databases are never routed, so they stay inside the cluster.
+# Only the web entrypoint (port 80): the Cloudflare tunnel connects over plain http.
 ---
 # The site: its files, the chat API, and the two public routes of the admin backend.
 apiVersion: networking.k8s.io/v1
@@ -13,10 +16,9 @@ metadata:
   name: openuvoice-public
   labels:
     {{- include "openuvoice.labels" $ctx | nindent 4 }}
-  {{- with .Values.ingress.annotations.public }}
   annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: {{ printf $mw "openuvoice-public-body" }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
@@ -46,16 +48,16 @@ spec:
                   number: {{ .Values.frontends.public.port }}
 ---
 # POST /api/inquiries on its own Ingress, so the rate limit applies to this path only.
+# The rate limit runs first, so a request over the limit is refused before its body is read.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: openuvoice-inquiries
   labels:
     {{- include "openuvoice.labels" $ctx | nindent 4 }}
-  {{- with .Values.ingress.annotations.inquiries }}
   annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: {{ printf "%s,%s" (printf $mw "openuvoice-inquiries-rate") (printf $mw "openuvoice-public-body") }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
@@ -77,10 +79,9 @@ metadata:
   name: openuvoice-admin
   labels:
     {{- include "openuvoice.labels" $ctx | nindent 4 }}
-  {{- with .Values.ingress.annotations.admin }}
   annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: {{ printf $mw "openuvoice-admin-body" }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
@@ -101,3 +102,4 @@ spec:
                 name: admin-frontend
                 port:
                   number: {{ .Values.frontends.admin.port }}
+                  

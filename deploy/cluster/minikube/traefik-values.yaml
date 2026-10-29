@@ -1,0 +1,22 @@
+# Values for the official Traefik chart on minikube, so local runs match k3s:
+#   helm repo add traefik https://traefik.github.io/charts
+#   helm upgrade --install traefik traefik/traefik --version 40.1.0 -n traefik --create-namespace \
+#     -f deploy/cluster/minikube/traefik-values.yaml
+# Chart 40.1.0 and Traefik v3.7.13 are what k3s v1.36.5 ships; move all three together.
+
+image:
+  tag: v3.7.13
+
+# Nothing to balance on minikube; the tunnel on the VM reaches Traefik through the node's port 80.
+service:
+  spec:
+    type: ClusterIP
+
+ports:
+  web:
+    hostPort: 80
+    forwardedHeaders:
+      # The minikube docker network: only the VM itself (where cloudflared runs) is on it.
+      # Traefik keeps X-Forwarded-* from here, so the backends see the real visitor and https.
+      trustedIPs:
+        - 192.168.49.0/24
