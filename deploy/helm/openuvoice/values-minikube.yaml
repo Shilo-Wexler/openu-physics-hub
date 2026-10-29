@@ -10,17 +10,21 @@ backends:
   chat:
     server:
       env:
-        # The dev OAuth client (the same one as in chat-backend/.env). Not a secret.
-        GOOGLE_CLIENT_ID: "PASTE-DEV-CLIENT-ID.apps.googleusercontent.com"
+        # The "chat local" OAuth client (the same one as in chat-backend/.env). Not a secret.
+        # Its Google settings list https://k8s.openuvoice.com as an origin and redirect target.
+        GOOGLE_CLIENT_ID: "706995094901-6dh21nu0flkhr96ogka8ga9fl1lqhgj3.apps.googleusercontent.com"
   admin:
     server:
       env:
-        # The "admin-dev" Access application (admin-dev.openuvoice.com). Identifiers, not secrets.
+        # The "admin-dev" Access application, which covers admin-dev and admin-k8s.
+        # Identifiers, not secrets.
         CF_ACCESS_TEAM_DOMAIN: "dark-frog-20e8.cloudflareaccess.com"
         CF_ACCESS_AUD: "ba8232895c7506668fe695c1cf25e65fca1b513189f26cfeae7cb359116e9828"
 
-# Local names, reached from inside the VM with curl -H "Host: ...". The tunnel step adds real hosts.
+# Real names, served by the "openuvoice-minikube" Cloudflare tunnel running on the VM.
+# Both sit behind Cloudflare Access, and the tunnel is the only way in, which is what
+# makes use-forwarded-headers on the ingress controller safe here.
 ingress:
   hosts:
-    public: openuvoice.local
-    admin: admin.openuvoice.local
+    public: k8s.openuvoice.com
+    admin: admin-k8s.openuvoice.com
