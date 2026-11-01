@@ -145,7 +145,7 @@ export default function InquiryPage() {
           </svg>
         </span>
         <h1 className={styles.title}>הפנייה נשלחה</h1>
-        <p className={styles.lead}>תודה. הפנייה הגיעה לוועדת הסטודנטים.</p>
+        <p className={styles.lead}>תודה. הפנייה הגיעה לוועד הסטודנטים.</p>
         <button type="button" className={styles.again} onClick={startOver}>
           שליחת פנייה נוספת
         </button>
@@ -156,8 +156,8 @@ export default function InquiryPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <p className={styles.eyebrow}>פנייה לוועדה</p>
-        <h1 className={styles.title}>מה תרצו להעביר לוועדת הסטודנטים?</h1>
+        <p className={styles.eyebrow}>פנייה לוועד</p>
+        <h1 className={styles.title}>מה תרצו להעביר לוועד הסטודנטים?</h1>
         <p className={styles.lead}>הפנייה אנונימית: לא צריך להתחבר, ולא נשמר שום פרט מזהה.</p>
       </header>
 

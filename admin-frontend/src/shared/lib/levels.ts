@@ -7,7 +7,7 @@ export const LEVELS: Level[] = ["admin", "committee", "team"];
 
 export const LEVEL_LABEL: Record<Level, string> = {
   admin: "מנהל",
-  committee: "חבר ועדה",
+  committee: "חבר ועד",
   team: "צוות",
 };
 

@@ -12,7 +12,7 @@ import styles from "./AdminsListPage.module.css";
 
 const GROUP_TITLE: Record<Level, string> = {
   admin: "מנהלים",
-  committee: "חברי ועדה",
+  committee: "חברי ועד",
   team: "צוות",
 };
 

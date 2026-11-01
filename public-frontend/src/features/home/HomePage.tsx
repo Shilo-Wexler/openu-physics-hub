@@ -10,11 +10,11 @@ import styles from "./HomePage.module.css";
 const AREAS: LinkRow[] = [
   GENERAL_CHAT_ROW,
   COURSE_CHATS_ROW,
-  { to: "/announcements", title: "הכרזות", text: "עדכונים והודעות מוועדת הסטודנטים." },
+  { to: "/announcements", title: "הכרזות", text: "עדכונים והודעות מוועד הסטודנטים." },
   {
     to: "/inquiry",
-    title: "פנייה לוועדה",
-    text: "בקשה או תלונה לוועדת הסטודנטים, באופן אנונימי.",
+    title: "פנייה לוועד",
+    text: "בקשה או תלונה לוועד הסטודנטים, באופן אנונימי.",
   },
   {
     to: "https://planmytoar.com",
@@ -33,7 +33,7 @@ export default function HomePage() {
           מה באמת חושבים <strong>על הקורס.</strong>
         </h1>
         <p className={styles.lead}>
-          ביקורות ודירוגים מסטודנטים שכבר למדו את הקורס, צ'אט פתוח, ופנייה אנונימית לוועדת הסטודנטים.
+          ביקורות ודירוגים מסטודנטים שכבר למדו את הקורס, צ'אט פתוח, ופנייה אנונימית לוועד הסטודנטים.
         </p>
       </section>
 

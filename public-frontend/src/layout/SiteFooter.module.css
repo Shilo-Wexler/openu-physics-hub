@@ -5,31 +5,55 @@
   padding: var(--space-4) var(--space-3);
   border-block-start: 1px solid var(--color-border);
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
+  justify-content: center;
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
+  color: var(--color-text);
 }
 
-/* The footer's links, side by side; they wrap on a narrow phone. */
+/* The footer's buttons, centered side by side; they wrap on a narrow phone. */
 .links {
   display: flex;
   flex-wrap: wrap;
-  column-gap: var(--space-4);
+  justify-content: center;
+  gap: var(--space-2);
 }
 
+/* An outlined pill button with an icon: small text, but still a full-size touch target. */
 .link {
-  /* Small text, but still a full-size touch target. */
   display: inline-flex;
   align-items: center;
+  gap: var(--space-2);
   min-height: var(--tap-size);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
   color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    transform 0.1s;
 }
 
 .link:hover {
-  color: var(--color-text);
+  border-color: var(--color-text);
+}
+
+/* Pressed: a soft fill and a little smaller, so the tap feels answered. */
+.link:active {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  transform: scale(0.97);
+}
+
+/* Line icons, same stroke style as the bottom nav icons. */
+.icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
