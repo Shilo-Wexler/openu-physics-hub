@@ -1,6 +1,5 @@
-# Our settings on top of the Traefik chart that k3s installs itself. On the server:
-#   kubectl apply -f deploy/cluster/k3s/traefik-config.yaml
-# k3s then upgrades its Traefik release with these values.
+# Our settings on top of the Traefik chart that k3s installs itself. Argo CD applies this file
+# (deploy/argocd/apps/cluster-k3s.yaml), and k3s then upgrades its Traefik release with these values.
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
@@ -20,3 +19,13 @@ spec:
           # so the backends see the real visitor and https.
           trustedIPs:
             - 10.42.0.0/16
+    # Every Ingress shows in its status the address it is served at. k3s copies the Service's
+    # external address there, but a ClusterIP Service has none, so the status stayed empty and
+    # Argo CD waited forever for the Ingresses to become healthy. Use the in-cluster name that
+    # the tunnel connects to instead.
+    providers:
+      kubernetesIngress:
+        publishedService:
+          enabled: false
+    additionalArguments:
+      - "--providers.kubernetesingress.ingressendpoint.hostname=traefik.kube-system.svc.cluster.local"
