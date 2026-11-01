@@ -190,7 +190,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The contact fields, opened by "עם פרטי קשר". */
+/* The contact fields, shown when the sender picks the contact option. */
 .contact {
   display: flex;
   flex-direction: column;
