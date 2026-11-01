@@ -64,7 +64,7 @@ type Identity = "anonymous" | "contact";
 
 const IDENTITIES: SegmentOption<Identity>[] = [
   { value: "anonymous", label: "אנונימית" },
-  { value: "contact", label: "עם פרטי קשר" },
+  { value: "contact", label: "עם פרטים" },
 ];
 
 // What the backend's 422 "detail" means, for the contact fields.
@@ -299,7 +299,7 @@ export default function InquiryPage() {
             options={IDENTITIES}
             value={identity}
             onChange={changeIdentity}
-            label="פנייה אנונימית או עם פרטי קשר"
+            label="פנייה אנונימית או עם פרטים"
           />
 
           {!anonymous && (
