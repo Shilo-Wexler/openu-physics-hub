@@ -1,6 +1,7 @@
 """Inquiries. Two routers in one file, like announcements:
 
-- router: the public site's anonymous form, POST /api/inquiries. No sign-in, and no identity is stored.
+- router: the public site's inquiry form, POST /api/inquiries. No sign-in. Anonymous unless the sender
+  chose to leave contact details (a phone or an email, and optionally a name); no other identity is stored.
 - admin_router: the console, /api/admin/inquiries. Every admin level may use it.
 
 Anti-flood on the public route is layered: the Ingress limits requests per IP (429, before this code
@@ -45,6 +46,12 @@ def create_inquiry(payload: NewInquiry):
         log.info("inquiry dropped by honeypot")
         return {"id": HONEYPOT_ID}
 
+    # Checked before Turnstile: it costs nothing, and a wrong form never waits on Cloudflare.
+    if payload.anonymous and payload.has_contact:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "anonymous inquiry with contact details")
+    if not payload.anonymous and not payload.reachable:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "missing contact details")
+
     if not payload.turnstile_token:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "missing turnstile_token")
     with http_errors(_ERRORS):
@@ -53,7 +60,15 @@ def create_inquiry(payload: NewInquiry):
     # The connection is taken only after Turnstile: the check can wait on Cloudflare for seconds,
     # and a flood must not hold every pool connection while it waits.
     with pool.connection() as conn, http_errors(_ERRORS):
-        inquiry_id = inquiries.create(conn, payload.course_id, payload.type, payload.content)
+        inquiry_id = inquiries.create(
+            conn,
+            payload.course_id,
+            payload.type,
+            payload.content,
+            payload.contact_name,
+            payload.contact_phone,
+            payload.contact_email,
+        )
     return {"id": inquiry_id}
 
 
@@ -81,6 +96,7 @@ def count_inquiries(conn: Conn):
 
 @admin_router.get("/{inquiry_id}")
 def get_inquiry(inquiry_id: int, conn: Conn):
+    """One inquiry, with its contact details (null when it is anonymous)."""
     with http_errors(_ERRORS):
         return inquiries.get(conn, inquiry_id)
 

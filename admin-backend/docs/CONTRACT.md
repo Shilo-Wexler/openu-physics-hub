@@ -4,7 +4,8 @@ The rules the admin-backend DB keeps. The schema is in `migrations/`; this file 
 
 ## Inquiries (`inquiries`)
 
-Anonymous: no name, email or IP is stored, and the content is never written to the log.
+Anonymous by default: no name, email or IP is stored, and the content is never written to the log.
+A sender may choose to leave contact details instead (see below); nothing else about them is stored.
 
 ### What the site sends (`POST /api/inquiries`)
 
@@ -13,14 +14,29 @@ Anonymous: no name, email or IP is stored, and the content is never written to t
 | `course_id` | A course number from `shared/courses.csv`, or `0` for "כללי" |
 | `type` | `exams`, `staff`, `accessibility`, `admin` or `other` |
 | `content` | 1 to 2000 characters after trimming |
+| `anonymous` | `true` (the default) or `false`. Not stored: it only says which contact rule applies |
+| `contact_name` | Optional, up to 100 characters after trimming |
+| `contact_phone` | Optional. Spaces, dashes, dots and brackets are dropped; then 7 to 15 digits, with an optional leading `+` |
+| `contact_email` | Optional, up to 254 characters, `name@domain.tld` shape. Stored lowercased |
 | `website` | Honeypot. Filled in: `201 {"id": 0}`, nothing is saved |
 | `turnstile_token` | Required. Missing or rejected: `422`. Cloudflare unreachable: `503` |
+
+Contact rules (an empty or blank field counts as not given):
+
+- `anonymous: true`: no contact field at all, or `422 "anonymous inquiry with contact details"`.
+- `anonymous: false`: a phone or an email (or both), or `422 "missing contact details"`. A name alone is not enough.
+- A phone or email in the wrong shape: `422 "invalid contact_phone"` or `"invalid contact_email"`.
+- The DB keeps the same rules: no empty strings, and no name without a phone or an email
+  (`inquiries_contact_reachable`).
 
 The server sets `status = new`, `created_at` and `updated_at`.
 
 ### Handling in the console
 
 - Every admin level may handle them.
+- Contact details come only with one inquiry (`GET /api/admin/inquiries/{id}`). The list carries only
+  `has_contact` (a phone or an email was given), to mark those rows.
+  All three are `null` for an anonymous inquiry.
 - Status: `new`, `in_progress` or `closed`, in any direction.
 - `handled_by` (an admin's email):
   - set to the current admin when the status changes;

@@ -136,3 +136,15 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+/* Phone (WhatsApp) and email: blue like the console's other action rows, so they read as tappable. */
+.contactLink {
+  color: var(--color-primary);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.contactLink:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

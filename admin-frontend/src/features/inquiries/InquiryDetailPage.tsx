@@ -8,9 +8,9 @@ import {
   getInquiry,
   INQUIRY_STATUSES,
   updateInquiry,
-  type Inquiry,
   type InquiryChange,
   type InquiryStatus,
+  type InquiryWithContact,
 } from "../../shared/api/inquiries";
 import BackLink from "../../shared/components/BackLink";
 import { Group, Row } from "../../shared/components/GroupedList";
@@ -25,6 +25,16 @@ import styles from "./InquiryDetailPage.module.css";
 
 // Same limit as the server and the inquiries table.
 const MAX_NOTE_LENGTH = 2000;
+
+// A number without + is taken as Israeli (0501234567), so its leading 0 becomes this country code.
+const LOCAL_COUNTRY_CODE = "972";
+
+/** A WhatsApp chat with the number. WhatsApp wants the full international number, digits only:
+    "+972501234567" and "0501234567" both become wa.me/972501234567. */
+function whatsappUrl(phone: string): string {
+  const digits = phone.startsWith("+") ? phone.slice(1) : phone.replace(/^0/, LOCAL_COUNTRY_CODE);
+  return `https://wa.me/${digits}`;
+}
 
 export default function InquiryDetailPage() {
   const { id: idText } = useParams();
@@ -42,7 +52,7 @@ function InquiryDetail({ id }: { id: number }) {
   // The list's filters came along in the address, so back returns to the same list.
   const back = `/inquiries${filtersSearch(readFilters(params))}`;
 
-  const [inquiry, setInquiry] = useState<Inquiry | null>(null);
+  const [inquiry, setInquiry] = useState<InquiryWithContact | null>(null);
   // The form: what the admin has picked and written, sent together by "save".
   const [status, setStatus] = useState<InquiryStatus>("new");
   const [note, setNote] = useState("");
@@ -93,6 +103,9 @@ function InquiryDetail({ id }: { id: number }) {
   }
 
   const check = <span className={styles.check}>✓</span>;
+  // The server keeps all three null for an anonymous inquiry; otherwise there is a phone or an email.
+  const anonymous =
+    inquiry !== null && !inquiry.contact_name && !inquiry.contact_phone && !inquiry.contact_email;
 
   return (
     <>
@@ -116,6 +129,39 @@ function InquiryDetail({ id }: { id: number }) {
           <div className={styles.content} dir="auto">
             {inquiry.content}
           </div>
+
+          {/* Only what the sender gave. A tap on the phone opens a WhatsApp chat, on the email a new email. */}
+          {!anonymous && (
+            <Group title="פרטי קשר">
+              {inquiry.contact_name && <Row label="שם" value={<bdi>{inquiry.contact_name}</bdi>} />}
+              {inquiry.contact_phone && (
+                <Row
+                  label="טלפון"
+                  value={
+                    <a
+                      className={styles.contactLink}
+                      href={whatsappUrl(inquiry.contact_phone)}
+                      target="_blank"
+                      rel="noreferrer"
+                      dir="ltr"
+                    >
+                      {inquiry.contact_phone}
+                    </a>
+                  }
+                />
+              )}
+              {inquiry.contact_email && (
+                <Row
+                  label="מייל"
+                  value={
+                    <a className={styles.contactLink} href={`mailto:${inquiry.contact_email}`} dir="ltr">
+                      {inquiry.contact_email}
+                    </a>
+                  }
+                />
+              )}
+            </Group>
+          )}
 
           <section className={styles.section}>
             <label htmlFor="inquiry-note" className={styles.label}>
@@ -149,6 +195,7 @@ function InquiryDetail({ id }: { id: number }) {
           </button>
 
           <Group title="פרטים">
+            {anonymous && <Row label="פונה" value="אנונימי" />}
             <Row label="מטפל" value={inquiry.handled_by ? <AdminLabel email={inquiry.handled_by} /> : "עוד לא"} />
             <Row label="עודכנה" value={formatDateTime(inquiry.updated_at)} />
           </Group>
