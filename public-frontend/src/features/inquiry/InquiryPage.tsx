@@ -1,11 +1,20 @@
-/** /inquiry: an anonymous request or complaint to the student committee. No sign-in needed. */
+/**
+ * /inquiry: a request or complaint to the student committee. No sign-in needed.
+ * Anonymous by default; the sender may choose to leave contact details: a phone or an email
+ * (at least one of them), and optionally a name.
+ */
 
 import { useEffect, useState, type FormEvent } from "react";
 
 import { GENERAL_COURSE_ID, type Course } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
 import {
+  CONTACT_EMAIL_ERROR,
+  CONTACT_PHONE_ERROR,
   INQUIRY_TYPES,
+  MAX_CONTACT_EMAIL_LENGTH,
+  MAX_CONTACT_NAME_LENGTH,
+  MAX_CONTACT_PHONE_LENGTH,
   MAX_INQUIRY_LENGTH,
   TURNSTILE_ERRORS,
   sendInquiry,
@@ -50,6 +59,21 @@ const SCOPES: SegmentOption<Scope>[] = [
   { value: "course", label: "קורס מסוים" },
 ];
 
+// Whether the sender leaves a way to reach them.
+type Identity = "anonymous" | "contact";
+
+const IDENTITIES: SegmentOption<Identity>[] = [
+  { value: "anonymous", label: "אנונימית" },
+  { value: "contact", label: "עם פרטי קשר" },
+];
+
+// What the backend's 422 "detail" means, for the contact fields.
+const CONTACT_ERRORS: Record<string, string> = {
+  [CONTACT_PHONE_ERROR]: "מספר הטלפון לא תקין. כדאי לבדוק ולשלוח שוב.",
+  [CONTACT_EMAIL_ERROR]: "כתובת המייל לא תקינה. כדאי לבדוק ולשלוח שוב.",
+  "missing contact details": "צריך למלא טלפון או מייל.",
+};
+
 export default function InquiryPage() {
   // General by default: most inquiries are, and it saves a step.
   const [scope, setScope] = useState<Scope>("general");
@@ -58,6 +82,11 @@ export default function InquiryPage() {
   const [coursesFailed, setCoursesFailed] = useState(false);
   const [type, setType] = useState<InquiryType | "">("");
   const [content, setContent] = useState("");
+  // Anonymous by default: leaving details is the sender's choice, never the starting point.
+  const [identity, setIdentity] = useState<Identity>("anonymous");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -93,7 +122,11 @@ export default function InquiryPage() {
 
   const courseId = scope === "general" ? GENERAL_COURSE_ID : (course?.id ?? null);
   const text = content.trim();
-  const filled = courseId !== null && type !== "" && text !== "";
+  const anonymous = identity === "anonymous";
+  const contact = { name: name.trim(), phone: phone.trim(), email: email.trim() };
+  // A way to reply: a phone or an email. A name alone is not enough (the backend checks this too).
+  const reachable = contact.phone !== "" || contact.email !== "";
+  const filled = courseId !== null && type !== "" && text !== "" && (anonymous || reachable);
   const ready = filled && token !== null && !sending;
 
   function handleToken(newToken: string | null) {
@@ -101,11 +134,29 @@ export default function InquiryPage() {
     if (newToken) setCheckFailed(false);
   }
 
+  function changeIdentity(next: Identity) {
+    setIdentity(next);
+    // Back to anonymous: whatever was typed is cleared, so nothing identifying stays in the form.
+    if (next === "anonymous") {
+      setName("");
+      setPhone("");
+      setEmail("");
+    }
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     // TypeScript follows the checks inside `ready`: below, courseId is a number, type an
     // InquiryType and token a string.
     if (!ready) return;
+    // Only what was filled is sent (undefined is left out of the JSON), and nothing when anonymous.
+    const contactFields = anonymous
+      ? {}
+      : {
+          contact_name: contact.name || undefined,
+          contact_phone: contact.phone || undefined,
+          contact_email: contact.email || undefined,
+        };
     setSending(true);
     setError(null);
     try {
@@ -113,6 +164,8 @@ export default function InquiryPage() {
         course_id: courseId,
         type,
         content: text,
+        anonymous,
+        ...contactFields,
         website,
         turnstile_token: token,
       });
@@ -132,6 +185,7 @@ export default function InquiryPage() {
     setCourse(null);
     setType("");
     setContent("");
+    changeIdentity("anonymous");
     setToken(null);
     setSent(false);
   }
@@ -158,7 +212,10 @@ export default function InquiryPage() {
       <header className={styles.header}>
         <p className={styles.eyebrow}>פנייה לוועד</p>
         <h1 className={styles.title}>מה תרצו להעביר לוועד הסטודנטים?</h1>
-        <p className={styles.lead}>הפנייה אנונימית: לא צריך להתחבר, ולא נשמר שום פרט מזהה.</p>
+        <p className={styles.lead}>
+          אפשר לפנות באופן אנונימי: לא צריך להתחבר, ולא נשמר שום פרט מזהה, אלא אם תבחרו להשאיר פרטי
+          קשר.
+        </p>
       </header>
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -233,6 +290,62 @@ export default function InquiryPage() {
           )}
         </div>
 
+        <div className={styles.field}>
+          {/* Seen only, as above. */}
+          <span className={styles.fieldTitle} aria-hidden="true">
+            פרטי קשר
+          </span>
+          <SegmentedControl
+            options={IDENTITIES}
+            value={identity}
+            onChange={changeIdentity}
+            label="פנייה אנונימית או עם פרטי קשר"
+          />
+
+          {!anonymous && (
+            <div className={styles.contact}>
+              <label className={styles.contactField}>
+                <span className={styles.contactLabel}>שם</span>
+                <input
+                  className={styles.input}
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={MAX_CONTACT_NAME_LENGTH}
+                  autoComplete="name"
+                  dir="auto"
+                />
+              </label>
+              <label className={styles.contactField}>
+                <span className={styles.contactLabel}>טלפון</span>
+                {/* Left to right, so digits and + read in their usual order. */}
+                <input
+                  className={styles.input}
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={MAX_CONTACT_PHONE_LENGTH}
+                  autoComplete="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                />
+              </label>
+              <label className={styles.contactField}>
+                <span className={styles.contactLabel}>מייל</span>
+                <input
+                  className={styles.input}
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  maxLength={MAX_CONTACT_EMAIL_LENGTH}
+                  autoComplete="email"
+                  dir="ltr"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
         {/* Honeypot: hidden from people and screen readers; a bot that fills it is dropped. */}
         <div style={HONEYPOT_STYLE} aria-hidden="true">
           <label>
@@ -292,6 +405,8 @@ function errorMessage(error: unknown): string {
     if (error.status === 422 && TURNSTILE_ERRORS.includes(error.message)) {
       return "האימות נכשל. אפשר לשלוח שוב.";
     }
+    const contactError = CONTACT_ERRORS[error.message];
+    if (error.status === 422 && contactError) return contactError;
     if (error.status === 422) return "אחד השדות לא תקין. כדאי לבדוק ולשלוח שוב.";
   }
   return "לא הצלחנו לשלוח את הפנייה.";

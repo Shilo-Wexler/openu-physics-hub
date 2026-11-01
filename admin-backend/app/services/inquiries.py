@@ -1,6 +1,7 @@
-"""Inquiries: the anonymous ones the public form sends, and how the console handles them.
+"""Inquiries: the ones the public form sends, and how the console handles them.
 
-No identity is ever stored with an inquiry. handled_by is the admin who took it on or closed it.
+An inquiry is anonymous unless the sender chose to leave contact details (name, phone and/or email).
+No other identity (IP, account) is ever stored. handled_by is the admin who took it on or closed it.
 """
 
 from typing import get_args
@@ -16,10 +17,15 @@ PAGE_SIZE = 50
 STATUSES: tuple[str, ...] = get_args(InquiryStatus)
 
 # The course name comes with every inquiry, so the console needs no separate course list.
+# has_contact marks the list's rows without carrying the details themselves. A name never comes
+# alone (inquiries_contact_reachable), so a phone or an email is enough to tell.
 COLUMNS = """
   i.id, i.course_number, c.name as course_name, i.type, i.content, i.status,
-  i.handled_by, i.internal_note, i.created_at, i.updated_at
+  i.handled_by, i.internal_note, i.created_at, i.updated_at,
+  (i.contact_phone is not null or i.contact_email is not null) as has_contact
 """
+# Contact details are shown only on the inquiry's own page, so the list doesn't carry them.
+DETAIL_COLUMNS = COLUMNS + ", i.contact_name, i.contact_phone, i.contact_email"
 FROM = "from inquiries i join courses c on c.course_number = i.course_number"
 
 
@@ -35,16 +41,31 @@ class InvalidValue(Exception):
     """A DB check rejected one of the values."""
 
 
-def create(conn: Connection, course_number: int, inquiry_type: str, content: str) -> int:
-    """Saves a new inquiry and returns its id."""
+def create(
+    conn: Connection,
+    course_number: int,
+    inquiry_type: str,
+    content: str,
+    contact_name: str | None = None,
+    contact_phone: str | None = None,
+    contact_email: str | None = None,
+) -> int:
+    """Saves a new inquiry and returns its id. Contact details left as None keep it anonymous."""
     try:
         row = conn.execute(
             """
-            insert into inquiries (course_number, type, content)
-            values (%(course)s, %(type)s, %(content)s)
+            insert into inquiries (course_number, type, content, contact_name, contact_phone, contact_email)
+            values (%(course)s, %(type)s, %(content)s, %(name)s, %(phone)s, %(email)s)
             returning id
             """,
-            {"course": course_number, "type": inquiry_type, "content": content},
+            {
+                "course": course_number,
+                "type": inquiry_type,
+                "content": content,
+                "name": contact_name,
+                "phone": contact_phone,
+                "email": contact_email,
+            },
         ).fetchone()
     except errors.ForeignKeyViolation:
         raise UnknownCourse() from None
@@ -97,7 +118,8 @@ def counts(conn: Connection) -> dict[str, int]:
 
 
 def get(conn: Connection, inquiry_id: int) -> dict:
-    row = conn.execute(f"select {COLUMNS} {FROM} where i.id = %s", (inquiry_id,)).fetchone()
+    """One inquiry with its contact details (null when not given)."""
+    row = conn.execute(f"select {DETAIL_COLUMNS} {FROM} where i.id = %s", (inquiry_id,)).fetchone()
     if row is None:
         raise NotFound()
     return row

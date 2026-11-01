@@ -1,4 +1,5 @@
-/** Anonymous inquiries from the public site's form. Every level may read and change them. */
+/** Inquiries from the public site's form: anonymous unless the sender left contact details.
+    Every level may read and change them. */
 
 import { request } from "./client";
 
@@ -21,6 +22,17 @@ export interface Inquiry {
   internal_note: string | null;
   created_at: string;
   updated_at: string;
+  /** The sender left a way to reply (the list marks it; the details come only with one inquiry). */
+  has_contact: boolean;
+}
+
+/** One inquiry on its own screen: the list leaves the contact details out, this has them.
+    All null: anonymous. Otherwise a phone or an email (or both), and maybe a name. */
+export interface InquiryWithContact extends Inquiry {
+  contact_name: string | null;
+  /** Digits only, maybe with a leading +. */
+  contact_phone: string | null;
+  contact_email: string | null;
 }
 
 export interface InquiryPage {
@@ -56,10 +68,10 @@ export function getInquiryCounts(token: string, signal?: AbortSignal) {
 }
 
 export function getInquiry(token: string, id: number, signal?: AbortSignal) {
-  return request<Inquiry>(`${BASE}/${id}`, { token, signal });
+  return request<InquiryWithContact>(`${BASE}/${id}`, { token, signal });
 }
 
 /** Changes the status and/or the note, and returns the inquiry as it is now. */
 export function updateInquiry(token: string, id: number, change: InquiryChange) {
-  return request<Inquiry>(`${BASE}/${id}`, { token, method: "POST", body: change });
+  return request<InquiryWithContact>(`${BASE}/${id}`, { token, method: "POST", body: change });
 }

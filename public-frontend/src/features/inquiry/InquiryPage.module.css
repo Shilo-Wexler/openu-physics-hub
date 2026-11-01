@@ -147,11 +147,11 @@
   outline-offset: 2px;
 }
 
-/* A framed box, like the message editor. */
-.textarea {
+/* Framed boxes, like the message editor: the inquiry text and the contact fields. */
+.textarea,
+.input {
   box-sizing: border-box;
   width: 100%;
-  min-height: calc(6 * 1.5em + 20px);
   padding: 10px var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -161,12 +161,26 @@
   /* 16px or more: below that, iPhone zooms the page in on focus. */
   font-size: var(--text-md);
   line-height: 1.5;
+}
+
+.textarea:focus-visible,
+.input:focus-visible {
+  outline: none;
+  border-color: var(--color-text);
+}
+
+.textarea {
+  min-height: calc(6 * 1.5em + 20px);
   resize: vertical;
 }
 
-.textarea:focus-visible {
-  outline: none;
-  border-color: var(--color-text);
+.input {
+  min-height: var(--tap-size);
+}
+
+/* The left-to-right fields (phone, email) still start at the right edge, under their labels. */
+.input[dir="ltr"] {
+  text-align: right;
 }
 
 .counter {
@@ -174,6 +188,24 @@
   font-size: var(--text-xs);
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* The contact fields, opened by "עם פרטי קשר". */
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-1);
+}
+
+.contactField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.contactLabel {
+  font-size: var(--text-sm);
 }
 
 .error {

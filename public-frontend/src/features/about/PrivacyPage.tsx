@@ -4,7 +4,7 @@ import styles from "./AboutPage.module.css";
 
 const CONTACT_EMAIL = "contact@openuvoice.com";
 // Change together with the text whenever the terms change.
-const LAST_UPDATED = "אוקטובר 2026";
+const LAST_UPDATED = "נובמבר 2026";
 
 export default function PrivacyPage() {
   return (
@@ -73,6 +73,11 @@ export default function PrivacyPage() {
           <strong>מה אנחנו שומרים.</strong> ההתחברות היא עם Google. מ-Google אנחנו שומרים רק מזהה
           מספרי שמאפשר לזהות אותך בכניסה הבאה. את השם, המייל והתמונה מחשבון Google אנחנו לא שומרים.
           באתר נשמרים הכינוי והאווטאר שבחרת, ההודעות, הדירוגים, הלייקים והדיווחים שלך.
+        </p>
+        <p className={styles.text}>
+          <strong>פניות לוועד.</strong> פנייה אנונימית נשמרת בלי שום פרט מזהה. אם בחרת להשאיר פרטי
+          קשר (טלפון או מייל), הם נשמרים עם הפנייה, משמשים רק כדי לחזור אליך בעניין
+          הפנייה, וגלויים רק לצוות הוועד.
         </p>
         <p className={styles.text}>
           <strong>שירותים חיצוניים.</strong> האתר עובר דרך Cloudflare, שמגן עליו מפני התקפות ורושם
