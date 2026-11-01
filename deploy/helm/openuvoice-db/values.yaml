@@ -20,7 +20,7 @@ databases:
     secretName: admin-db
     storage: 1Gi
 
-# Empty means the cluster's default StorageClass (on minikube: "standard").
+# Empty means the cluster's default StorageClass (on k3s: "local-path", on the server disk).
 storageClass: ""
 
 resources:

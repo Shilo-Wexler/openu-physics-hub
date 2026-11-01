@@ -1,0 +1,79 @@
+# Deploy
+
+How OpenUVoice runs outside a laptop. Staging runs on one Oracle Cloud server (arm64, Ubuntu)
+with k3s; prod will run on the same server in its own namespace. Argo CD deploys everything from
+this repo, so after the one-time setup below, a merge to `main` is the only deploy step.
+
+## Folder map
+
+| Path | What it is |
+|---|---|
+| `../.github/workflows/ci.yml` | Checks every PR; on `main` builds the 6 images to GHCR and writes `tag-staging.yaml` |
+| `argocd/root.yaml` | The parent Argo CD app, applied once by hand (its header has the Argo CD install) |
+| `argocd/values.yaml` | Argo CD's own Helm values (hourly git polling) |
+| `argocd/apps/` | One file per Argo CD app: `argocd`, `cluster-k3s`, `staging-db`, `staging-app` |
+| `cluster/k3s/` | Cluster-wide config: Traefik settings, in-cluster cloudflared |
+| `helm/openuvoice-db/` | Chart for the two Postgres databases (chat, admin) |
+| `helm/openuvoice/` | Chart for the app: backends, frontends, migrations Job, purge CronJob, Ingress |
+| `helm/openuvoice/values-<env>.yaml` | Per-environment values: hosts and public keys only |
+| `helm/openuvoice/tag-<env>.yaml` | Image tag per environment; written by CI, never by hand |
+| `host/` | Files that live on the server itself, outside Kubernetes |
+| `migrate/` | The migrations image (one per backend), run by the chart before each upgrade |
+
+No secrets live in this repo. Every secret is a Kubernetes Secret made by hand on the server.
+
+## Names per environment
+
+Same shape in every environment, so a name says which one it belongs to.
+
+| | dev (Mac) | staging | prod |
+|---|---|---|---|
+| Hosts | `localhost`, `dev` + `admin-dev.openuvoice.com` | `staging` + `admin-staging.openuvoice.com` | `openuvoice.com` + `admin.openuvoice.com` |
+| Namespace | none | `openuvoice-staging` | `openuvoice-prod` |
+| Argo CD apps | none | `staging-db`, `staging-app` | `prod-db`, `prod-app` |
+| Cloudflare tunnel | `openuvoice-dev` (cloudflared on the Mac) | `openuvoice-staging` (in the cluster) | `openuvoice-prod` |
+| Cloudflare Access app | `dev` | `staging` | `prod` (console only; the site is public) |
+| Google client (chat sign-in) | `chat dev` | `chat staging` | `chat prod` |
+| Turnstile widget | Cloudflare's test keys | `openuvoice-staging` | `openuvoice-prod` |
+
+Shared by all: the Google client `Cloudflare Access` (the Google login on every Access gate).
+Public IDs (Google client IDs, Access AUD, Turnstile site keys) are in `values-<env>.yaml`.
+
+## A new server from zero
+
+Run from the repo root on the Mac unless it says "on the server". `ssh oracle` is the server.
+
+1. **Firewall.** Oracle's Ubuntu image rejects forwarded traffic in iptables. In
+   `/etc/iptables/rules.v4`, before the REJECT lines, accept the pod and service networks:
+   INPUT `-s 10.42.0.0/16` and `-s 10.43.0.0/16`; FORWARD both `-s` and `-d` for each.
+   Edit the file by hand (never `netfilter-persistent save`), then reboot. Only SSH (22) is
+   open to the internet; 80, 443 and 6443 stay closed.
+2. **AppArmor profile**, before k3s, so containerd uses it (see the header of
+   `host/cri-containerd.apparmor.d`).
+3. **k3s config**, before k3s (see the header of `host/k3s-config.yaml`).
+4. **k3s**, pinned. On the server:
+   `curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.36.5+k3s1 sh -`
+   Then copy `/etc/rancher/k3s/k3s.yaml` to `~/.kube/config` (mode 600) and install Helm.
+5. **Argo CD**, the deploy key and the root app: follow the header of `argocd/root.yaml`.
+   The UI is reached only through an SSH port-forward.
+6. **Namespace and Secrets** for the environment, by hand. In `openuvoice-<env>`:
+   - `chat-db`, `admin-db`: `postgres-password`, `app-password` (random, `openssl rand -hex 24`)
+   - `chat-backend`: `database-url`, `mod-api-token` (random, `openssl rand -hex 32`)
+   - `admin-backend`: `database-url`, `mod-api-token` (same value as chat), `turnstile-secret`
+   - `ghcr`: docker-registry Secret with a read-only (`read:packages`) GitHub token
+   - In namespace `cloudflared`: `cloudflared-token`, the tunnel token (see `cluster/k3s/cloudflared.yaml`)
+
+   Type secret values with `read -rs VAR` (alone on its line), use the variable, then `unset` it,
+   so they never show on screen or in shell history.
+7. **First admin**, once the app is up. On the server:
+   `kubectl -n openuvoice-<env> exec -it admin-db-0 -- psql -U admin_app -d admin_db`
+   then `insert into admins (email, name) values ('<email>', '<name>');`
+
+## Everyday
+
+- **Deploy:** merge to `main`. CI builds the images and commits the tag; Argo CD picks it up
+  within an hour, or at once with `argo-refresh` on the server.
+- **Argo CD UI:** `ssh -L 8080:localhost:8080 oracle 'KUBECONFIG=$HOME/.kube/config kubectl -n argocd port-forward svc/argocd-server 8080:443'`,
+  then https://localhost:8080.
+- **k3s upgrade:** compare `host/cri-containerd.apparmor.d` with the new containerd template
+  first; drop the profile once containerd ships the fix (containerd issue #14485).

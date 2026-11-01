@@ -61,7 +61,7 @@ jobs:
       - run: helm lint deploy/helm/openuvoice-db
       - run: >-
           helm lint deploy/helm/openuvoice
-          -f deploy/helm/openuvoice/values-minikube.yaml --set-string image.tag=ci
+          -f deploy/helm/openuvoice/values-staging.yaml --set-string image.tag=ci
 
   images:
     name: Image ${{ matrix.name }}

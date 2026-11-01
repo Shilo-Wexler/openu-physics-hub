@@ -50,7 +50,7 @@ capabilities:
 
 {{/*
 The Secret that lets every pod pull our private images (from GHCR). Renders nothing when
-image.pullSecret is empty, as on minikube, where the images are built straight into the cluster.
+image.pullSecret is empty (images that need no login).
 Called with the root context, inside a pod spec.
 */}}
 {{- define "openuvoice.imagePullSecrets" -}}
