@@ -3,7 +3,13 @@
 import re
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, Field, StringConstraints, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    Field,
+    StringConstraints,
+    field_validator,
+)
 
 InquiryType = Literal["exams", "staff", "accessibility", "admin", "other"]
 InquiryStatus = Literal["new", "in_progress", "closed"]
@@ -82,4 +88,3 @@ class InquiryUpdate(BaseModel):
 
     status: InquiryStatus | None = None
     internal_note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] | None = None
-    
