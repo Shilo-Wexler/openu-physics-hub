@@ -1,14 +1,13 @@
-# Images are built per commit and tagged with the short git hash:
-#   helm upgrade --install openuvoice deploy/helm/openuvoice -n openuvoice \
-#     -f deploy/helm/openuvoice/values-minikube.yaml --set-string image.tag=$(git rev-parse --short HEAD)
-# --set-string, not --set: a hash made only of digits would otherwise become a number.
-# registry is empty on minikube (images are built straight into the cluster);
-# later it becomes e.g. "ghcr.io/shilo-wexler/".
+# Defaults shared by every environment. Each environment layers values-<env>.yaml (hosts,
+# public keys, registry) and then tag-<env>.yaml, which CI writes; Argo CD passes both.
+# image.tag is the short git hash of the commit the images were built from. It must stay a
+# string: by hand use --set-string, since a hash made only of digits would become a number.
+# image.registry is the prefix of every image name, e.g. "ghcr.io/shilo-wexler/".
 image:
   registry: ""
   tag: ""
   pullPolicy: IfNotPresent
-  # Secret with a read-only GHCR token, made by hand in each namespace. Empty: none (minikube).
+  # Secret with a read-only GHCR token, made by hand in each namespace. Empty: no pull secret.
   pullSecret: ""
 
 # One entry per backend: its database (used by the migrations Job) and its server.
@@ -126,7 +125,7 @@ frontends:
         memory: 64Mi
 
 # One host for the site and one for the console; set per environment.
-# The Ingress controller is Traefik everywhere (k3s ships it; minikube installs the same version).
+# The Ingress controller is Traefik, which k3s ships.
 # Body size limits and the inquiries rate limit are Traefik Middlewares, in templates/middlewares.yaml.
 ingress:
   className: traefik

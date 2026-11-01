@@ -4,7 +4,7 @@
 # buffering also holds each response until it is complete: the CRD that k3s ships has no
 # disableResponseBuffer yet, and inside the cluster the delay is negligible.
 ---
-# The site and the chat API: chat messages and inquiries are small (ingress-nginx allowed 1MB).
+# The site and the chat API: chat messages and inquiries are small.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:

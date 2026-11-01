@@ -1,0 +1,13 @@
+# k3s server config for the Oracle server, kept here so a new server can be built the same way.
+# Lives at /etc/rancher/k3s/config.yaml and must be in place BEFORE installing k3s
+# (secrets-encryption cannot simply be switched on later). Install from the repo root on the Mac:
+#   ssh oracle 'sudo mkdir -p /etc/rancher/k3s'
+#   ssh oracle 'sudo tee /etc/rancher/k3s/config.yaml >/dev/null' < deploy/host/k3s-config.yaml
+# No secrets here: k3s makes its own join token and encryption key on the server.
+
+# The tunnel (in-cluster cloudflared) is the only way in, so Traefik needs no LoadBalancer:
+# without servicelb nothing listens on the server's public ports 80/443.
+disable:
+  - servicelb
+# Kubernetes Secrets (DB passwords, tokens) are stored encrypted on disk, not in plain text.
+secrets-encryption: true
