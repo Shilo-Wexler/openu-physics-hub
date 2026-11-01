@@ -17,6 +17,7 @@ Input files:
                             a blank line separates reviews
   generic-reviews.txt       short reviews that fit any course, one per line
   generic-replies.txt       short replies that fit any review, one per line
+  reported.txt              [reports] text: rude or spam replies, each reported by that many users
   users.txt                 demo nicknames, one per line
   inquiries.txt             course|type|status|days ago|internal note|content
   announcements.txt         pinned|published|draft|days ago|title|body
@@ -37,7 +38,8 @@ TARGET_MESSAGES = 50
 TARGET_REVIEWS = 18
 # Reviews spread over this many days back from the moment the seed runs.
 SPREAD_DAYS = 90
-OPEN_REPORTS = 10
+# Demo users who write the reported replies; few of them, so the console shows repeat offenders.
+TROLLS = 3
 # The email shown as author of demo announcements and handler of demo inquiries. The admin
 # seed uses it to tell whether demo data is already there.
 DEMO_EMAIL = "demo@openuvoice.com"
@@ -85,7 +87,7 @@ def parse_course(path):
             q = int(quote) if quote else None
             if q is not None and not 1 <= q <= len(threads[-1][2]):
                 raise SystemExit(f"{path.name}: >{q} has no such reply: {raw}")
-            threads[-1][2].append((int(likes), q, paragraphs(text)))
+            threads[-1][2].append((int(likes), q, paragraphs(text), 0))
     return threads
 
 
@@ -128,11 +130,21 @@ def build_chat(rng):
     generic_reviews = lines("generic-reviews.txt")
     generic_replies = lines("generic-replies.txt")
     max_minutes = SPREAD_DAYS * 24 * 60
+    trolls = rng.sample(user_ns, TROLLS)
 
     messages = []  # (n, course_id, thread_n, quote_n, user_n, minutes_ago, content)
     likes = {}  # message n -> like count
     ratings = []
     course_files = sorted((HERE / "content").glob("*.txt"), key=lambda p: int(p.stem))
+    # Each reported reply lands in a random course chat.
+    reported_by_course = {}
+    for raw in lines("reported.txt"):
+        m = re.match(r"^\[(\d+)\] (.+)$", raw)
+        if not m:
+            raise SystemExit(f"reported.txt: cannot read line: {raw}")
+        course_id = int(rng.choice(course_files).stem)
+        reported_by_course.setdefault(course_id, []).append((int(m.group(1)), m.group(2)))
+    reported = []  # (message n, number of reports, author, minutes_ago)
 
     for path in course_files:
         course_id = int(path.stem)
@@ -140,13 +152,15 @@ def build_chat(rng):
         if course_id != GENERAL_COURSE_ID:
             pool = rng.sample(generic_reviews, max(0, TARGET_REVIEWS - len(threads)))
             threads += [(generic_likes(rng), text, []) for text in pool]
+        for count, text in reported_by_course.get(course_id, []):
+            rng.choice(threads)[2].append((0, None, text, count))
         replies_now = sum(len(t[2]) for t in threads)
         extra = max(0, TARGET_MESSAGES - len(threads) - replies_now)
         # Busier reviews (more likes) draw more of the extra replies.
         weights = [1 + t[0] for t in threads]
         for _ in range(extra):
             t = rng.choices(range(len(threads)), weights=weights)[0]
-            threads[t][2].append((generic_likes(rng), None, rng.choice(generic_replies)))
+            threads[t][2].append((generic_likes(rng), None, rng.choice(generic_replies), 0))
 
         for likes_r, text, replies in threads:
             review_n = len(messages) + 1
@@ -162,12 +176,15 @@ def build_chat(rng):
                 gaps = [max(1, g * room // (total + 1)) for g in gaps]
             at = review_ago
             reply_ns = []
-            for (likes_p, quote, rtext), gap in zip(replies, gaps):
+            for (likes_p, quote, rtext, report_count), gap in zip(replies, gaps):
                 at = max(1, at - gap)
                 n = len(messages) + 1
                 quote_n = reply_ns[quote - 1] if quote else None
                 quoted_author = messages[quote_n - 1][4] if quote_n else None
-                if quote_n and quoted_author != author:
+                if report_count:
+                    who = rng.choice([u for u in trolls if u != author])
+                    reported.append((n, report_count, who, at))
+                elif quote_n and quoted_author != author:
                     # A quote reply is usually the reviewer answering whoever spoke to them.
                     who = author
                 else:
@@ -191,9 +208,9 @@ def build_chat(rng):
         for u in rng.sample(user_ns, min(count, len(user_ns))):
             like_rows.append((n, u))
     report_rows = []
-    for m in rng.sample([m for m in messages if m[2] is not None], OPEN_REPORTS):
-        reporter = rng.choice([u for u in user_ns if u != m[4]])
-        report_rows.append((m[0], reporter, rng.randint(1, m[5])))
+    for n, count, author, at in reported:
+        for reporter in rng.sample([u for u in user_ns if u != author], count):
+            report_rows.append((n, reporter, rng.randint(1, max(1, at - 1))))
 
     parts = [HEADER_CHAT]
     parts.append(copy_block("demo_users", ["n", "nickname", "avatar"], users))
@@ -208,7 +225,10 @@ def build_chat(rng):
     ))
     parts.append(copy_block("demo_reports", ["message_n", "user_n", "minutes_ago"], report_rows))
     parts.append(FOOTER_CHAT)
-    stats = f"{len(users)} users, {len(messages)} messages, {len(like_rows)} likes, {len(ratings)} ratings"
+    stats = (
+        f"{len(users)} users, {len(messages)} messages, {len(like_rows)} likes, "
+        f"{len(ratings)} ratings, {len(reported)} reported replies ({len(report_rows)} reports)"
+    )
     return "\n\n".join(parts) + "\n", stats
 
 
