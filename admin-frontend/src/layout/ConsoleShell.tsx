@@ -96,7 +96,7 @@ export default function ConsoleShell() {
         <h1>כניסת צוות</h1>
         <section className="card">
           {expired && <p className="notice">ההתחברות פגה. אפשר להתחבר שוב.</p>}
-          <p>הכניסה לחברי הוועדה בלבד.</p>
+          <p>הכניסה לחברי הוועד בלבד.</p>
           <SignIn onEmail={handleEmail} />
           {signInError && <p className="error">{signInError}</p>}
         </section>

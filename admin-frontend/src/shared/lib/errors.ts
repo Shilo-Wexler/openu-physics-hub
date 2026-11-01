@@ -14,7 +14,7 @@ const BY_DETAIL: Record<string, string> = {
   // server
   "database unavailable": "השרת לא זמין כרגע. אפשר לנסות שוב בעוד רגע.",
   // levels
-  "requires a committee member": "צוות לא יכול לבצע את הפעולה הזו. צריך חבר ועדה או מנהל.",
+  "requires a committee member": "צוות לא יכול לבצע את הפעולה הזו. צריך חבר ועד או מנהל.",
   "requires an admin": "רק מנהל יכול להוסיף מנהל, או לשנות ולהסיר מנהל.",
   // admins
   "already an admin": "המייל הזה כבר ברשימת הצוות.",

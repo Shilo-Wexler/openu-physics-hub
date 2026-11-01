@@ -10,7 +10,7 @@ export interface NavSection {
 export const MAIN_SECTIONS: NavSection[] = [
   { to: "/", label: "בית", prefixes: [] },
   { to: "/chat", label: "צ'אט", prefixes: ["/chat", "/courses"] },
-  { to: "/inquiry", label: "פנייה לוועדה", prefixes: ["/inquiry"] },
+  { to: "/inquiry", label: "פנייה לוועד", prefixes: ["/inquiry"] },
 ];
 
 /** True when the current path is in the section. "/" (no prefixes) matches only the home page itself. */

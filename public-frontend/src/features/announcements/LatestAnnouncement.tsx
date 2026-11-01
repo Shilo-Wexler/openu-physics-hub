@@ -29,7 +29,7 @@ export default function LatestAnnouncement() {
   return (
     <section className={styles.section} aria-labelledby="latest-announcement">
       <h2 className={styles.label} id="latest-announcement">
-        מהוועדה
+        מהוועד
       </h2>
       <AnnouncementCard announcement={announcement} headingLevel={3} short />
       <Link to="/announcements" className={styles.all}>

@@ -17,7 +17,10 @@ export default function ConsoleHeader({ sections, badges = {} }: Props) {
           <span className={styles.logo}>
             OpenU<span className={styles.logoMuted}>Voice</span>
           </span>
-          <span className={styles.suffix}>ניהול</span>
+          <span className={styles.admin}>
+            <AdminIcon />
+            Admin
+          </span>
         </NavLink>
 
         <nav className={styles.nav} aria-label="אזורים">
@@ -42,5 +45,17 @@ export default function ConsoleHeader({ sections, badges = {} }: Props) {
         </nav>
       </div>
     </header>
+  );
+}
+
+/** A person with a small key: stands for the staff-only console. */
+function AdminIcon() {
+  return (
+    <svg className={styles.adminIcon} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="10" cy="8" r="3.5" />
+      <path d="M3.5 20c.7-3.4 3.3-5.3 6.5-5.3 1.2 0 2.3.3 3.2.8" />
+      <circle cx="17.5" cy="15.5" r="2.2" />
+      <path d="M17.5 17.7V21M17.5 19.5h1.6" />
+    </svg>
   );
 }

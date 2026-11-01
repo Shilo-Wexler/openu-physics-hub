@@ -59,7 +59,7 @@ export default function AnnouncementsPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>הכרזות</h1>
-        <p className={styles.subtitle}>עדכונים מוועדת הסטודנטים</p>
+        <p className={styles.subtitle}>עדכונים מוועד הסטודנטים</p>
       </header>
 
       {page.status === "loading" && <p className={styles.note}>טוען הכרזות…</p>}
