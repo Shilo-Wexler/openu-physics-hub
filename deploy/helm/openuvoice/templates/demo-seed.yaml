@@ -1,0 +1,85 @@
+{{- if .Values.demo.enabled }}
+{{- $ctx := dict "root" $ "component" "demo-seed" }}
+---
+# Demo content for staging: the SQL files that deploy/demo/build.py writes into demo/.
+# Base64 (binaryData) so the tabs and Hebrew in them reach the pod exactly as written.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-seed
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+binaryData:
+  {{- range $name, $backend := .Values.backends }}
+  {{ $name }}.sql: {{ $.Files.Get (printf "demo/%s.sql" $name) | b64enc }}
+  {{- end }}
+{{- range $name, $backend := .Values.backends }}
+{{- $component := printf "%s-demo-seed" $name }}
+{{- $jobCtx := dict "root" $ "component" $component }}
+---
+# Loads the demo content into this backend's database after every install or upgrade (an Argo CD
+# PostSync), so after the migrations. The SQL does nothing when the demo data is already there.
+# Runs on the migrations image, which has psql.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $component }}
+  labels:
+    {{- include "openuvoice.labels" $jobCtx | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    # Delete the previous run only when a new one starts, so the last run's logs stay readable.
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        {{- include "openuvoice.labels" $jobCtx | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- include "openuvoice.imagePullSecrets" $ | nindent 6 }}
+      securityContext:
+        {{- include "openuvoice.podSecurityContext" $ | nindent 8 }}
+      containers:
+        - name: demo-seed
+          image: {{ include "openuvoice.image" (dict "root" $ "name" (printf "%s-migrate" $name)) }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          command: ["psql", "-X", "-q", "-v", "ON_ERROR_STOP=1", "-f", "/demo/{{ $name }}.sql"]
+          env:
+            - name: PGHOST
+              value: {{ $backend.database.host }}
+            - name: PGDATABASE
+              value: {{ $backend.database.name }}
+            - name: PGUSER
+              value: {{ $backend.database.user }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $backend.database.secretName }}
+                  key: app-password
+            - name: PGCONNECT_TIMEOUT
+              value: "5"
+          securityContext:
+            {{- include "openuvoice.containerSecurityContext" $ | nindent 12 }}
+          resources:
+            {{- toYaml $.Values.migrate.resources | nindent 12 }}
+          volumeMounts:
+            - name: demo
+              mountPath: /demo
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: demo
+          configMap:
+            name: demo-seed
+            items:
+              - key: {{ $name }}.sql
+                path: {{ $name }}.sql
+        - name: tmp
+          emptyDir: {}
+{{- end }}
+{{- end }}

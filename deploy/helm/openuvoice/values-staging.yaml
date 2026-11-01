@@ -39,3 +39,6 @@ ingress:
   hosts:
     public: staging.openuvoice.com
     admin: admin-staging.openuvoice.com
+# Fill staging with demo content (deploy/demo/). Never in production.
+demo:
+  enabled: true

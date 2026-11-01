@@ -93,6 +93,11 @@ purge:
   schedule: "0 3 * * *"
   timeZone: Asia/Jerusalem
 
+# Demo content (reviews, users, inquiries, announcements) loaded after each deploy; see
+# templates/demo-seed.yaml and deploy/demo/build.py. Only staging turns it on, never production.
+demo:
+  enabled: false
+
 # The two static sites (nginx serving the built files). Each gets <name>-frontend.
 # env becomes container env vars (the public site turns them into /config.js at startup).
 frontends:
