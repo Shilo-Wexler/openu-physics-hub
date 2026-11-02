@@ -1,7 +1,7 @@
 /** The inquiries queue: a status switch, course and type filters, and the newest inquiries first. */
 
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useMatch, useNavigate, useSearchParams } from "react-router";
 
 import { isAbort, isAuthError } from "../../shared/api/client";
 import {
@@ -13,6 +13,7 @@ import {
 } from "../../shared/api/inquiries";
 import { ListMessage, ListRow, LoadMore, RowList } from "../../shared/components/ListRow";
 import SegmentedControl from "../../shared/components/SegmentedControl";
+import { useReportPosition, useSplit } from "../../shared/components/SplitView";
 import { courseLabel, STATUS_LABEL, TYPE_LABEL } from "../../shared/lib/inquiryLabels";
 import { errorMessage } from "../../shared/lib/errors";
 import { useAdmin, useLoad } from "../../layout/consoleContext";
@@ -33,6 +34,7 @@ export default function InquiriesPage() {
   const { token, version } = useAdmin();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { split, confirmLeave } = useSplit();
   const filters = readFilters(params);
   const search = filtersSearch(filters);
   const filtered = filters.course !== null || filters.type !== null;
@@ -47,35 +49,43 @@ export default function InquiriesPage() {
   }
 
   // replace: switching views or filters should not fill the back button's history.
+  // On a computer an inquiry may be open beside the list: a new list closes it, so unsaved changes ask first.
+  async function show(next: Filters) {
+    if (await confirmLeave()) navigate(`/inquiries${filtersSearch(next)}`, { replace: true });
+  }
   function changeView(view: View) {
-    navigate(`/inquiries${filtersSearch({ ...filters, view })}`, { replace: true });
+    void show({ ...filters, view });
   }
   function changeCourse(course: number | null) {
-    navigate(`/inquiries${filtersSearch({ ...filters, course })}`, { replace: true });
+    void show({ ...filters, course });
   }
   function changeType(type: InquiryType | null) {
-    navigate(`/inquiries${filtersSearch({ ...filters, type })}`, { replace: true });
+    void show({ ...filters, type });
   }
 
   return (
     <>
-      <h1>פניות</h1>
+      {/* On a computer the title sits above the list-and-inquiry window (SplitView draws it). */}
+      {!split && <h1>פניות</h1>}
 
-      <SegmentedControl
-        label="מצב הפניות"
-        segments={VIEWS.map((v) => ({ ...v, count: countFor(v.value) }))}
-        value={filters.view}
-        onChange={changeView}
-      />
+      {/* The switch and the filters. On a computer they stay at the top while the rows scroll under them. */}
+      <div className={styles.head}>
+        <SegmentedControl
+          label="מצב הפניות"
+          segments={VIEWS.map((v) => ({ ...v, count: countFor(v.value) }))}
+          value={filters.view}
+          onChange={changeView}
+        />
 
-      {/* Both filters in one row, so as many inquiries as possible fit on the screen.
-          The row is also the box the course results open over (see CourseFilter.module.css). */}
-      <div className={styles.filters}>
-        <CourseFilter value={filters.course} onChange={changeCourse} />
-        <TypeFilter value={filters.type} onChange={changeType} />
+        {/* Both filters in one row, so as many inquiries as possible fit on the screen.
+            The row is also the box the course results open over (see CourseFilter.module.css). */}
+        <div className={styles.filters}>
+          <CourseFilter value={filters.course} onChange={changeCourse} />
+          <TypeFilter value={filters.type} onChange={changeType} />
+        </div>
       </div>
 
-      <InquiryList filters={filters} search={search} />
+      <InquiryList filters={filters} search={search} total={countFor(filters.view)} />
     </>
   );
 }
@@ -84,6 +94,8 @@ interface ListProps {
   filters: Filters;
   /** The filters as a query string: the list's identity, and passed on so an inquiry's back link returns here. */
   search: string;
+  /** How many inquiries the view holds, when known (not with a filter on). */
+  total: number | undefined;
 }
 
 /** What is on screen: the first page(s) of the list for `search`. While another list loads, the previous one
@@ -94,9 +106,13 @@ interface Shown {
   nextBefore: number | null;
 }
 
-function InquiryList({ filters, search }: ListProps) {
+function InquiryList({ filters, search, total }: ListProps) {
   const { token, version, onAuthError } = useAdmin();
+  const { idle } = useSplit();
+  const navigate = useNavigate();
   const [shown, setShown] = useState<Shown | null>(null);
+  // Which list (filters and version) last came from the server; a cached or older list doesn't count.
+  const [fresh, setFresh] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -119,6 +135,7 @@ function InquiryList({ filters, search }: ListProps) {
       .then((page) => {
         rememberPage(search, version, page);
         setShown({ search, items: page.items, nextBefore: page.next_before });
+        setFresh(`${version}${search}`);
         setLoading(false);
       })
       .catch((e: unknown) => {
@@ -131,6 +148,21 @@ function InquiryList({ filters, search }: ListProps) {
     // `search` stands for the filters (query is built from them); version reloads after every change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, search, version, onAuthError]);
+
+  // On a computer with nothing open, the newest inquiry opens beside the list, like a mail app; after a save
+  // this is the next one. Only from a fresh list: an older one may still hold the inquiry just saved.
+  const first = shown?.items[0];
+  const ready = fresh === `${version}${search}`;
+  useEffect(() => {
+    if (idle && ready && first) navigate(`/inquiries/${first.id}${search}`, { replace: true });
+  }, [idle, ready, first, search, navigate]);
+
+  // Where the open inquiry sits in this list, shown above it on a computer: "פנייה 2 מתוך 9".
+  const openId = Number(useMatch("/inquiries/:id")?.params.id);
+  const index = shown?.items.findIndex((inquiry) => inquiry.id === openId) ?? -1;
+  // Without a count (a filter is on), the loaded rows are the whole list once there is no next page.
+  const of = total ?? (shown?.nextBefore === null ? shown.items.length : undefined);
+  useReportPosition(index < 0 ? null : of === undefined ? `פנייה ${index + 1}` : `פנייה ${index + 1} מתוך ${of}`);
 
   async function loadMore() {
     if (!shown || shown.nextBefore === null) return;

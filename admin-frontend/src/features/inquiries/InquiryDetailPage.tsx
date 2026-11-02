@@ -14,6 +14,7 @@ import {
 } from "../../shared/api/inquiries";
 import BackLink from "../../shared/components/BackLink";
 import { Group, Row } from "../../shared/components/GroupedList";
+import { useReportUnsaved, useSplit } from "../../shared/components/SplitView";
 import { formatDateTime } from "../../shared/lib/format";
 import { courseLabel, STATUS_LABEL, TYPE_LABEL } from "../../shared/lib/inquiryLabels";
 import { errorMessage } from "../../shared/lib/errors";
@@ -48,6 +49,7 @@ export default function InquiryDetailPage() {
 function InquiryDetail({ id }: { id: number }) {
   const { token, changed, onAuthError } = useAdmin();
   const navigate = useNavigate();
+  const { split } = useSplit();
   const [params] = useSearchParams();
   // The list's filters came along in the address, so back returns to the same list.
   const back = `/inquiries${filtersSearch(readFilters(params))}`;
@@ -81,6 +83,8 @@ function InquiryDetail({ id }: { id: number }) {
 
   // Closing or reloading the tab with unsaved changes asks too (the browser's own question).
   useWarnOnLeave(dirty);
+  // On a computer the list is beside this form: a click there asks first too.
+  useReportUnsaved(dirty);
 
   /** Sends only what changed, in one request, then goes back to the list (where the inquiry now sits in
       its new view). On a failure the form stays, with the error. */
@@ -109,7 +113,8 @@ function InquiryDetail({ id }: { id: number }) {
 
   return (
     <>
-      <BackLink to={back} label="פניות" confirm={dirty ? LEAVE_QUESTION : undefined} />
+      {/* Beside the list (computer) there is nothing to go back to. */}
+      {!split && <BackLink to={back} label="פניות" confirm={dirty ? LEAVE_QUESTION : undefined} />}
 
       {error && <p className="error">{error}</p>}
       {!inquiry && !error && <p className={styles.status}>טוען…</p>}

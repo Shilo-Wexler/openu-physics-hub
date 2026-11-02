@@ -2,11 +2,12 @@
     the time, a second line, and a preview of up to two lines. Every list screen uses these, so they all
     look and behave the same, and a change to a row is made once. */
 
-import type { ReactNode } from "react";
-import { Link } from "react-router";
+import type { MouseEvent, ReactNode } from "react";
+import { NavLink, useNavigate } from "react-router";
 
 import { formatListTime } from "../lib/format";
 import styles from "./ListRow.module.css";
+import { useSplit } from "./SplitView";
 
 /** The white rounded box that ListRows sit in. */
 export function RowList({ children }: { children: ReactNode }) {
@@ -28,11 +29,26 @@ interface ListRowProps {
   preview?: ReactNode;
   /** Drawn before the text, such as a dot or a thumbnail. The separator line starts after it. */
   leading?: ReactNode;
-  /** Opens a screen, and shows a chevron. Without it the row is plain text. */
+  /** Opens a screen, and shows a chevron. Without it the row is plain text.
+      In a SplitView on a computer, the row of the open item is marked. */
   to?: string;
 }
 
 export function ListRow({ title, strong = false, badge, time, subtitle, preview, leading, to }: ListRowProps) {
+  const { isDirty, confirmLeave } = useSplit();
+  const navigate = useNavigate();
+
+  // On a computer the item beside the list may have unsaved changes: ask before opening another one.
+  function onClick(event: MouseEvent<HTMLAnchorElement>) {
+    // A new tab or window leaves the open item as it is, so nothing to ask.
+    if (!to || !isDirty() || event.metaKey || event.ctrlKey || event.shiftKey) return;
+    // The answer comes later, so the link never goes by itself; it goes after a "yes".
+    event.preventDefault();
+    void confirmLeave().then((ok) => {
+      if (ok) navigate(to);
+    });
+  }
+
   const body = (
     <>
       {leading && <span className={styles.leading}>{leading}</span>}
@@ -68,9 +84,17 @@ export function ListRow({ title, strong = false, badge, time, subtitle, preview,
   return (
     <li className={styles.item}>
       {to ? (
-        <Link to={to} className={`${styles.row} ${styles.link}`}>
+        // end: only this item's own address marks the row (the query, such as the list's filters, is ignored).
+        <NavLink
+          to={to}
+          end
+          className={({ isActive }) =>
+            isActive ? `${styles.row} ${styles.link} ${styles.selected}` : `${styles.row} ${styles.link}`
+          }
+          onClick={onClick}
+        >
           {body}
-        </Link>
+        </NavLink>
       ) : (
         <div className={styles.row}>{body}</div>
       )}

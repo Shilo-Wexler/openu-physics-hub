@@ -7,6 +7,7 @@ import { ApiError, isAbort, isAuthError } from "../shared/api/client";
 import { getInquiryCounts } from "../shared/api/inquiries";
 import { getMe } from "../shared/api/me";
 import { ConfirmProvider } from "../shared/components/ConfirmSheet";
+import SplitView from "../shared/components/SplitView";
 import type { Level } from "../shared/lib/levels";
 import AdminEditorPage from "../features/admins/AdminEditorPage";
 import AdminsListPage from "../features/admins/AdminsListPage";
@@ -225,8 +226,11 @@ function ConsoleRoutes({ onSignOut }: { onSignOut: () => void }) {
       <main>
         <Routes>
           <Route index element={<Navigate to="/inquiries" replace />} />
-          <Route path="inquiries">
-            <Route index element={<InquiriesPage />} />
+          {/* On a computer the list and the open inquiry share the screen; on a phone they are two screens. */}
+          <Route
+            path="inquiries"
+            element={<SplitView base="/inquiries" title="פניות" list={<InquiriesPage />} empty="אין פנייה פתוחה." />}
+          >
             <Route path=":id" element={<InquiryDetailPage />} />
           </Route>
           <Route path="chat">
