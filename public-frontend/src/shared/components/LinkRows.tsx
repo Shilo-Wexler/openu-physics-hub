@@ -18,12 +18,14 @@ interface Props {
   rows: LinkRow[];
   /** Names the list for screen readers, since it is a navigation block of its own. */
   label: string;
+  /** On a computer: tiles side by side instead of rows (phone: rows either way). */
+  tilesOnDesktop?: boolean;
 }
 
-export default function LinkRows({ rows, label }: Props) {
+export default function LinkRows({ rows, label, tilesOnDesktop = false }: Props) {
   return (
     <nav aria-label={label}>
-      <ul className={styles.rows}>
+      <ul className={[styles.rows, tilesOnDesktop && styles.tiles].filter(Boolean).join(" ")}>
         {rows.map((row) => {
           const content = (
             <>

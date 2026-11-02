@@ -30,3 +30,10 @@
   font-size: var(--text-md);
   color: var(--color-text-muted);
 }
+
+/* Computer: main already adds room above the page, so the intro does not add its own. */
+@media (min-width: 1024px) {
+  .hero {
+    padding-block-start: 0;
+  }
+}

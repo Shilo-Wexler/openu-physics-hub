@@ -14,9 +14,16 @@ interface Props {
   headingLevel?: 2 | 3;
   /** Cuts the text to a few lines, for a preview. */
   short?: boolean;
+  /** On a computer: the text beside the image instead of around it (phone: unchanged). */
+  wideOnDesktop?: boolean;
 }
 
-export default function AnnouncementCard({ announcement, headingLevel = 2, short = false }: Props) {
+export default function AnnouncementCard({
+  announcement,
+  headingLevel = 2,
+  short = false,
+  wideOnDesktop = false,
+}: Props) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const titleId = `announcement-${announcement.id}`;
   const { image, title } = announcement;
@@ -24,7 +31,9 @@ export default function AnnouncementCard({ announcement, headingLevel = 2, short
 
   return (
     <article
-      className={[styles.card, announcement.pinned && styles.pinned].filter(Boolean).join(" ")}
+      className={[styles.card, announcement.pinned && styles.pinned, wideOnDesktop && styles.wide]
+        .filter(Boolean)
+        .join(" ")}
       // A screen reader names the card by its title; without one, by its date.
       aria-labelledby={title ? titleId : undefined}
       aria-label={title ? undefined : `הכרזה מ־${date}`}

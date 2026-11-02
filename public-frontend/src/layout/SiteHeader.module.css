@@ -61,3 +61,13 @@
     display: none;
   }
 }
+
+/* Computer: the header stays at the top while the page scrolls, so the sections are always one click away.
+   z-index keeps it above page content that scrolls under it. */
+@media (min-width: 1024px) {
+  .header {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 10;
+  }
+}
