@@ -17,6 +17,11 @@
   text-decoration: none;
 }
 
+/* A row's icon: computer only (below), so the phone stays as it was. */
+.icon {
+  display: none;
+}
+
 .text {
   display: flex;
   flex-direction: column;
@@ -58,9 +63,57 @@
   }
 }
 
-/* Computer, when tilesOnDesktop is set: the rows become equal tiles side by side, one per
-   item whatever their number, with light lines between them and one line under all. */
 @media (min-width: 1024px) {
+  /* The icon in a soft rounded square, before the title. */
+  .icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-muted);
+  }
+
+  .icon svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .row {
+    gap: var(--space-4);
+  }
+
+  /* When fillOnDesktop is set: the list takes all the height its parent gives it, and the
+     rows share it equally (never shorter than their content). The parent must be a flex
+     column with a set height, like the home page's areas column. */
+  .fillNav {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .fill {
+    display: grid;
+    flex-grow: 1;
+    grid-auto-rows: 1fr;
+  }
+
+  .fill li {
+    display: flex;
+  }
+
+  .fill .row {
+    flex-grow: 1;
+  }
+
+  /* When tilesOnDesktop is set: the rows become equal tiles side by side, one per
+     item whatever their number, with light lines between them and one line under all. */
   .tiles {
     display: grid;
     grid-auto-flow: column;
@@ -72,7 +125,8 @@
     border-inline-start: 1px solid var(--color-border);
   }
 
-  /* Title and text on top, the arrow at the bottom corner; every tile as tall as the tallest. */
+  /* Icon, title and text on top, the arrow at the bottom corner; every tile as tall as the
+     tallest. */
   .tiles .row {
     flex-direction: column;
     align-items: stretch;

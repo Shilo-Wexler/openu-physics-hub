@@ -31,9 +31,49 @@
   color: var(--color-text-muted);
 }
 
-/* Computer: main already adds room above the page, so the intro does not add its own. */
+/* The areas' small title: computer only (below), so the phone stays as it was. */
+.areasTitle {
+  display: none;
+}
+
 @media (min-width: 1024px) {
+  /* main already adds room above the page, so the intro does not add its own. */
   .hero {
     padding-block-start: 0;
+  }
+
+  /* With a pinned announcement: the areas on the right, the announcement in a 400px column
+     on the left (a poster's width). Both columns stretch to the taller one, so they start
+     and end on the same lines. */
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    grid-template-areas: "areas side";
+    column-gap: 72px;
+    align-items: stretch;
+  }
+
+  /* Flex columns, so the announcement's card and the area rows can fill the height. */
+  .columns .side {
+    grid-area: side;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .columns .areas {
+    grid-area: areas;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Same look and height as the announcement's "מהוועדה" line across the page. */
+  .areasTitle {
+    display: flex;
+    align-items: center;
+    min-height: var(--tap-size);
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-muted);
   }
 }

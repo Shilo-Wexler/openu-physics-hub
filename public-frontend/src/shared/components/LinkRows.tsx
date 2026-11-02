@@ -1,5 +1,6 @@
 /** Big rows that each lead to a page (the home page's areas, the /chat choices). */
 
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 
 import styles from "./LinkRows.module.css";
@@ -12,6 +13,8 @@ export interface LinkRow {
   text: string;
   /** Another site: opens in a new tab, with an "external" icon instead of the arrow. */
   external?: boolean;
+  /** A small line icon before the title, shown on a computer only (an svg, aria-hidden). */
+  icon?: ReactNode;
 }
 
 interface Props {
@@ -20,15 +23,27 @@ interface Props {
   label: string;
   /** On a computer: tiles side by side instead of rows (phone: rows either way). */
   tilesOnDesktop?: boolean;
+  /** On a computer: the rows grow to share the height the parent gives them, equally. */
+  fillOnDesktop?: boolean;
 }
 
-export default function LinkRows({ rows, label, tilesOnDesktop = false }: Props) {
+export default function LinkRows({
+  rows,
+  label,
+  tilesOnDesktop = false,
+  fillOnDesktop = false,
+}: Props) {
   return (
-    <nav aria-label={label}>
-      <ul className={[styles.rows, tilesOnDesktop && styles.tiles].filter(Boolean).join(" ")}>
+    <nav aria-label={label} className={fillOnDesktop ? styles.fillNav : undefined}>
+      <ul
+        className={[styles.rows, tilesOnDesktop && styles.tiles, fillOnDesktop && styles.fill]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {rows.map((row) => {
           const content = (
             <>
+              {row.icon && <span className={styles.icon}>{row.icon}</span>}
               <span className={styles.text}>
                 <span className={styles.title}>{row.title}</span>
                 <span className={styles.description}>{row.text}</span>
