@@ -106,8 +106,8 @@ export default function HomePage() {
         </div>
 
         <div className={styles.areas}>
-          {/* A small title in line with the announcement's "מהוועדה" (computer, beside it only). */}
-          {hasPinned && <h2 className={styles.areasTitle}>אזורי האתר</h2>}
+          {/* A small title in line with the announcement's own (computer, beside it only). */}
+          {hasPinned && <h2 className={styles.areasTitle}>באתר</h2>}
           <LinkRows
             rows={AREAS}
             label="אזורי האתר"
