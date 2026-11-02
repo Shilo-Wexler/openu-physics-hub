@@ -1,5 +1,6 @@
 /** The stats screen: a period switch, the inquiries received in it compared with the period before,
-    how they split by type, and the busiest courses in inquiries and in the chat. Read-only, every level. */
+    how they split by type, and the busiest courses in inquiries and in the chat. Read-only, every level.
+    On a computer: the switch beside the title, three tiles in a row, and the three lists side by side. */
 
 import { useSearchParams } from "react-router";
 
@@ -8,6 +9,7 @@ import { Group, Row } from "../../shared/components/GroupedList";
 import { ListMessage } from "../../shared/components/ListRow";
 import SegmentedControl from "../../shared/components/SegmentedControl";
 import { courseLabel, TYPE_LABEL } from "../../shared/lib/inquiryLabels";
+import { useIsDesktop } from "../../shared/lib/useIsDesktop";
 import { useAdmin, useLoad } from "../../layout/consoleContext";
 import LoadError from "../../layout/LoadError";
 import styles from "./StatsPage.module.css";
@@ -47,10 +49,12 @@ export default function StatsPage() {
 
   return (
     <>
-      <h1>נתונים</h1>
-
-      <div className={styles.switch}>
-        <SegmentedControl label="תקופה" segments={PERIODS} value={period} onChange={changePeriod} />
+      {/* On a computer the switch sits at the far end of the title's row; on a phone under it. */}
+      <div className={styles.titleRow}>
+        <h1>נתונים</h1>
+        <div className={styles.switch}>
+          <SegmentedControl label="תקופה" segments={PERIODS} value={period} onChange={changePeriod} />
+        </div>
       </div>
 
       {shown === null ? (
@@ -70,6 +74,7 @@ export default function StatsPage() {
 }
 
 function StatsBody({ stats }: { stats: Stats }) {
+  const desktop = useIsDesktop();
   const { inquiries, chat_courses: chatCourses } = stats;
   // Most common type first; the bars are measured against it.
   const types = Object.entries(inquiries.by_type).sort(([, a], [, b]) => b - a) as [keyof typeof TYPE_LABEL, number][];
@@ -77,57 +82,105 @@ function StatsBody({ stats }: { stats: Stats }) {
 
   return (
     <>
-      <section className={styles.tile}>
-        <h2 className={styles.tileLabel}>פניות חדשות</h2>
-        <p className={styles.tileNumber}>{inquiries.count}</p>
-        <p className={styles.tileNote}>{comparison(inquiries.count, inquiries.previous_count, stats.period)}</p>
-      </section>
+      <div className={styles.tiles}>
+        <Tile
+          label="פניות חדשות"
+          value={String(inquiries.count)}
+          note={comparison(inquiries.count, inquiries.previous_count, stats.period)}
+        />
+        {/* Two more tiles fill the row on a computer. They only sum up the lists under them, so a phone,
+            where the lists are right below, does without them. */}
+        {desktop && <TopTypeTile top={types[0]} count={inquiries.count} />}
+        {desktop && <TopChatTile courses={chatCourses} />}
+      </div>
 
-      <Group title="פניות לפי סוג">
-        {types.map(([type, n]) => (
-          <Row
-            key={type}
-            label={TYPE_LABEL[type]}
-            value={n}
-            detail={
-              <span className={styles.bar} aria-hidden="true">
-                <span className={styles.fill} style={{ width: `${(n / most) * 100}%` }} />
-              </span>
-            }
-          />
-        ))}
-      </Group>
-
-      <Group title="קורסים עם הכי הרבה פניות">
-        {inquiries.top_courses.length === 0 ? (
-          <Row label="אין פניות בתקופה הזו." />
-        ) : (
-          inquiries.top_courses.map((c) => (
+      <div className={styles.columns}>
+        <Group title="פניות לפי סוג">
+          {types.map(([type, n]) => (
             <Row
-              key={c.course_number}
-              label={courseLabel(c.course_number, c.course_name)}
-              value={countLabel(c.inquiry_count, "פנייה", "פניות")}
+              key={type}
+              label={TYPE_LABEL[type]}
+              value={n}
+              detail={
+                <span className={styles.bar} aria-hidden="true">
+                  <span className={styles.fill} style={{ width: `${(n / most) * 100}%` }} />
+                </span>
+              }
             />
-          ))
-        )}
-      </Group>
+          ))}
+        </Group>
 
-      <Group title="הכי פעילים בצ'אט">
-        {chatCourses === null ? (
-          <Row label="הצ'אט לא זמין כרגע. אפשר לנסות שוב מאוחר יותר." />
-        ) : chatCourses.length === 0 ? (
-          <Row label="אין הודעות בתקופה הזו." />
-        ) : (
-          chatCourses.map((c) => (
-            <Row
-              key={c.course_id}
-              label={courseLabel(c.course_id, c.course_name)}
-              value={countLabel(c.message_count, "הודעה", "הודעות")}
-            />
-          ))
-        )}
-      </Group>
+        <Group title="קורסים עם הכי הרבה פניות">
+          {inquiries.top_courses.length === 0 ? (
+            <Row label="אין פניות בתקופה הזו." />
+          ) : (
+            inquiries.top_courses.map((c) => (
+              <Row
+                key={c.course_number}
+                label={courseLabel(c.course_number, c.course_name)}
+                value={countLabel(c.inquiry_count, "פנייה", "פניות")}
+              />
+            ))
+          )}
+        </Group>
+
+        <Group title="הכי פעילים בצ'אט">
+          {chatCourses === null ? (
+            <Row label="הצ'אט לא זמין כרגע. אפשר לנסות שוב מאוחר יותר." />
+          ) : chatCourses.length === 0 ? (
+            <Row label="אין הודעות בתקופה הזו." />
+          ) : (
+            chatCourses.map((c) => (
+              <Row
+                key={c.course_id}
+                label={courseLabel(c.course_id, c.course_name)}
+                value={countLabel(c.message_count, "הודעה", "הודעות")}
+              />
+            ))
+          )}
+        </Group>
+      </div>
     </>
+  );
+}
+
+/** A white card with a grey label, a big value (a number, or a name cut with "..."), and a note. */
+function Tile({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <section className={styles.tile}>
+      <h2 className={styles.tileLabel}>{label}</h2>
+      <p className={styles.tileNumber} title={value}>
+        {value}
+      </p>
+      <p className={styles.tileNote}>{note}</p>
+    </section>
+  );
+}
+
+/** The most common type in the period, out of all its inquiries. */
+function TopTypeTile({ top, count }: { top: [keyof typeof TYPE_LABEL, number] | undefined; count: number }) {
+  if (!top || top[1] === 0) return <Tile label="הסוג הנפוץ" value="—" note="אין פניות בתקופה הזו." />;
+  const [type, n] = top;
+  return (
+    <Tile
+      label="הסוג הנפוץ"
+      value={TYPE_LABEL[type]}
+      note={`${countLabel(n, "פנייה", "פניות")} מתוך ${count}`}
+    />
+  );
+}
+
+/** The busiest course in the chat in the period: the first of the chat list. */
+function TopChatTile({ courses }: { courses: Stats["chat_courses"] }) {
+  if (courses === null) return <Tile label="הכי פעיל בצ'אט" value="—" note="הצ'אט לא זמין כרגע." />;
+  const first = courses[0];
+  if (!first) return <Tile label="הכי פעיל בצ'אט" value="—" note="אין הודעות בתקופה הזו." />;
+  return (
+    <Tile
+      label="הכי פעיל בצ'אט"
+      value={courseLabel(first.course_id, first.course_name)}
+      note={countLabel(first.message_count, "הודעה", "הודעות")}
+    />
   );
 }
 

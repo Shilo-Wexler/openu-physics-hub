@@ -1,5 +1,6 @@
 /** The "attached files" part of the meeting form. Nothing here talks to the server except a download:
-    files picked or marked for removal wait in the editor's state until "save" sends them. */
+    files picked or marked for removal wait in the editor's state until "save" sends them.
+    Each file shows as a small sheet with its type on a coloured label, like a computer's file manager. */
 
 import { useRef, useState, type ChangeEvent } from "react";
 
@@ -14,6 +15,28 @@ const MAX_FILE_MB = 25;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 // The browser needs the object URL a moment after the click starts the download (Safari on iPhone more).
 const RELEASE_DOWNLOAD_MS = 60_000;
+// The label holds a few letters at most; a longer ending (or none) shows no label, just the sheet.
+const MAX_LABEL = 4;
+
+/** The label's colour by kind, so files tell apart at a glance; anything else is grey. */
+type Kind = "pdf" | "word" | "excel" | "slides" | "other";
+
+const KIND_BY_EXTENSION: Record<string, Kind> = {
+  pdf: "pdf",
+  doc: "word",
+  docx: "word",
+  odt: "word",
+  rtf: "word",
+  txt: "word",
+  xls: "excel",
+  xlsx: "excel",
+  ods: "excel",
+  csv: "excel",
+  ppt: "slides",
+  pptx: "slides",
+  odp: "slides",
+  key: "slides",
+};
 
 /** A file picked in the form and not uploaded yet. key tells two files with the same name apart. */
 export interface PendingFile {
@@ -31,6 +54,28 @@ export function toPending(files: File[]): PendingFile[] {
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+/** The ending of a file name ("pdf" for "פרוטוקול.pdf"), lower case; "" when there is none. */
+function extensionOf(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
+}
+
+/** A white sheet with a folded corner, and the file's ending on a small coloured label over its bottom. */
+function FileIcon({ name }: { name: string }) {
+  const extension = extensionOf(name);
+  const kind = KIND_BY_EXTENSION[extension] ?? "other";
+  const label = extension.length > 0 && extension.length <= MAX_LABEL ? extension.toUpperCase() : null;
+  return (
+    <span className={styles.icon} aria-hidden="true">
+      <svg viewBox="0 0 32 40">
+        <path className={styles.sheet} d="M5 1h15l9 9v27a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2z" />
+        <path className={styles.fold} d="M20 1v7a2 2 0 0 0 2 2h7" />
+      </svg>
+      {label && <span className={`${styles.label} ${styles[kind]}`}>{label}</span>}
+    </span>
+  );
 }
 
 interface Props {
@@ -115,19 +160,22 @@ export default function MeetingFiles({
                 disabled={gone || downloading === file.id}
                 onClick={() => void download(file)}
               >
-                <span className={gone ? `${styles.name} ${styles.gone}` : styles.name}>
-                  <bdi>{file.file_name}</bdi>
-                </span>
-                <span className={styles.detail}>
-                  {gone ? (
-                    "יימחק בשמירה"
-                  ) : downloading === file.id ? (
-                    "מוריד…"
-                  ) : (
-                    <>
-                      {formatSize(file.size_bytes)} · <bdi>{file.uploaded_by_name}</bdi>
-                    </>
-                  )}
+                <FileIcon name={file.file_name} />
+                <span className={styles.info}>
+                  <span className={gone ? `${styles.name} ${styles.gone}` : styles.name}>
+                    <bdi>{file.file_name}</bdi>
+                  </span>
+                  <span className={styles.detail}>
+                    {gone ? (
+                      "יימחק בשמירה"
+                    ) : downloading === file.id ? (
+                      "מוריד…"
+                    ) : (
+                      <>
+                        {formatSize(file.size_bytes)} · <bdi>{file.uploaded_by_name}</bdi>
+                      </>
+                    )}
+                  </span>
                 </span>
               </button>
               {canRemoveSaved && (
@@ -146,10 +194,13 @@ export default function MeetingFiles({
         {pending.map(({ key, file }) => (
           <li key={`pending-${key}`} className={styles.item}>
             <span className={styles.file}>
-              <span className={styles.name}>
-                <bdi>{file.name}</bdi>
+              <FileIcon name={file.name} />
+              <span className={styles.info}>
+                <span className={styles.name}>
+                  <bdi>{file.name}</bdi>
+                </span>
+                <span className={styles.detail}>{formatSize(file.size)} · יועלה בשמירה</span>
               </span>
-              <span className={styles.detail}>{formatSize(file.size)} · יועלה בשמירה</span>
             </span>
             <button type="button" className={styles.remove} disabled={disabled} onClick={() => onRemovePending(key)}>
               הסרה
@@ -163,6 +214,12 @@ export default function MeetingFiles({
             disabled={disabled}
             onClick={() => picker.current?.click()}
           >
+            {/* In the icon's place, so "add" lines up with the files above it. */}
+            <span className={styles.addIcon} aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </span>
             הוספת קובץ
           </button>
         </li>

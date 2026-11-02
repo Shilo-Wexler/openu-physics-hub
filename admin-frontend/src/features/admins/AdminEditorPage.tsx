@@ -1,5 +1,8 @@
 /** One admin as a form, new or existing: name and level, one "save", and removing them.
-    What a level may not change is shown without the controls (lib/levels); the server checks again. */
+    What a level may not change is shown without the controls (lib/levels); the server checks again.
+    On a phone "save" returns to the list; on a computer, where the list stays beside it, the person stays
+    open as saved. On a wide screen the form has two columns: name and level, and beside them save,
+    the details and removing. */
 
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
@@ -9,6 +12,7 @@ import { isAbort, isAuthError } from "../../shared/api/client";
 import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
+import { useReportUnsaved, useSplit } from "../../shared/components/SplitView";
 import { formatDateTime } from "../../shared/lib/format";
 import { LEVEL_HINT, LEVEL_LABEL, levelsManagedBy, type Level } from "../../shared/lib/levels";
 import { emailError } from "../../shared/lib/validation";
@@ -34,6 +38,7 @@ export default function AdminEditorPage() {
 
 function AdminEditor({ email }: { email: string | null }) {
   const { token, email: me, role: myRole, changed, onAuthError } = useAdmin();
+  const { split } = useSplit();
   const confirm = useConfirm();
   const navigate = useNavigate();
   const managed = levelsManagedBy(myRole);
@@ -80,8 +85,10 @@ function AdminEditor({ email }: { email: string | null }) {
   const levelChanged = !isNew && saved !== null && level !== saved.role;
   const dirty = isNew ? newEmail.trim() !== "" || name.trim() !== "" : nameChanged || levelChanged;
 
-  // Closing or reloading the tab with unsaved changes asks too (the browser's own question).
+  // Closing or reloading the tab with unsaved changes asks too (the browser's own question),
+  // and on a computer so does a click in the list beside the form.
   useWarnOnLeave(dirty);
+  useReportUnsaved(dirty);
 
   // Nobody to add for team, so the "new" screen goes back to the list.
   if (isNew && managed.length === 0) return <Navigate to={BACK} replace />;
@@ -97,7 +104,8 @@ function AdminEditor({ email }: { email: string | null }) {
     return null;
   }
 
-  /** Sends what changed (the name, then the level), then back to the list. */
+  /** Sends what changed (the name, then the level). Then back to the list on a phone; on a computer the
+      person stays open as saved, and someone new opens at their own address. */
   async function save() {
     const wrong = problem();
     if (wrong) {
@@ -108,13 +116,32 @@ function AdminEditor({ email }: { email: string | null }) {
     setError(null);
     try {
       if (isNew) {
-        await addAdmin(token, newEmail.trim().toLowerCase(), name.trim(), level);
-      } else if (saved) {
-        if (nameChanged) setSaved(await setAdminName(token, saved.email, name.trim()));
-        if (levelChanged) await setAdminRole(token, saved.email, level);
+        const added = newEmail.trim().toLowerCase();
+        await addAdmin(token, added, name.trim(), level);
+        changed();
+        navigate(split ? `${BACK}/${encodeURIComponent(added)}` : BACK, { replace: true });
+        return;
       }
-      changed();
-      navigate(BACK, { replace: true });
+      if (saved) {
+        let current = saved;
+        if (nameChanged) {
+          current = await setAdminName(token, saved.email, name.trim());
+          setSaved(current);
+        }
+        if (levelChanged) {
+          await setAdminRole(token, saved.email, level);
+          current = { ...current, role: level };
+        }
+        changed();
+        if (!split) {
+          navigate(BACK, { replace: true });
+          return;
+        }
+        setSaved(current);
+        setName(current.name);
+        setLevel(current.role);
+        setSaving(false);
+      }
     } catch (e) {
       // A name saved before the level failed stays saved: the form now starts from it.
       changed();
@@ -137,6 +164,7 @@ function AdminEditor({ email }: { email: string | null }) {
     try {
       await removeAdmin(token, saved.email);
       changed();
+      // On a computer the list then opens its first person beside it.
       navigate(BACK, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
@@ -145,7 +173,8 @@ function AdminEditor({ email }: { email: string | null }) {
     }
   }
 
-  const back = <BackLink to={BACK} label="צוות" confirm={dirty ? LEAVE_QUESTION : undefined} />;
+  // On a computer the list is beside the form, so there is nothing to go back to.
+  const back = split ? null : <BackLink to={BACK} label="צוות" confirm={dirty ? LEAVE_QUESTION : undefined} />;
 
   if (missing) {
     return (
@@ -175,83 +204,95 @@ function AdminEditor({ email }: { email: string | null }) {
       : LEVEL_HINT[level];
 
   return (
-    <>
+    <div className={styles.form}>
       {back}
       <h1 className={styles.heading}>{isNew ? "חבר צוות חדש" : saved?.name}</h1>
 
-      {isNew && (
-        <section className={styles.section}>
-          <label htmlFor="admin-email" className={styles.label}>
-            מייל
-          </label>
-          <input
-            id="admin-email"
-            className={styles.field}
-            type="email"
-            dir="ltr"
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-            autoComplete="off"
-          />
-          <p className={styles.hint}>חשבון הגוגל שאיתו חבר הצוות ייכנס, למשל name@gmail.com. הגישה נפתחת מיד.</p>
-        </section>
-      )}
+      {/* Two columns on a wide screen; on a phone one under the other, in the same order. */}
+      <div className={styles.layout}>
+        {/* Who they are and what they may do. */}
+        <div>
+          {isNew && (
+            <section className={styles.section}>
+              <label htmlFor="admin-email" className={styles.label}>
+                מייל
+              </label>
+              <input
+                id="admin-email"
+                className={styles.field}
+                type="email"
+                dir="ltr"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                autoComplete="off"
+              />
+              <p className={styles.hint}>חשבון הגוגל שאיתו חבר הצוות ייכנס, למשל name@gmail.com. הגישה נפתחת מיד.</p>
+            </section>
+          )}
 
-      <section className={styles.section}>
-        <label htmlFor="admin-name" className={styles.label}>
-          שם
-        </label>
-        <input
-          id="admin-name"
-          className={styles.field}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          readOnly={!canRename}
-          maxLength={MAX_NAME}
-          dir="auto"
-        />
-        <p className={styles.hint}>השם שיופיע בקונסולה.</p>
-      </section>
-
-      {canManage ? (
-        <Group title="תפקיד" footer={levelNote}>
-          {managed.map((option) => (
-            <Row
-              key={option}
-              label={LEVEL_LABEL[option]}
-              value={option === level ? check : undefined}
-              onClick={() => setLevel(option)}
-              choice
+          <section className={styles.section}>
+            <label htmlFor="admin-name" className={styles.label}>
+              שם
+            </label>
+            <input
+              id="admin-name"
+              className={styles.field}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              readOnly={!canRename}
+              maxLength={MAX_NAME}
+              dir="auto"
             />
-          ))}
-        </Group>
-      ) : (
-        <Group title="תפקיד" footer={levelNote}>
-          <Row label={LEVEL_LABEL[level]} />
-        </Group>
-      )}
+            <p className={styles.hint}>השם שיופיע בקונסולה.</p>
+          </section>
 
-      {error && <p className="error">{error}</p>}
-      {canRename && (
-        <button type="button" className={styles.save} disabled={!dirty || saving} onClick={() => void save()}>
-          {saving ? "שומר…" : isNew ? "הוספה" : "שמירה"}
-        </button>
-      )}
-
-      {saved && (
-        <>
-          <Group title="פרטים">
-            <Row label="מייל" value={<bdi dir="ltr">{saved.email}</bdi>} />
-            <Row label="נוסף על ידי" value={saved.added_by ? <AdminLabel email={saved.added_by} /> : "ישירות ב-DB"} />
-            <Row label="נוסף" value={formatDateTime(saved.created_at)} />
-          </Group>
-          {canManage && (
-            <Group>
-              <Row label="הסרה מהצוות" danger onClick={() => void remove()} />
+          {canManage ? (
+            <Group title="תפקיד" footer={levelNote}>
+              {managed.map((option) => (
+                <Row
+                  key={option}
+                  label={LEVEL_LABEL[option]}
+                  value={option === level ? check : undefined}
+                  onClick={() => setLevel(option)}
+                  choice
+                />
+              ))}
+            </Group>
+          ) : (
+            <Group title="תפקיד" footer={levelNote}>
+              <Row label={LEVEL_LABEL[level]} />
             </Group>
           )}
-        </>
-      )}
-    </>
+        </div>
+
+        {/* Save, the details and removing. On a wide screen it stays in sight beside the form. */}
+        <div className={styles.side}>
+          {error && <p className="error">{error}</p>}
+          {canRename && (
+            <button type="button" className={styles.save} disabled={!dirty || saving} onClick={() => void save()}>
+              {saving ? "שומר…" : isNew ? "הוספה" : "שמירה"}
+            </button>
+          )}
+
+          {saved && (
+            <>
+              <Group title="פרטים">
+                <Row label="מייל" value={<bdi dir="ltr">{saved.email}</bdi>} />
+                <Row
+                  label="נוסף על ידי"
+                  value={saved.added_by ? <AdminLabel email={saved.added_by} /> : "ישירות ב-DB"}
+                />
+                <Row label="נוסף" value={formatDateTime(saved.created_at)} />
+              </Group>
+              {canManage && (
+                <Group>
+                  <Row label="הסרה מהצוות" danger onClick={() => void remove()} />
+                </Group>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

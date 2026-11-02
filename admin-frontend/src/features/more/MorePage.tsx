@@ -1,14 +1,16 @@
 /** The "more" screen: everything that does not fit the bottom bar, plus the signed-in account. */
 
+import { Link } from "react-router";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { LEVEL_LABEL } from "../../shared/lib/levels";
+import { useIsDesktop } from "../../shared/lib/useIsDesktop";
 import { useAdmin } from "../../layout/consoleContext";
 import styles from "./MorePage.module.css";
 
 /** The coloured square behind a row's icon, like iOS Settings. */
-function IconTile({ paths }: { paths: string[] }) {
+function IconTile({ paths, large = false }: { paths: string[]; large?: boolean }) {
   return (
-    <span className={styles.tile}>
+    <span className={large ? `${styles.tile} ${styles.tileLarge}` : styles.tile}>
       <svg viewBox="0 0 24 24" aria-hidden="true">
         {paths.map((d) => (
           <path key={d} d={d} />
@@ -34,21 +36,54 @@ const NOTES_ICON = [
   "M10 9H8",
 ];
 
+/** The screens under "more". New sections are added here, and show on both layouts. */
+const SECTIONS = [
+  {
+    to: "/more/admins",
+    label: "צוות",
+    hint: "ניהול חברי הצוות והתפקידים שלהם",
+    icon: USERS_ICON,
+  },
+  {
+    to: "/more/meetings",
+    label: "סיכומי ישיבות",
+    hint: "סיכומים של ישיבות קודמות ופתיחת סיכום חדש",
+    icon: NOTES_ICON,
+  },
+];
+
+function Chevron() {
+  return (
+    <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
 interface Props {
   onSignOut: () => void;
 }
 
-/** New sections become rows here. */
 export default function MorePage({ onSignOut }: Props) {
+  const desktop = useIsDesktop();
+  return (
+    <>
+      <h1>עוד</h1>
+      {desktop ? <DesktopMore onSignOut={onSignOut} /> : <PhoneMore onSignOut={onSignOut} />}
+    </>
+  );
+}
+
+/** Phone: grouped rows, one under the other. */
+function PhoneMore({ onSignOut }: Props) {
   const { email, role, nameOf } = useAdmin();
 
   return (
     <>
-      <h1>עוד</h1>
-
       <Group>
-        <Row icon={<IconTile paths={USERS_ICON} />} label="צוות" to="/more/admins" />
-        <Row icon={<IconTile paths={NOTES_ICON} />} label="סיכומי ישיבות" to="/more/meetings" />
+        {SECTIONS.map((s) => (
+          <Row key={s.to} icon={<IconTile paths={s.icon} />} label={s.label} to={s.to} />
+        ))}
       </Group>
 
       {/* Opens your own admin screen, where you change your name. */}
@@ -65,5 +100,51 @@ export default function MorePage({ onSignOut }: Props) {
         <Row label="התנתקות" danger onClick={onSignOut} />
       </Group>
     </>
+  );
+}
+
+/** Computer: the account card on the right, a card per section on the left, both the same height. */
+function DesktopMore({ onSignOut }: Props) {
+  const { email, role, nameOf } = useAdmin();
+  const name = nameOf(email) ?? email;
+  // The first letter of the name (Array.from keeps a letter made of two code units whole).
+  const initial = Array.from(name)[0]?.toUpperCase() ?? "";
+
+  return (
+    <div className={styles.layout}>
+      <aside className={styles.account} aria-label="החשבון שלך">
+        <span className={styles.avatar} aria-hidden="true">
+          {initial}
+        </span>
+        <bdi className={styles.name}>{name}</bdi>
+        <bdi className={styles.email} dir="ltr">
+          {email}
+        </bdi>
+        <span className={styles.level}>{LEVEL_LABEL[role]}</span>
+
+        <div className={styles.accountLinks}>
+          <Link className={styles.accountRow} to={`/more/admins/${encodeURIComponent(email)}`}>
+            <span>עריכת השם שלך</span>
+            <Chevron />
+          </Link>
+          <button type="button" className={`${styles.accountRow} ${styles.danger}`} onClick={onSignOut}>
+            התנתקות
+          </button>
+        </div>
+      </aside>
+
+      <nav className={styles.cards} aria-label="מסכים נוספים">
+        {SECTIONS.map((s) => (
+          <Link key={s.to} className={styles.card} to={s.to}>
+            <IconTile paths={s.icon} large />
+            <span className={styles.cardText}>
+              <span className={styles.cardTitle}>{s.label}</span>
+              <span className={styles.cardHint}>{s.hint}</span>
+            </span>
+            <Chevron />
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
 }

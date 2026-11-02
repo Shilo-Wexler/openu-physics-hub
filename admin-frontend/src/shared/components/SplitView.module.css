@@ -1,0 +1,113 @@
+/* Computer only (SplitView draws this layout only from 1024px). */
+
+/* The title, with the screen's action (such as "+") at the far end, like a new-item button in iOS.
+   The row keeps the title's own space under it (see h1 in global.css). */
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.titleRow h1 {
+  margin: 0;
+}
+
+/* One white window as tall as the screen under the title, so the page itself doesn't scroll:
+   the list on the right, the open item on the left, a line between them. The 96px are the title
+   and the page's own top and bottom padding (see h1 and main in global.css). */
+.window {
+  display: grid;
+  grid-template-columns: 420px minmax(0, 1fr);
+  height: calc(100dvh - var(--header-height) - 96px);
+  min-height: 480px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border);
+  overflow: hidden;
+}
+
+/* The list side. Its rows run edge to edge, so the open row's mark touches the line. */
+.list {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-inline-end: 1px solid var(--color-border-strong);
+}
+
+/* Inside the window the list's white box (RowList) needs no corners or gap of its own, whether it stands
+   alone or under a group title. Element selectors are not renamed by CSS modules, so this reaches into the
+   list; only one level down, so menus deeper inside (such as the course search results) keep their corners. */
+.list > div > ul,
+.list > section > ul {
+  margin-block-end: 0;
+  border-radius: 0;
+}
+
+/* The list's top (ListHead): stays put while the rows scroll. Only here, inside the window (computer). */
+@media (min-width: 1024px) {
+  .head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: var(--space-3) var(--space-3) 0;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+}
+
+/* The item side: the page's grey, like the item's screen on a phone. min-width 0: a long word must not widen it. */
+.item {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-bg);
+}
+
+/* Where the open item sits in the list, above its title. */
+.position {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Nothing open (in practice: the list is empty). Quiet, in the middle of the item side. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 44px;
+  height: 44px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.emptyText {
+  margin: 0;
+}
+
+/* Scroll bars: thin and invisible until the mouse is over that side, like macOS with a trackpad. */
+.list,
+.item {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.list:hover,
+.item:hover {
+  scrollbar-color: var(--color-border-strong) transparent;
+}

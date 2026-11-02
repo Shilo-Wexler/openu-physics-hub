@@ -1,4 +1,5 @@
-/* The page title with the round "+" at the far end, like a new-item button in iOS. */
+/* The page title with the round "+" at the far end, like a new-item button in iOS (phone; on a computer
+   SplitView draws the title row). */
 .head {
   display: flex;
   align-items: center;
@@ -36,8 +37,11 @@
   stroke-linecap: round;
 }
 
-/* Like a Group's title, so the lists here match the grouped screens. */
+/* Like a Group's title, so the lists here match the grouped screens; the count at the far end. */
 .groupTitle {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
   margin: 0 0 var(--space-1);
   padding-inline: var(--space-3);
   color: var(--color-text-muted);
@@ -45,7 +49,36 @@
   font-weight: var(--weight-regular);
 }
 
-/* The row's small picture; the same box stands empty while the image loads. */
+.groupCount {
+  font-variant-numeric: tabular-nums;
+}
+
+/* On a computer, inside the white list side: a grey bar over each group, so the groups read apart at a
+   glance. It stays at the top while its own rows scroll under it, then the next group's bar takes its place. */
+@media (min-width: 1024px) {
+  .groupTitle {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border-block: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+  }
+
+  section:first-child > .groupTitle {
+    border-block-start: 0;
+  }
+
+  .groupCount {
+    color: var(--color-text-muted);
+    font-weight: var(--weight-regular);
+  }
+}
+
+/* The row's picture, or the grey square in its place; the same box stands empty while an image loads. */
 .thumb {
   display: block;
   width: 44px;
@@ -54,4 +87,37 @@
   border-radius: 8px;
   background: var(--color-surface-muted);
   object-fit: cover;
+}
+
+/* No picture: a text icon in the square, so the row still lines up with the ones that have one. */
+.noImage {
+  display: grid;
+  place-items: center;
+  color: var(--color-text-muted);
+}
+
+.noImage svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* On a computer there is room for a bigger picture. */
+@media (min-width: 1024px) {
+  .thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+  }
+}
+
+/* The second line: always one line, so every row has the same height. */
+.oneLine {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

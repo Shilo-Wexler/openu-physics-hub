@@ -8,6 +8,8 @@ import { blockUser, dismissReports, removeMessage, reportedMessages, unblockUser
 import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
+import LongText from "../../shared/components/LongText";
+import { useSplit } from "../../shared/components/SplitView";
 import { formatDateTime } from "../../shared/lib/format";
 import { errorMessage } from "../../shared/lib/errors";
 import { useAdmin, useLoad } from "../../layout/consoleContext";
@@ -19,6 +21,7 @@ export default function ReportPage() {
   const { token, version, changed, onAuthError } = useAdmin();
   const confirm = useConfirm();
   const navigate = useNavigate();
+  const { split } = useSplit();
   const id = Number(useParams().id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +47,8 @@ export default function ReportPage() {
     }
   }
 
-  const back = <BackLink to="/chat" label="צ'אט" />;
+  // Beside the list (computer) there is nothing to go back to.
+  const back = split ? null : <BackLink to="/chat" label="צ'אט" />;
 
   if (reported.failed) {
     return (
@@ -116,9 +120,10 @@ export default function ReportPage() {
         </p>
       </header>
 
-      <div className={styles.content} dir="auto">
+      {/* key: another message starts cut again. */}
+      <LongText key={m.message_id} className={styles.content}>
         {m.content}
-      </div>
+      </LongText>
 
       {error && <p className="error">{error}</p>}
 

@@ -7,11 +7,12 @@ import { ApiError, isAbort, isAuthError } from "../shared/api/client";
 import { getInquiryCounts } from "../shared/api/inquiries";
 import { getMe } from "../shared/api/me";
 import { ConfirmProvider } from "../shared/components/ConfirmSheet";
+import SplitView from "../shared/components/SplitView";
 import type { Level } from "../shared/lib/levels";
 import AdminEditorPage from "../features/admins/AdminEditorPage";
-import AdminsListPage from "../features/admins/AdminsListPage";
+import AdminsListPage, { NewAdminLink } from "../features/admins/AdminsListPage";
 import AnnouncementEditorPage from "../features/announcements/AnnouncementEditorPage";
-import AnnouncementListPage from "../features/announcements/AnnouncementListPage";
+import AnnouncementListPage, { NewAnnouncementLink } from "../features/announcements/AnnouncementListPage";
 import { DEV_SIGN_IN, type Identity } from "../features/auth/identity";
 import SignIn from "../features/auth/SignIn";
 import { useIdentity } from "../features/auth/useIdentity";
@@ -22,7 +23,7 @@ import ReportPage from "../features/chat/ReportPage";
 import InquiriesPage from "../features/inquiries/InquiriesPage";
 import InquiryDetailPage from "../features/inquiries/InquiryDetailPage";
 import MeetingEditorPage from "../features/meetings/MeetingEditorPage";
-import MeetingListPage from "../features/meetings/MeetingListPage";
+import MeetingListPage, { NewMeetingLink } from "../features/meetings/MeetingListPage";
 import MorePage from "../features/more/MorePage";
 import StatsPage from "../features/stats/StatsPage";
 import BottomNav from "./BottomNav";
@@ -225,31 +226,66 @@ function ConsoleRoutes({ onSignOut }: { onSignOut: () => void }) {
       <main>
         <Routes>
           <Route index element={<Navigate to="/inquiries" replace />} />
-          <Route path="inquiries">
-            <Route index element={<InquiriesPage />} />
+          {/* On a computer the list and the open inquiry share the screen; on a phone they are two screens. */}
+          <Route
+            path="inquiries"
+            element={<SplitView base="/inquiries" title="פניות" list={<InquiriesPage />} empty="אין פנייה פתוחה." />}
+          >
             <Route path=":id" element={<InquiryDetailPage />} />
           </Route>
-          <Route path="chat">
-            <Route index element={<ChatPage />} />
+          <Route
+            path="chat"
+            element={<SplitView base="/chat" title="צ'אט" list={<ChatPage />} empty="אין מה להציג כאן." />}
+          >
             <Route path="reports/:id" element={<ReportPage />} />
             <Route path="blocked/:userId" element={<BlockedUserPage />} />
             <Route path="log/:id" element={<ActionPage />} />
           </Route>
           {/* "new" is matched before ":id", so both open the same form, empty or filled. */}
-          <Route path="announcements">
-            <Route index element={<AnnouncementListPage />} />
+          <Route
+            path="announcements"
+            element={
+              <SplitView
+                base="/announcements"
+                title="הכרזות"
+                action={<NewAnnouncementLink />}
+                list={<AnnouncementListPage />}
+                empty="עוד אין הכרזות."
+              />
+            }
+          >
             <Route path="new" element={<AnnouncementEditorPage />} />
             <Route path=":id" element={<AnnouncementEditorPage />} />
           </Route>
           <Route path="stats" element={<StatsPage />} />
           <Route path="more" element={<MorePage onSignOut={onSignOut} />} />
-          <Route path="more/admins">
-            <Route index element={<AdminsListPage />} />
+          <Route
+            path="more/admins"
+            element={
+              <SplitView
+                base="/more/admins"
+                title="צוות"
+                action={<NewAdminLink />}
+                list={<AdminsListPage />}
+                empty="אין חברי צוות."
+              />
+            }
+          >
             <Route path="new" element={<AdminEditorPage />} />
             <Route path=":email" element={<AdminEditorPage />} />
           </Route>
-          <Route path="more/meetings">
-            <Route index element={<MeetingListPage />} />
+          <Route
+            path="more/meetings"
+            element={
+              <SplitView
+                base="/more/meetings"
+                title="סיכומי ישיבות"
+                action={<NewMeetingLink />}
+                list={<MeetingListPage />}
+                empty="עוד אין סיכומים."
+              />
+            }
+          >
             <Route path="new" element={<MeetingEditorPage />} />
             <Route path=":id" element={<MeetingEditorPage />} />
           </Route>

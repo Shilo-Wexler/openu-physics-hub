@@ -1,4 +1,5 @@
-/* The page title with the round "+" at the far end, like the announcements list. */
+/* The page title with the round "+" at the far end, like the announcements list (phone; on a computer
+   SplitView draws the title row). */
 .head {
   display: flex;
   align-items: center;
@@ -34,4 +35,86 @@
   stroke: currentColor;
   stroke-width: 2.5;
   stroke-linecap: round;
+}
+
+.group {
+  margin-block-end: var(--space-4);
+}
+
+/* Like a Group's title, so the lists here match the grouped screens; the count at the far end. */
+.groupTitle {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  padding-inline: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+}
+
+.groupCount {
+  font-variant-numeric: tabular-nums;
+}
+
+/* On a computer, inside the white list side: a grey bar over each year, as on the announcements list.
+   It stays at the top while its own rows scroll under it. */
+@media (min-width: 1024px) {
+  .group {
+    margin-block-end: 0;
+  }
+
+  .groupTitle {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border-block: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .group:first-child > .groupTitle {
+    border-block-start: 0;
+  }
+
+  .groupCount {
+    color: var(--color-text-muted);
+    font-weight: var(--weight-regular);
+  }
+}
+
+/* The day and the month in a soft blue square, like a calendar page, so every row starts the same way. */
+.date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-block: var(--space-2);
+  border-radius: 10px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  line-height: 1.05;
+}
+
+.day {
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.month {
+  font-size: 0.6875rem;
+}
+
+/* The second line: always one line, so every row has the same height. */
+.oneLine {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

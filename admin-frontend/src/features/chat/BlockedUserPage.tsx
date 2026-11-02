@@ -8,6 +8,8 @@ import { blockedUsers, removedMessages, unblockUser } from "../../shared/api/cha
 import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
+import LongText from "../../shared/components/LongText";
+import { useSplit } from "../../shared/components/SplitView";
 import { formatDateTime } from "../../shared/lib/format";
 import { errorMessage } from "../../shared/lib/errors";
 import { useAdmin, useLoad } from "../../layout/consoleContext";
@@ -20,6 +22,7 @@ export default function BlockedUserPage() {
   const { token, version, changed, onAuthError } = useAdmin();
   const confirm = useConfirm();
   const navigate = useNavigate();
+  const { split } = useSplit();
   const userId = useParams().userId ?? "";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +52,8 @@ export default function BlockedUserPage() {
     }
   }
 
-  const back = <BackLink to={BACK} label="חסומים" />;
+  // Beside the list (computer) there is nothing to go back to.
+  const back = split ? null : <BackLink to={BACK} label="חסומים" />;
 
   if (users.failed) {
     return (
@@ -101,9 +105,7 @@ export default function BlockedUserPage() {
           <p className={styles.meta}>
             {m.course_name} · הוסרה {formatDateTime(m.removed_at)}
           </p>
-          <div className={styles.content} dir="auto">
-            {m.content}
-          </div>
+          <LongText className={styles.content}>{m.content}</LongText>
         </article>
       ))}
     </>
