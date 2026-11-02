@@ -1,4 +1,5 @@
-/* Shared by /about and /privacy: one narrow column of short sections. */
+/* Shared by /about and /privacy: one narrow column of short sections.
+   On desktop a page can sit in .layout: text on the right, a side card on the left. */
 .page {
   display: flex;
   flex-direction: column;
@@ -64,7 +65,7 @@
   line-height: 1.7;
 }
 
-/* The English credit line at the end: small, grey, kept on the right like the rest. */
+/* The English credit line at the end (phone): small, grey, kept on the right like the rest. */
 .credit {
   margin: 0;
   padding-block-start: var(--space-3);
@@ -95,4 +96,86 @@
   color: var(--color-link);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* The side card (desktop only): a bordered card that stays in view while the text scrolls. */
+.side {
+  display: none;
+}
+
+.sideTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+}
+
+/* A second group in the card gets room above its title. */
+.people + .sideTitle {
+  margin-block-start: var(--space-5);
+}
+
+/* Rows between thin lines, with a dark line on top, like the home tiles. */
+.people {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-text);
+}
+
+.people li {
+  border-block-end: 1px solid var(--color-border);
+}
+
+.personRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-block: var(--space-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.personName {
+  font-weight: var(--weight-medium);
+}
+
+.personSite {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.personRow:hover .personName {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (min-width: 1024px) {
+  /* Text column takes the free width, the card a fixed 340px on the left (RTL). */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 80px;
+    align-items: start;
+  }
+
+  .layout .page {
+    max-width: none;
+  }
+
+  /* Starts level with the page title, and stays under the 64px header while scrolling. */
+  .side {
+    display: block;
+    position: sticky;
+    top: calc(64px + var(--space-5));
+    margin-block-start: var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+  }
+
+  /* The card shows the credit on desktop, so the line at the end is not needed. */
+  .credit {
+    display: none;
+  }
 }
