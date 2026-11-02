@@ -8,7 +8,12 @@ import { getPinnedAnnouncement, type Announcement } from "../../shared/api/annou
 import AnnouncementCard from "./AnnouncementCard";
 import styles from "./LatestAnnouncement.module.css";
 
-export default function LatestAnnouncement() {
+interface Props {
+  /** Called once a pinned announcement is there to show, so the page can make room for it. */
+  onShow?: () => void;
+}
+
+export default function LatestAnnouncement({ onShow }: Props) {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
 
   useEffect(() => {
@@ -22,6 +27,11 @@ export default function LatestAnnouncement() {
       });
     return () => controller.abort();
   }, []);
+
+  // Tells the page once there is something to show. Calling it again is harmless.
+  useEffect(() => {
+    if (announcement) onShow?.();
+  }, [announcement, onShow]);
 
   if (!announcement) return null;
 
