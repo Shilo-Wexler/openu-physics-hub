@@ -11,6 +11,13 @@
   }
 }
 
+/* Desktop: still eight in a row, with bigger avatars and more room between the rows. */
+@media (min-width: 1024px) {
+  .grid {
+    row-gap: var(--space-4);
+  }
+}
+
 .option {
   display: flex;
   align-items: center;
