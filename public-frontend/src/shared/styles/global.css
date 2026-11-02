@@ -62,7 +62,7 @@
   background: var(--color-bg);
   /* Always light, whatever the device's dark mode setting: the browser's own parts
      (scrollbars, the search field's clear button) stay light too. */
-  color-scheme: light;
+  color-scheme: only light;
   -webkit-font-smoothing: antialiased;
 }
 
