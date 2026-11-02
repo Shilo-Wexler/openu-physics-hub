@@ -96,9 +96,11 @@ interface Props {
   list: ReactNode;
   /** Shown beside the list (computer) while no item is open: in practice only when the list is empty. */
   empty: string;
+  /** Beside the title on a computer, such as a round "+" for a new item. On a phone the list draws its own. */
+  action?: ReactNode;
 }
 
-export default function SplitView({ base, title, list, empty }: Props) {
+export default function SplitView({ base, title, list, empty, action }: Props) {
   const desktop = useIsDesktop();
   const atList = useMatch({ path: base, end: true }) !== null;
   const ask = useConfirm();
@@ -129,7 +131,10 @@ export default function SplitView({ base, title, list, empty }: Props) {
 
   return (
     <SplitContext.Provider value={value}>
-      <h1>{title}</h1>
+      <div className={styles.titleRow}>
+        <h1>{title}</h1>
+        {action}
+      </div>
       {/* One window: the list on the right, a line, the open item on the left. Each side scrolls on its own. */}
       <div className={styles.window}>
         <div className={styles.list}>{list}</div>

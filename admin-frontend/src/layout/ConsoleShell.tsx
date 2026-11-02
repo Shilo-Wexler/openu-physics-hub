@@ -12,7 +12,7 @@ import type { Level } from "../shared/lib/levels";
 import AdminEditorPage from "../features/admins/AdminEditorPage";
 import AdminsListPage from "../features/admins/AdminsListPage";
 import AnnouncementEditorPage from "../features/announcements/AnnouncementEditorPage";
-import AnnouncementListPage from "../features/announcements/AnnouncementListPage";
+import AnnouncementListPage, { NewAnnouncementLink } from "../features/announcements/AnnouncementListPage";
 import { DEV_SIGN_IN, type Identity } from "../features/auth/identity";
 import SignIn from "../features/auth/SignIn";
 import { useIdentity } from "../features/auth/useIdentity";
@@ -242,8 +242,18 @@ function ConsoleRoutes({ onSignOut }: { onSignOut: () => void }) {
             <Route path="log/:id" element={<ActionPage />} />
           </Route>
           {/* "new" is matched before ":id", so both open the same form, empty or filled. */}
-          <Route path="announcements">
-            <Route index element={<AnnouncementListPage />} />
+          <Route
+            path="announcements"
+            element={
+              <SplitView
+                base="/announcements"
+                title="הכרזות"
+                action={<NewAnnouncementLink />}
+                list={<AnnouncementListPage />}
+                empty="עוד אין הכרזות."
+              />
+            }
+          >
             <Route path="new" element={<AnnouncementEditorPage />} />
             <Route path=":id" element={<AnnouncementEditorPage />} />
           </Route>

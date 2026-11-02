@@ -1,5 +1,19 @@
 /* Computer only (SplitView draws this layout only from 1024px). */
 
+/* The title, with the screen's action (such as "+") at the far end, like a new-item button in iOS.
+   The row keeps the title's own space under it (see h1 in global.css). */
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.titleRow h1 {
+  margin: 0;
+}
+
 /* One white window as tall as the screen under the title, so the page itself doesn't scroll:
    the list on the right, the open item on the left, a line between them. The 96px are the title
    and the page's own top and bottom padding (see h1 and main in global.css). */
@@ -22,10 +36,11 @@
   border-inline-end: 1px solid var(--color-border-strong);
 }
 
-/* Inside the window the list's white box (RowList) needs no corners or gap of its own. Element selectors are
-   not renamed by CSS modules, so this reaches into the list; only one level down, so menus deeper inside
-   (such as the course search results) keep their corners. */
-.list > div > ul {
+/* Inside the window the list's white box (RowList) needs no corners or gap of its own, whether it stands
+   alone or under a group title. Element selectors are not renamed by CSS modules, so this reaches into the
+   list; only one level down, so menus deeper inside (such as the course search results) keep their corners. */
+.list > div > ul,
+.list > section > ul {
   margin-block-end: 0;
   border-radius: 0;
 }

@@ -29,13 +29,13 @@ interface ListRowProps {
   preview?: ReactNode;
   /** Drawn before the text, such as a dot or a thumbnail. The separator line starts after it. */
   leading?: ReactNode;
-  /** Opens a screen, and shows a chevron. Without it the row is plain text.
+  /** Opens a screen, and shows a chevron (on a phone). Without it the row is plain text.
       In a SplitView on a computer, the row of the open item is marked. */
   to?: string;
 }
 
 export function ListRow({ title, strong = false, badge, time, subtitle, preview, leading, to }: ListRowProps) {
-  const { isDirty, confirmLeave } = useSplit();
+  const { split, isDirty, confirmLeave } = useSplit();
   const navigate = useNavigate();
 
   // On a computer the item beside the list may have unsaved changes: ask before opening another one.
@@ -71,8 +71,9 @@ export function ListRow({ title, strong = false, badge, time, subtitle, preview,
             </span>
           )}
         </span>
-        {/* Shows the row opens a screen, like every iOS list row that does. */}
-        {to && (
+        {/* Shows the row opens a screen, like every iOS list row that does. Not on a computer beside the
+            item: there the row opens it right next to the list, and the marked row shows which is open. */}
+        {to && !split && (
           <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true">
             <path d="m15 18-6-6 6-6" />
           </svg>
