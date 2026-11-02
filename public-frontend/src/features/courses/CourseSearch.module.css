@@ -70,8 +70,10 @@
   cursor: pointer;
 }
 
+/* .active: the row the arrow keys reached (Enter picks it), marked like a hovered row. */
 .item:hover,
-.item:focus-visible {
+.item:focus-visible,
+.active {
   outline: none;
   background: var(--color-surface-muted);
 }
