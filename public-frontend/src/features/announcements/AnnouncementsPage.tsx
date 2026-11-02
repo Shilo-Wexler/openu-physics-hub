@@ -1,4 +1,5 @@
-/** /announcements: everything the committee published, pinned first, 20 at a time. */
+/** /announcements: everything the committee published, pinned first, 20 at a time.
+    On a desktop the cards fill three columns, the pinned one first. */
 
 import { useEffect, useState } from "react";
 
@@ -107,3 +108,4 @@ export default function AnnouncementsPage() {
     </div>
   );
 }
+

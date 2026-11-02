@@ -28,12 +28,16 @@ function GitLabIcon() {
   );
 }
 
-const ICONS = { linkedin: LinkedInIcon, gitlab: GitLabIcon };
+// Each site a person can link to: its icon, and the name shown in the desktop card.
+const SITES = {
+  linkedin: { Icon: LinkedInIcon, label: "LinkedIn" },
+  gitlab: { Icon: GitLabIcon, label: "GitLab" },
+};
 
 interface Person {
   name: string;
   href: string;
-  site: keyof typeof ICONS;
+  site: keyof typeof SITES;
 }
 
 // The team, each name linking to a profile they chose. New helpers join the credit line.
@@ -47,17 +51,30 @@ const TEAM = {
   },
 } satisfies Record<string, Person>;
 
+// Who goes under each heading of the desktop card. Same people as the credit line.
+const BUILT_BY: Person[] = [TEAM.shilo, TEAM.yehuda];
+const DESIGNED_WITH: Person[] = [TEAM.yoav];
+
 /** Another site: a new tab, and noopener so it cannot reach back into this one. */
-function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
+function ExternalLink({
+  href,
+  className = styles.link,
+  children,
+}: {
+  href: string;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <a className={styles.link} href={href} target="_blank" rel="noopener noreferrer">
+    <a className={className} href={href} target="_blank" rel="noopener noreferrer">
       {children}
     </a>
   );
 }
 
+/** A name inside the credit line (phone). */
 function PersonLink({ person }: { person: Person }) {
-  const Icon = ICONS[person.site];
+  const { Icon } = SITES[person.site];
   return (
     <span className={styles.person}>
       <ExternalLink href={person.href}>
@@ -68,38 +85,72 @@ function PersonLink({ person }: { person: Person }) {
   );
 }
 
+/** A group of names in the side card (desktop): each row is one link. */
+function PeopleList({ title, people }: { title: string; people: Person[] }) {
+  return (
+    <>
+      <h2 className={styles.sideTitle}>{title}</h2>
+      <ul className={styles.sideList}>
+        {people.map((person) => {
+          const { Icon, label } = SITES[person.site];
+          return (
+            <li key={person.href}>
+              <ExternalLink href={person.href} className={styles.personRow}>
+                <span className={styles.personName}>{person.name}</span>
+                <span className={styles.personSite}>
+                  <Icon />
+                  {label}
+                </span>
+              </ExternalLink>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
 export default function AboutPage() {
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>אודות</p>
-        <h1 className={styles.title}>OpenUVoice</h1>
-      </header>
+    <div className={styles.layout}>
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <p className={styles.eyebrow}>אודות</p>
+          <h1 className={styles.title}>OpenUVoice</h1>
+        </header>
 
-      <section className={styles.section} aria-labelledby="about-who">
-        <h2 className={styles.sectionTitle} id="about-who">
-          מי אנחנו
-        </h2>
-        <p className={styles.text}>
-          OpenUVoice הוא מקום אחד לסטודנטים לפיזיקה באוניברסיטה הפתוחה: לקרוא ולכתוב ביקורות על
-          קורסים, לדבר בצ'אט, לעקוב אחרי עדכוני ועד הסטודנטים ולפנות אליו.
-        </p>
-        <p className={styles.text}>
-          ועד הסטודנטים לפיזיקה הוא קבוצה של סטודנטים מתנדבים. מדי פעם אנחנו נפגשים עם צוותי ההוראה
-          ומעלים בפניהם בעיות שסטודנטים מצביעים עליהן, והפניות שמגיעות דרך האתר עוזרות לנו לדעת מה
-          להעלות.
-        </p>
-        <p className={styles.text}>
-          האתר הוא מיזם עצמאי של סטודנטים, ואינו קשור רשמית ל
-          <ExternalLink href={OPENU_URL}>אוניברסיטה הפתוחה</ExternalLink> או ל
-          <ExternalLink href={STUDENT_UNION_URL}>אגודת הסטודנטים</ExternalLink>.
-        </p>
-      </section>
+        <section className={styles.section} aria-labelledby="about-who">
+          <h2 className={styles.sectionTitle} id="about-who">
+            מי אנחנו
+          </h2>
+          <p className={styles.text}>
+            OpenUVoice הוא מקום אחד לסטודנטים לפיזיקה באוניברסיטה הפתוחה: לקרוא ולכתוב ביקורות על
+            קורסים, לדבר בצ'אט, לעקוב אחרי עדכוני ועד הסטודנטים ולפנות אליו.
+          </p>
+          <p className={styles.text}>
+            ועד הסטודנטים לפיזיקה הוא קבוצה של סטודנטים מתנדבים. מדי פעם אנחנו נפגשים עם צוותי ההוראה
+            ומעלים בפניהם בעיות שסטודנטים מצביעים עליהן, והפניות שמגיעות דרך האתר עוזרות לנו לדעת מה
+            להעלות.
+          </p>
+          <p className={styles.text}>
+            האתר הוא מיזם עצמאי של סטודנטים, ואינו קשור רשמית ל
+            <ExternalLink href={OPENU_URL}>אוניברסיטה הפתוחה</ExternalLink> או ל
+            <ExternalLink href={STUDENT_UNION_URL}>אגודת הסטודנטים</ExternalLink>.
+          </p>
+        </section>
 
-      <p className={styles.credit} dir="ltr">
-        Built by <PersonLink person={TEAM.shilo} /> and <PersonLink person={TEAM.yehuda} />,
-        designed together with <PersonLink person={TEAM.yoav} />.
-      </p>
+        {/* Phone: the credit line at the end. Hidden on desktop, where the side card shows it. */}
+        <p className={styles.credit} dir="ltr">
+          Built by <PersonLink person={TEAM.shilo} /> and <PersonLink person={TEAM.yehuda} />,
+          designed together with <PersonLink person={TEAM.yoav} />.
+        </p>
+      </div>
+
+      {/* Desktop: the same credit as a card on the left. Hidden on the phone. */}
+      <aside className={styles.side} dir="ltr" lang="en" aria-label="Credits">
+        <PeopleList title="Built by" people={BUILT_BY} />
+        <PeopleList title="Designed together with" people={DESIGNED_WITH} />
+      </aside>
     </div>
   );
 }

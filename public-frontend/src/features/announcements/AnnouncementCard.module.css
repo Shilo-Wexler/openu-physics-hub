@@ -82,3 +82,38 @@
   line-clamp: 4;
   overflow: hidden;
 }
+
+/* Computer, when wideOnDesktop is set and there is an image: the text on the right, the image
+   on the left at its natural proportions. Without an image the card stays one column.
+   Rows: an empty flexible row above and below the text centers it next to the image,
+   whatever the image's height. */
+@media (min-width: 1024px) {
+  .wide:has(.imageLink) {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-rows: 1fr auto auto auto 1fr;
+    column-gap: var(--space-5);
+    row-gap: var(--space-2);
+  }
+
+  .wide .meta {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .wide .title {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .wide .body {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  .wide .imageLink {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    align-self: center;
+  }
+}

@@ -55,3 +55,70 @@
   padding-block-end: var(--space-3);
   border-block-end: 1px solid var(--color-text);
 }
+
+/* Computer only (rendered there by CourseChatPage): the share button and the link to the
+   university's course page, side by side under the rating. */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding-block-end: var(--space-3);
+}
+
+/* A link to another site: the site's one link blue. */
+.external {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+.external:hover {
+  text-decoration: underline;
+}
+
+/* Computer: the reviews fill the page from the right edge (the page is right-to-left); the side
+   column sits on the left. In the HTML the side comes first, so a phone shows the course on top;
+   here each one is placed in its column by number. */
+@media (min-width: 1024px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    column-gap: var(--space-5);
+    align-items: start;
+  }
+
+  .feed {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  /* The side never moves while the reviews scroll. It sticks exactly where it starts
+     (the 64px site header, SiteHeader's own height, plus main's room above the page), and it is
+     never taller than what is left of the window, minus some room at the bottom; the course list
+     inside takes what is left and scrolls on its own (CourseNav).
+     A thin line on its start side separates it from the reviews. */
+  .side {
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    inset-block-start: calc(64px + var(--space-6));
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 64px - var(--space-6) - var(--space-4));
+    overflow-y: auto;
+    padding-inline-start: var(--space-5);
+    border-inline-start: 1px solid var(--color-border);
+  }
+
+  /* The name only; the share button moved under the rating. main already adds room above. */
+  .header {
+    flex-direction: column;
+    padding-block: 0 var(--space-2);
+  }
+
+  .title {
+    font-size: var(--text-xl);
+  }
+}

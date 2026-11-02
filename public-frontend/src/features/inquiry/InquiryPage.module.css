@@ -272,3 +272,63 @@
   font-weight: var(--weight-medium);
   cursor: pointer;
 }
+
+/* Desktop: two columns. The text box on the right (column 1, in RTL), at a fixed height so
+   it does not jump when the course search or the contact fields open; the choices on the left.
+   Whatever comes after (check, errors, send) runs full width. */
+@media (min-width: 1024px) {
+  .page {
+    padding-block-start: 0;
+  }
+
+  .title {
+    font-size: var(--text-2xl);
+  }
+
+  /* Rows 1-3 hold the choices; row 4 (1fr) takes any height the text box needs beyond them,
+     so the choices never spread apart. */
+  .form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    column-gap: var(--space-6);
+    row-gap: var(--space-5);
+  }
+
+  .form > * {
+    grid-column: 1 / -1;
+  }
+
+  .form > .partText {
+    grid-column: 1;
+    grid-row: 1 / 5;
+    align-self: start;
+  }
+
+  .form > .partScope {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .form > .partType {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .form > .partContact {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  /* Fixed: not stretched by the other column, and not resized by hand. */
+  .partText .textarea {
+    height: 320px;
+    resize: none;
+  }
+
+  /* Name, phone and email side by side. */
+  .contact {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

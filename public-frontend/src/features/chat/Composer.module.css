@@ -198,3 +198,14 @@
     bottom: 0;
   }
 }
+
+/* Computer: the bar sits inside the reviews column (CourseChatPage), so it lines up with the
+   reviews' edges instead of reaching past them; a little more room under it, away from the
+   window's edge. */
+@media (min-width: 1024px) {
+  .sticky {
+    margin-inline: 0;
+    padding-inline: 0;
+    padding-block: var(--space-3);
+  }
+}

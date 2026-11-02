@@ -2,6 +2,7 @@
  * /inquiry: a request or complaint to the student committee. No sign-in needed.
  * Anonymous by default; the sender may choose to leave contact details: a phone or an email
  * (at least one of them), and optionally a name.
+ * On a desktop the form has two columns: the choices on the right, the text box on the left.
  */
 
 import { useEffect, useState, type FormEvent } from "react";
@@ -219,7 +220,7 @@ export default function InquiryPage() {
       </header>
 
       <form className={styles.form} onSubmit={handleSubmit}>
-        <div className={styles.field}>
+        <div className={`${styles.field} ${styles.partScope}`}>
           {/* Seen only: the switch below carries the same words as its own label. */}
           <span className={styles.fieldTitle} aria-hidden="true">
             על מה הפנייה?
@@ -249,7 +250,7 @@ export default function InquiryPage() {
 
         {/* Real radio buttons under pill labels: the keyboard, screen readers and `required`
             work as they do for any radio group. */}
-        <fieldset className={styles.field}>
+        <fieldset className={`${styles.field} ${styles.partType}`}>
           <legend className={styles.fieldTitle}>סוג הפנייה</legend>
           <div className={styles.types}>
             {INQUIRY_TYPES.map((value) => (
@@ -269,7 +270,7 @@ export default function InquiryPage() {
           </div>
         </fieldset>
 
-        <div className={styles.field}>
+        <div className={`${styles.field} ${styles.partText}`}>
           <label className={styles.fieldTitle} htmlFor="inquiry-content">
             הפנייה
           </label>
@@ -290,7 +291,7 @@ export default function InquiryPage() {
           )}
         </div>
 
-        <div className={styles.field}>
+        <div className={`${styles.field} ${styles.partContact}`}>
           {/* Seen only, as above. */}
           <span className={styles.fieldTitle} aria-hidden="true">
             פרטי קשר

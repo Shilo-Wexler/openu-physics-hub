@@ -1,4 +1,5 @@
-/* /announcements: the same light header as the chat hub, then the cards one under another. */
+/* /announcements: the same light header as the chat hub, then the cards one under another.
+   On a desktop the cards fill three columns with no gaps, the pinned one first. */
 .header {
   display: flex;
   flex-direction: column;
@@ -78,5 +79,28 @@
 @media (hover: hover) {
   .button:not(:disabled):hover {
     background: var(--color-surface-muted);
+  }
+}
+
+@media (min-width: 1024px) {
+  .header {
+    padding-block-start: 0;
+  }
+
+  .title {
+    font-size: var(--text-2xl);
+  }
+
+  /* Masonry: each card drops under the one above it in its column, so a short card
+     never leaves a hole beside a tall one with an image. */
+  .list {
+    display: block;
+    columns: 3;
+    column-gap: var(--space-4);
+  }
+
+  .list > * {
+    break-inside: avoid;
+    margin-block-end: var(--space-4);
   }
 }

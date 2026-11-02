@@ -27,3 +27,93 @@
   font-size: var(--text-md);
   color: var(--color-text-muted);
 }
+
+/* The computer version (ChoiceCards, rendered only there): two equal cards side by side. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A whole card is one link: icon, title, a line about it, and a black button at the bottom.
+   Light frame at rest, dark frame on hover, like a pinned announcement. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+  min-height: 260px;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: border-color 150ms ease;
+}
+
+.card:hover {
+  border-color: var(--color-text);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius);
+  background: var(--color-surface-muted);
+}
+
+.icon svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cardTitle {
+  font-size: 1.5rem; /* 24px: between the text scale's lg and xl, for a card's own title */
+  font-weight: var(--weight-medium);
+}
+
+/* Grows to fill the card, so the buttons of both cards sit on the same line. */
+.cardText {
+  flex-grow: 1;
+  color: var(--color-text-muted);
+}
+
+/* Looks like the site's main button; the card around it is the real link. */
+.action {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-size);
+  padding-inline: var(--space-4);
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--weight-medium);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
+
+/* Computer: the big title size, and no room of its own above it (main already adds it). */
+@media (min-width: 1024px) {
+  .header {
+    padding-block-start: 0;
+  }
+
+  .title {
+    font-size: var(--text-2xl);
+  }
+}

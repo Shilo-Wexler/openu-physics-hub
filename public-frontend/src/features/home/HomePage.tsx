@@ -24,6 +24,8 @@ const AREAS: LinkRow[] = [
   },
 ];
 
+// Full-width bands on every screen: the intro, the announcement, the areas
+// (rows on a phone, tiles side by side on a computer).
 export default function HomePage() {
   return (
     <>
@@ -40,7 +42,7 @@ export default function HomePage() {
       {/* Shows nothing until there is an announcement, so the page looks the same without one. */}
       <LatestAnnouncement />
 
-      <LinkRows rows={AREAS} label="אזורי האתר" />
+      <LinkRows rows={AREAS} label="אזורי האתר" tilesOnDesktop />
     </>
   );
 }

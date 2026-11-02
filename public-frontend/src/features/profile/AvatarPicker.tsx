@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 
 import { changeAvatar } from "../../shared/api/chat";
+import { useIsDesktop } from "../../shared/browser/useIsDesktop";
 import Avatar, { AVATARS } from "../../shared/components/Avatar";
 import { useAuth } from "../auth/AuthContext";
 import styles from "./AvatarPicker.module.css";
@@ -13,6 +14,7 @@ interface Props {
 
 export default function AvatarPicker({ current }: Props) {
   const { updateUser } = useAuth();
+  const isDesktop = useIsDesktop();
   const [failed, setFailed] = useState(false);
   // Counts clicks, so a slow answer to an old click cannot undo a newer one.
   const latestRequest = useRef(0);
@@ -46,8 +48,9 @@ export default function AvatarPicker({ current }: Props) {
             aria-pressed={avatar === current}
             aria-label={`אווטאר ${index + 1} מתוך ${AVATARS.length}`}
           >
-            {/* 44, not 48: six in a row with the ring around one still fit a narrow phone. */}
-            <Avatar avatar={avatar} size={44} />
+            {/* 44 on a phone, not 48: six in a row with the ring around one still fit a narrow
+                phone. Bigger on a desktop, where the grid has the whole left side. */}
+            <Avatar avatar={avatar} size={isDesktop ? 64 : 44} />
           </button>
         ))}
       </div>

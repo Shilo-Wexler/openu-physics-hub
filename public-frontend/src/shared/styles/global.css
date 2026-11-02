@@ -17,7 +17,6 @@
   /* Links to other sites: the familiar link blue, the one color outside black and white. */
   --color-link: #0b57d0;
 
-
   /* Avatar backgrounds; Avatar.tsx picks one by the avatar's place in its list.
      Near-neutral tints, so the colorful emoji stand out and the page stays calm. */
   --avatar-bg-1: #f1f1f1;
@@ -52,7 +51,8 @@
   --space-5: 32px;
   --space-6: 48px;
   --tap-size: 44px; /* minimum touch target */
-  --content-width: 960px;
+  --content-width: 960px; /* header, footer and page width; wider on a computer (below) */
+  --reading-width: 720px; /* reading pages and forms: a comfortable line length */
   --bottom-nav-height: 56px; /* BottomNav's tab height, phone only */
 
   font-family: var(--font-sans);
@@ -94,4 +94,17 @@ main {
   max-width: var(--content-width);
   margin-inline: auto;
   padding: var(--space-4) var(--space-3);
+}
+
+/* Computer: the site's one desktop breakpoint (useIsDesktop.ts holds the same number).
+   A wider frame, so work screens (chat, courses, home) have room for columns;
+   reading pages narrow themselves to --reading-width in their own modules. */
+@media (min-width: 1024px) {
+  :root {
+    --content-width: 1400px;
+  }
+
+  main {
+    padding-block-start: var(--space-6);
+  }
 }

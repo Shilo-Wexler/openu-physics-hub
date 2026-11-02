@@ -9,6 +9,8 @@ import {
   type SharedMessage,
 } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
+import { useIsDesktop } from "../../shared/browser/useIsDesktop";
+import CourseNav from "./CourseNav";
 import RatingPanel from "./RatingPanel";
 import { ReplyBarProvider } from "./replyBar";
 import ReviewCard from "./ReviewCard";
@@ -17,6 +19,11 @@ import ShareButton from "./ShareButton";
 import { coursePath, courseUrl, messagePath } from "./share";
 import { useViewerGeneration } from "./useViewerGeneration";
 import styles from "./CourseChatPage.module.css";
+
+/** The course's own page on the Open University site, where its syllabus and details are. */
+function openUniversityUrl(courseId: number): string {
+  return `https://www.openu.ac.il/courses/${courseId}.htm`;
+}
 
 type State =
   | { status: "loading" }
@@ -69,6 +76,7 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   // A new viewer (sign-in or sign-out here) loads the course (my_rating) and the shared
   // review (liked_by_me) again.
   const generation = useViewerGeneration();
+  const isDesktop = useIsDesktop();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -116,45 +124,72 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   const { course } = state;
   const general = course.id === GENERAL_COURSE_ID;
   // One writing bar for the whole page: the shared review above the list answers through it too.
+  // Phone: one column, the share button beside the title. Computer: the reviews on the right and
+  // a side column on the left with the course, its rating, the links and the course list.
   return (
     <ReplyBarProvider>
-      <header className={styles.header}>
-        <div className={styles.heading}>
-          {!general && <p className={styles.eyebrow}>קורס {course.id}</p>}
-          <h1 className={styles.title}>{general ? "צ'אט כללי" : course.name}</h1>
-        </div>
-        <ShareButton url={courseUrl(course.id)} />
-      </header>
-      {/* The general chat is not a course, so it has nothing to rate.
-          key: once the course reloads for a new viewer, a fresh panel starts from their rating. */}
-      {!general && (
-        <RatingPanel
-          key={state.loadedFor}
-          course={course}
-          onChange={(next) => setState((s) => (s.status === "ready" ? { ...s, course: next } : s))}
-        />
-      )}
+      <div className={styles.layout}>
+        <aside className={styles.side} aria-label="פרטי הקורס">
+          <header className={styles.header}>
+            <div className={styles.heading}>
+              {!general && <p className={styles.eyebrow}>קורס {course.id}</p>}
+              <h1 className={styles.title}>{general ? "צ'אט כללי" : course.name}</h1>
+            </div>
+            {!isDesktop && <ShareButton url={courseUrl(course.id)} />}
+          </header>
+          {/* The general chat is not a course, so it has nothing to rate.
+              key: once the course reloads for a new viewer, a fresh panel starts from their rating. */}
+          {!general && (
+            <RatingPanel
+              key={state.loadedFor}
+              course={course}
+              onChange={(next) => setState((s) => (s.status === "ready" ? { ...s, course: next } : s))}
+            />
+          )}
+          {isDesktop && (
+            <>
+              <div className={styles.links}>
+                <ShareButton url={courseUrl(course.id)} />
+                {!general && (
+                  // noopener: the other site gets no handle on this tab.
+                  <a
+                    className={styles.external}
+                    href={openUniversityUrl(course.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    דף הקורס באתר האוניברסיטה ↗
+                  </a>
+                )}
+              </div>
+              <CourseNav currentId={course.id} />
+            </>
+          )}
+        </aside>
 
-      {shared?.status === "missing" && (
-        <p className={styles.notice}>ההודעה ששותפה כבר לא קיימת. אלה שאר הביקורות בקורס.</p>
-      )}
-      {shared?.status === "found" && (
-        <section className={styles.shared} aria-label="הודעה ששותפה">
-          <ReviewCard
-            key={shared.loadedFor}
-            review={shared.review}
+        <div className={styles.feed}>
+          {shared?.status === "missing" && (
+            <p className={styles.notice}>ההודעה ששותפה כבר לא קיימת. אלה שאר הביקורות בקורס.</p>
+          )}
+          {shared?.status === "found" && (
+            <section className={styles.shared} aria-label="הודעה ששותפה">
+              <ReviewCard
+                key={shared.loadedFor}
+                review={shared.review}
+                courseId={courseId}
+                highlighted={shared.reply_id === null}
+                highlightReplyId={shared.reply_id}
+              />
+            </section>
+          )}
+
+          {/* The reviews load on their own, so the course header shows as soon as it arrives. */}
+          <ReviewList
             courseId={courseId}
-            highlighted={shared.reply_id === null}
-            highlightReplyId={shared.reply_id}
+            hiddenId={shared?.status === "found" ? shared.review.id : null}
           />
-        </section>
-      )}
-
-      {/* The reviews load on their own, so the course header shows as soon as it arrives. */}
-      <ReviewList
-        courseId={courseId}
-        hiddenId={shared?.status === "found" ? shared.review.id : null}
-      />
+        </div>
+      </div>
     </ReplyBarProvider>
   );
 }

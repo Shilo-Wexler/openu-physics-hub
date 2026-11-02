@@ -2,11 +2,13 @@
  * /profile: the signed-in user's nickname and avatar, sign-out and account deletion.
  * ?welcome=1 marks the first sign-in, ?restored=1 a sign-in that cancelled a deletion,
  * ?deleted=1 the guest screen right after asking to delete the account.
+ * On a desktop: who you are and the account actions in a card on the right, the editing on the left.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 
+import { useIsDesktop } from "../../shared/browser/useIsDesktop";
 import Avatar from "../../shared/components/Avatar";
 import { useAuth } from "../auth/AuthContext";
 import AvatarPicker from "./AvatarPicker";
@@ -15,6 +17,7 @@ import styles from "./ProfilePage.module.css";
 
 export default function ProfilePage() {
   const { user, loading, signOut, deleteAccount, requireSignIn } = useAuth();
+  const isDesktop = useIsDesktop();
   const [searchParams, setSearchParams] = useSearchParams();
   const welcome = searchParams.get("welcome") === "1";
   const restored = searchParams.get("restored") === "1";
@@ -75,18 +78,20 @@ export default function ProfilePage() {
     }
   }
 
-  return (
-    <div className={styles.page}>
-      {/* Who you are, large, as on the iPhone's account screen. Reads from `user`, so a
-          new avatar or nickname picked below shows here at once. */}
-      <header className={styles.identity}>
-        <Avatar avatar={user.avatar} size={88} />
-        <div className={styles.identityText}>
-          <p className={styles.eyebrow}>הפרופיל שלי</p>
-          <h1 className={styles.name}>{user.nickname}</h1>
-        </div>
-      </header>
+  // Who you are, large, as on the iPhone's account screen. Reads from `user`, so a new avatar
+  // or nickname picked below shows here at once.
+  const identity = (
+    <header className={styles.identity}>
+      <Avatar avatar={user.avatar} size={isDesktop ? 120 : 88} />
+      <div className={styles.identityText}>
+        <p className={styles.eyebrow}>הפרופיל שלי</p>
+        <h1 className={styles.name}>{user.nickname}</h1>
+      </div>
+    </header>
+  );
 
+  const notices = (
+    <>
       {welcome && (
         <p className={styles.welcome}>
           ברוכים הבאים! כאן בוחרים כינוי ואווטאר, ואפשר לשנות אותם מתי שרוצים.
@@ -94,7 +99,11 @@ export default function ProfilePage() {
       )}
 
       {restored && <p className={styles.welcome}>טוב שחזרת! מחיקת החשבון בוטלה.</p>}
+    </>
+  );
 
+  const editing = (
+    <>
       {/* The form's own label is this part's title. */}
       <section className={styles.section}>
         <NicknameForm current={user.nickname} />
@@ -104,61 +113,88 @@ export default function ProfilePage() {
         <h2 className={styles.sectionTitle}>אווטאר</h2>
         <AvatarPicker current={user.avatar} />
       </section>
+    </>
+  );
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>חשבון</h2>
-        <ul className={styles.actions}>
-          <li>
-            <button type="button" className={styles.action} onClick={() => void runSignOut()}>
-              התנתקות
-            </button>
-          </li>
-          <li>
-            {confirmingDelete ? (
-              // The question in place of the row: nothing covers the page, on a phone or a computer.
-              <div className={styles.confirmBox} role="group" aria-labelledby="delete-question">
-                <p id="delete-question" className={styles.question}>
-                  למחוק את החשבון?
-                </p>
-                <p className={styles.confirmText}>
-                  המחיקה תתבצע בעוד שבוע, ועד אז אפשר לבטל אותה בהתחברות מחדש. אחרי שבוע יימחקו
-                  הכינוי, האווטאר, הדירוגים והלייקים, וההודעות שכתבת יוסרו מהאתר.
-                </p>
-                <button
-                  ref={confirmButton}
-                  type="button"
-                  className={styles.confirm}
-                  disabled={deleting}
-                  onClick={() => void confirmDelete()}
-                >
-                  כן, למחוק
-                </button>
-                <button
-                  type="button"
-                  className={styles.cancel}
-                  disabled={deleting}
-                  onClick={() => setConfirmingDelete(false)}
-                >
-                  ביטול
-                </button>
-              </div>
-            ) : (
+  const account = (
+    <section className={styles.section}>
+      <h2 className={styles.sectionTitle}>חשבון</h2>
+      <ul className={styles.actions}>
+        <li>
+          <button type="button" className={styles.action} onClick={() => void runSignOut()}>
+            התנתקות
+          </button>
+        </li>
+        <li>
+          {confirmingDelete ? (
+            // The question in place of the row: nothing covers the page, on a phone or a computer.
+            <div className={styles.confirmBox} role="group" aria-labelledby="delete-question">
+              <p id="delete-question" className={styles.question}>
+                למחוק את החשבון?
+              </p>
+              <p className={styles.confirmText}>
+                המחיקה תתבצע בעוד שבוע, ועד אז אפשר לבטל אותה בהתחברות מחדש. אחרי שבוע יימחקו
+                הכינוי, האווטאר, הדירוגים והלייקים, וההודעות שכתבת יוסרו מהאתר.
+              </p>
+              <button
+                ref={confirmButton}
+                type="button"
+                className={styles.confirm}
+                disabled={deleting}
+                onClick={() => void confirmDelete()}
+              >
+                כן, למחוק
+              </button>
               <button
                 type="button"
-                className={`${styles.action} ${styles.danger}`}
-                onClick={() => setConfirmingDelete(true)}
+                className={styles.cancel}
+                disabled={deleting}
+                onClick={() => setConfirmingDelete(false)}
               >
-                מחיקת חשבון
+                ביטול
               </button>
-            )}
-          </li>
-        </ul>
-        {error && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        )}
-      </section>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={`${styles.action} ${styles.danger}`}
+              onClick={() => setConfirmingDelete(true)}
+            >
+              מחיקת חשבון
+            </button>
+          )}
+        </li>
+      </ul>
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
+    </section>
+  );
+
+  // A desktop has room for the card beside the editing; a phone keeps one column, account last.
+  if (isDesktop) {
+    return (
+      <div className={styles.columns}>
+        <aside className={styles.card} aria-label="החשבון שלי">
+          {identity}
+          {account}
+        </aside>
+        <div className={styles.page}>
+          {notices}
+          {editing}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.page}>
+      {identity}
+      {notices}
+      {editing}
+      {account}
     </div>
   );
 }

@@ -74,6 +74,12 @@
   min-height: 348px;
 }
 
+/* Computer: the grid's place; some height held while the list loads, so the footer
+   does not jump up and back. */
+.gridSlot {
+  min-height: 320px;
+}
+
 .message {
   margin: 0;
   padding-block: var(--space-6);
@@ -89,4 +95,27 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* Computer: the big page title, and a search bar as wide as the grid under it.
+   main already adds room above the page. */
+@media (min-width: 1024px) {
+  .header {
+    padding-block-start: 0;
+  }
+
+  .title {
+    font-size: var(--text-2xl);
+  }
+
+  .search {
+    max-width: none;
+    min-height: 64px;
+    padding-inline: var(--space-5);
+    border-radius: var(--radius-lg);
+  }
+
+  .searchInput {
+    font-size: var(--text-lg);
+  }
 }
