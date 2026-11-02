@@ -63,3 +63,16 @@
 .bar[hidden] {
   display: none;
 }
+
+/* Computer: the reviews have their own column beside the course (CourseChatPage), so their
+   header starts at the top, level with the course name, and is a column title in size. */
+@media (min-width: 1024px) {
+  .header {
+    margin-top: 0;
+  }
+
+  .title {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+  }
+}

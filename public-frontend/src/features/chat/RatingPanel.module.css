@@ -241,3 +241,23 @@
     transition: none;
   }
 }
+
+/* Computer: the panel sits in the narrow course column (CourseChatPage). The averages become
+   two rows under a dark line, the label on one side and the stars with the number on the
+   other, so they fit the column and read like a short table. */
+@media (min-width: 1024px) {
+  .panel {
+    padding-block-start: var(--space-4);
+    border-block-start: 1px solid var(--color-text);
+  }
+
+  .averages {
+    grid-template-columns: 1fr;
+  }
+
+  .average {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}

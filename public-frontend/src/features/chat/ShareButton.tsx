@@ -30,7 +30,7 @@ export default function ShareButton({ url }: { url: string }) {
       <span className={styles.copied} role="status">
         {copied ? "הקישור הועתק" : ""}
       </span>
-      <button className={styles.button} type="button" aria-label="שיתוף" onClick={() => void share()}>
+      <button className={styles.button} type="button" aria-label="שיתוף" onClick={share}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3v13" />
           <path d="m7 8 5-5 5 5" />
