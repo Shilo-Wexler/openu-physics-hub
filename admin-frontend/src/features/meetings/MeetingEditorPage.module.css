@@ -8,6 +8,46 @@
   margin: 0 0 var(--space-3);
 }
 
+/* The form measures its own width (not the window's): on a computer it sits beside the list. */
+.form {
+  container-type: inline-size;
+}
+
+/* On a computer, when the form has room (640px), two columns, as in the announcement form. The title and
+   the date share the first row; under them the text, and beside it a fixed column (files, save, details)
+   that stays in sight while a long summary scrolls. The phone keeps one column, in the order of the code. */
+@media (min-width: 1024px) {
+  @container (min-width: 640px) {
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      grid-template-areas:
+        "title date"
+        "content side";
+      column-gap: var(--space-5);
+      align-items: start;
+    }
+
+    .titleField {
+      grid-area: title;
+    }
+
+    .dateField {
+      grid-area: date;
+    }
+
+    .contentField {
+      grid-area: content;
+    }
+
+    .side {
+      grid-area: side;
+      position: sticky;
+      top: 0;
+    }
+  }
+}
+
 .section {
   margin-block-end: var(--space-4);
 }

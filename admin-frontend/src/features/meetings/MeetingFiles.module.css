@@ -35,22 +35,29 @@
   border-block-start: 1px solid var(--color-border);
 }
 
-/* The file's name and details. min-width: 0 lets a long name wrap instead of pushing the row wider
-   (in a right-to-left page, anything wider than the screen scrolls the page sideways). */
+/* The file's icon, then its name and details. min-width: 0 lets a long name wrap instead of pushing the
+   row wider (in a right-to-left page, anything wider than the screen scrolls the page sideways). */
 .file {
   flex: 1;
   min-width: 0;
   min-height: var(--tap-size);
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
+  align-items: center;
+  gap: var(--space-3);
   padding: 10px var(--space-3);
   border: 0;
   background: none;
   color: var(--color-text);
   font: inherit;
   text-align: start;
+}
+
+/* The name over the details. */
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .interactive {
@@ -72,6 +79,65 @@
   cursor: default;
 }
 
+/* The file icon: a white sheet with a grey edge and a folded corner. The label sits over its bottom and
+   reaches a little past its start edge, as on a computer's file icons. */
+.icon {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 40px;
+}
+
+.icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sheet {
+  fill: var(--color-surface);
+  stroke: var(--color-border-strong);
+}
+
+.fold {
+  fill: var(--color-bg);
+  stroke: var(--color-border-strong);
+}
+
+.label {
+  position: absolute;
+  bottom: 6px;
+  inset-inline-start: -4px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+}
+
+/* The label's colour by kind (see KIND_BY_EXTENSION): the colours people know these files by. */
+.pdf {
+  background: #c62828;
+}
+
+.word {
+  background: #1f5fbf;
+}
+
+.excel {
+  background: #1e7b3c;
+}
+
+.slides {
+  background: #c55a11;
+}
+
+.other {
+  background: #8e8e93;
+}
+
 .name {
   overflow-wrap: anywhere;
 }
@@ -88,9 +154,25 @@
   overflow-wrap: anywhere;
 }
 
-/* "Add a file": blue like any action row. */
+/* "Add a file": blue like any action row, with a "+" in the icon's place so it lines up with the files. */
 .add {
   color: var(--color-primary);
+}
+
+.addIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+}
+
+.addIcon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
 }
 
 .remove,

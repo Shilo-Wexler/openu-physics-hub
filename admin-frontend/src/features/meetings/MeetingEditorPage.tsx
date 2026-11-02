@@ -1,5 +1,8 @@
 /** One meeting summary as a form, new or existing: title, meeting date, text and attached files. The same
-    screen is for reading and for editing, like an announcement. "Save" sends it and returns to the list. */
+    screen is for reading and for editing, like an announcement. "Save" sends it; on a phone it then returns
+    to the list, on a computer (the list beside it) the summary stays open as saved.
+    On a wide screen the form has two columns: the title and text, and beside them the date, the files,
+    save and the details. */
 
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
@@ -17,6 +20,7 @@ import {
 import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
+import { useReportUnsaved, useSplit } from "../../shared/components/SplitView";
 import { formatDateTime } from "../../shared/lib/format";
 import { errorMessage } from "../../shared/lib/errors";
 import { charLength } from "../../shared/lib/text";
@@ -62,6 +66,7 @@ export default function MeetingEditorPage() {
 
 function MeetingEditor({ id }: { id: number | null }) {
   const { token, isTeam, changed, onAuthError } = useAdmin();
+  const { split } = useSplit();
   const confirm = useConfirm();
   const navigate = useNavigate();
 
@@ -106,8 +111,10 @@ function MeetingEditor({ id }: { id: number | null }) {
     : charLength(title) > 0 || charLength(content) > 0;
   const dirty = fieldsDirty || pending.length > 0 || removed.size > 0;
 
-  // Closing or reloading the tab with unsaved changes asks too (the browser's own question).
+  // Closing or reloading the tab with unsaved changes asks too (the browser's own question),
+  // and on a computer so does a click in the list beside the form.
   useWarnOnLeave(dirty);
+  useReportUnsaved(dirty);
 
   /** What is wrong with the form, or null when it can be sent. */
   function problem(): string | null {
@@ -170,7 +177,23 @@ function MeetingEditor({ id }: { id: number | null }) {
       setSaving(false);
       return;
     }
-    navigate(LIST, { replace: true });
+
+    if (!split) {
+      navigate(LIST, { replace: true });
+      return;
+    }
+    // On a computer the list beside the form already shows the change. A new summary opens at its own
+    // address (a fresh form, loaded from the server); an existing one stays open, now as saved.
+    if (id === null) {
+      navigate(`${LIST}/${meetingId}`, { replace: true });
+      return;
+    }
+    // The files changed one by one above; the list of files changed with them, so it is reloaded too.
+    changed();
+    setTitle(meeting.title);
+    setMeetingDate(meeting.meeting_date);
+    setContent(meeting.content);
+    setSaving(false);
   }
 
   async function remove() {
@@ -186,6 +209,7 @@ function MeetingEditor({ id }: { id: number | null }) {
     try {
       await deleteMeeting(token, saved.id);
       changed();
+      // On a computer the list then opens its newest summary beside it.
       navigate(LIST, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
@@ -203,7 +227,10 @@ function MeetingEditor({ id }: { id: number | null }) {
     });
   }
 
-  const back = <BackLink to={LIST} label="סיכומי ישיבות" confirm={dirty ? LEAVE_QUESTION : undefined} />;
+  // On a computer the list is beside the form, so there is nothing to go back to.
+  const back = split ? null : (
+    <BackLink to={LIST} label="סיכומי ישיבות" confirm={dirty ? LEAVE_QUESTION : undefined} />
+  );
 
   if (missing) {
     return (
@@ -226,97 +253,104 @@ function MeetingEditor({ id }: { id: number | null }) {
   const edited = saved !== null && saved.updated_at !== saved.created_at;
 
   return (
-    <>
+    <div className={styles.form}>
       {back}
       <h1 className={styles.heading}>{saved ? "סיכום ישיבה" : "סיכום חדש"}</h1>
 
-      <section className={styles.section}>
-        <label htmlFor="meeting-title" className={styles.label}>
-          כותרת (לא חובה)
-        </label>
-        <input
-          id="meeting-title"
-          className={styles.field}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          maxLength={MAX_TITLE}
-          dir={fieldDir(title)}
-        />
-      </section>
-
-      <section className={styles.section}>
-        <label htmlFor="meeting-date" className={styles.label}>
-          תאריך הישיבה
-        </label>
-        {/* A box with the date in blue and a calendar icon, so it reads as something to tap and change. */}
-        <span className={styles.dateBox}>
+      {/* Two columns on a wide screen. On a phone one under the other: title, date, text, files, as before. */}
+      <div className={styles.layout}>
+        <section className={`${styles.section} ${styles.titleField}`}>
+          <label htmlFor="meeting-title" className={styles.label}>
+            כותרת (לא חובה)
+          </label>
           <input
-            id="meeting-date"
-            className={`${styles.field} ${styles.date}`}
-            type="date"
-            value={meetingDate}
-            onChange={(e) => setMeetingDate(e.target.value)}
-            onClick={(e) => openPicker(e.currentTarget)}
+            id="meeting-title"
+            className={styles.field}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={MAX_TITLE}
+            dir={fieldDir(title)}
           />
-          <svg className={styles.dateIcon} viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 2v4M16 2v4M3 10h18" />
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-          </svg>
-        </span>
-      </section>
+        </section>
 
-      <section className={styles.section}>
-        <label htmlFor="meeting-content" className={styles.label}>
-          סיכום (לא חובה כשיש קובץ)
-        </label>
-        <textarea
-          id="meeting-content"
-          className={`${styles.field} ${styles.text}`}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          maxLength={MAX_CONTENT}
-          rows={10}
-          dir={fieldDir(content)}
-        />
-      </section>
+        <section className={`${styles.section} ${styles.dateField}`}>
+          <label htmlFor="meeting-date" className={styles.label}>
+            תאריך הישיבה
+          </label>
+          {/* A box with the date in blue and a calendar icon, so it reads as something to tap and change. */}
+          <span className={styles.dateBox}>
+            <input
+              id="meeting-date"
+              className={`${styles.field} ${styles.date}`}
+              type="date"
+              value={meetingDate}
+              onChange={(e) => setMeetingDate(e.target.value)}
+              onClick={(e) => openPicker(e.currentTarget)}
+            />
+            <svg className={styles.dateIcon} viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 2v4M16 2v4M3 10h18" />
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+            </svg>
+          </span>
+        </section>
 
-      <MeetingFiles
-        meetingId={saved?.id ?? null}
-        saved={saved?.attachments ?? []}
-        pending={pending}
-        removed={removed}
-        canRemoveSaved={!isTeam}
-        disabled={saving}
-        onAdd={(files) => {
-          setError(null);
-          setPending((current) => [...current, ...toPending(files)]);
-        }}
-        onRemovePending={(key) => setPending((current) => current.filter((file) => file.key !== key))}
-        onToggleRemoved={toggleRemoved}
-        onError={setError}
-      />
+        <section className={`${styles.section} ${styles.contentField}`}>
+          <label htmlFor="meeting-content" className={styles.label}>
+            סיכום (לא חובה כשיש קובץ)
+          </label>
+          <textarea
+            id="meeting-content"
+            className={`${styles.field} ${styles.text}`}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            maxLength={MAX_CONTENT}
+            rows={10}
+            dir={fieldDir(content)}
+          />
+        </section>
 
-      {error && <p className="error">{error}</p>}
-      <button type="button" className={styles.save} disabled={!dirty || saving} onClick={() => void save()}>
-        {saving ? "שומר…" : "שמירה"}
-      </button>
+        {/* The date (above), the files, save and the details. On a wide screen they share the column beside
+            the text and stay in sight while a long summary scrolls. */}
+        <div className={styles.side}>
+          <MeetingFiles
+            meetingId={saved?.id ?? null}
+            saved={saved?.attachments ?? []}
+            pending={pending}
+            removed={removed}
+            canRemoveSaved={!isTeam}
+            disabled={saving}
+            onAdd={(files) => {
+              setError(null);
+              setPending((current) => [...current, ...toPending(files)]);
+            }}
+            onRemovePending={(key) => setPending((current) => current.filter((file) => file.key !== key))}
+            onToggleRemoved={toggleRemoved}
+            onError={setError}
+          />
 
-      {saved && (
-        <>
-          <Group title="פרטים">
-            <Row label="נכתב על ידי" value={<bdi>{saved.created_by_name}</bdi>} />
-            <Row label="נוצר" value={formatDateTime(saved.created_at)} />
-            {edited && <Row label="נערך לאחרונה על ידי" value={<bdi>{saved.updated_by_name}</bdi>} />}
-            {edited && <Row label="נערך" value={formatDateTime(saved.updated_at)} />}
-          </Group>
-          {/* Team cannot delete (the server refuses too), so the row is not shown. */}
-          {!isTeam && (
-            <Group>
-              <Row label="מחיקת הסיכום" danger onClick={() => void remove()} />
-            </Group>
+          {error && <p className="error">{error}</p>}
+          <button type="button" className={styles.save} disabled={!dirty || saving} onClick={() => void save()}>
+            {saving ? "שומר…" : "שמירה"}
+          </button>
+
+          {saved && (
+            <>
+              <Group title="פרטים">
+                <Row label="נכתב על ידי" value={<bdi>{saved.created_by_name}</bdi>} />
+                <Row label="נוצר" value={formatDateTime(saved.created_at)} />
+                {edited && <Row label="נערך לאחרונה על ידי" value={<bdi>{saved.updated_by_name}</bdi>} />}
+                {edited && <Row label="נערך" value={formatDateTime(saved.updated_at)} />}
+              </Group>
+              {/* Team cannot delete (the server refuses too), so the row is not shown. */}
+              {!isTeam && (
+                <Group>
+                  <Row label="מחיקת הסיכום" danger onClick={() => void remove()} />
+                </Group>
+              )}
+            </>
           )}
-        </>
-      )}
-    </>
+        </div>
+      </div>
+    </div>
   );
 }

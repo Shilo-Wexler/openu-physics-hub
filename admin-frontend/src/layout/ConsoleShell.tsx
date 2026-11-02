@@ -23,7 +23,7 @@ import ReportPage from "../features/chat/ReportPage";
 import InquiriesPage from "../features/inquiries/InquiriesPage";
 import InquiryDetailPage from "../features/inquiries/InquiryDetailPage";
 import MeetingEditorPage from "../features/meetings/MeetingEditorPage";
-import MeetingListPage from "../features/meetings/MeetingListPage";
+import MeetingListPage, { NewMeetingLink } from "../features/meetings/MeetingListPage";
 import MorePage from "../features/more/MorePage";
 import StatsPage from "../features/stats/StatsPage";
 import BottomNav from "./BottomNav";
@@ -274,8 +274,18 @@ function ConsoleRoutes({ onSignOut }: { onSignOut: () => void }) {
             <Route path="new" element={<AdminEditorPage />} />
             <Route path=":email" element={<AdminEditorPage />} />
           </Route>
-          <Route path="more/meetings">
-            <Route index element={<MeetingListPage />} />
+          <Route
+            path="more/meetings"
+            element={
+              <SplitView
+                base="/more/meetings"
+                title="סיכומי ישיבות"
+                action={<NewMeetingLink />}
+                list={<MeetingListPage />}
+                empty="עוד אין סיכומים."
+              />
+            }
+          >
             <Route path="new" element={<MeetingEditorPage />} />
             <Route path=":id" element={<MeetingEditorPage />} />
           </Route>
