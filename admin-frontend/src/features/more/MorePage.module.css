@@ -18,3 +18,160 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* The same square, bigger, on the computer cards. */
+.tileLarge {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.tileLarge svg {
+  width: 24px;
+  height: 24px;
+}
+
+.chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #a0a0a6;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Computer only (the component renders these on a wide screen): account card on the right,
+   section cards on the left. The cards stretch to the account card's height, so both sides end on one line. */
+.layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+.account {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-4) 20px var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 1.875rem;
+  font-weight: var(--weight-medium);
+}
+
+.name {
+  margin-block-start: 12px;
+  font-size: 1.1875rem;
+  font-weight: var(--weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.email {
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.level {
+  margin-block-start: var(--space-2);
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.accountLinks {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  margin-block-start: 18px;
+  border-block-start: 1px solid var(--color-border);
+}
+
+.accountRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-size);
+  padding-inline: 4px;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.accountRow > span {
+  flex: 1;
+}
+
+.accountRow + .accountRow {
+  border-block-start: 1px solid var(--color-border);
+}
+
+.danger {
+  color: var(--color-danger);
+}
+
+/* One card per row, all the same height, together as tall as the account card. */
+.cards {
+  display: grid;
+  grid-auto-rows: 1fr;
+  gap: var(--space-3);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 20px var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.cardText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTitle {
+  font-size: 1.0625rem;
+  font-weight: var(--weight-bold);
+}
+
+.cardHint {
+  color: var(--color-text-muted);
+}
+
+@media (hover: hover) {
+  .card:hover {
+    background: var(--color-bg);
+  }
+
+  .accountRow:hover {
+    background: var(--color-bg);
+  }
+}
