@@ -3,7 +3,7 @@
     The routes under it are the items. */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Outlet, useMatch } from "react-router";
+import { Outlet, useMatch, useNavigate } from "react-router";
 
 import { LEAVE_QUESTION } from "../lib/unsaved";
 import { useIsDesktop } from "../lib/useIsDesktop";
@@ -57,6 +57,35 @@ export function useReportPosition(text: string | null): void {
     setPosition(text);
     return () => setPosition(null);
   }, [text, setPosition]);
+}
+
+/** For the list: on a computer with nothing open, opens `to` (its first item) beside it, like a mail app.
+    After a change (`version` went up) the list on screen may still hold the item just handled, so it waits
+    for the reload to finish (`loading` true, then false) before opening anything. */
+export function useAutoOpen(to: string | null, loading: boolean, version: number): void {
+  const { idle } = useSplit();
+  const navigate = useNavigate();
+  const seenVersion = useRef(version);
+
+  useEffect(() => {
+    if (version !== seenVersion.current) {
+      seenVersion.current = version;
+      return;
+    }
+    if (idle && !loading && to) navigate(to, { replace: true });
+  }, [idle, loading, to, version, navigate]);
+}
+
+/** "דיווח 2 מתוך 5": where the open item sits in a list, for useReportPosition. Null when it isn't there. */
+export function positionText(noun: string, index: number, total: number | undefined): string | null {
+  if (index < 0) return null;
+  return total === undefined ? `${noun} ${index + 1}` : `${noun} ${index + 1} מתוך ${total}`;
+}
+
+/** The top of a list (view switch, filters). On a computer it stays at the top of the list side, on white,
+    while the rows scroll under it. On a phone it is a plain box. */
+export function ListHead({ children }: { children: ReactNode }) {
+  return <div className={styles.head}>{children}</div>;
 }
 
 interface Props {

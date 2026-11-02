@@ -233,8 +233,10 @@ function ConsoleRoutes({ onSignOut }: { onSignOut: () => void }) {
           >
             <Route path=":id" element={<InquiryDetailPage />} />
           </Route>
-          <Route path="chat">
-            <Route index element={<ChatPage />} />
+          <Route
+            path="chat"
+            element={<SplitView base="/chat" title="צ'אט" list={<ChatPage />} empty="אין מה להציג כאן." />}
+          >
             <Route path="reports/:id" element={<ReportPage />} />
             <Route path="blocked/:userId" element={<BlockedUserPage />} />
             <Route path="log/:id" element={<ActionPage />} />

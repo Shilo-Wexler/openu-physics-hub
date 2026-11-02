@@ -30,6 +30,18 @@
   border-radius: 0;
 }
 
+/* The list's top (ListHead): stays put while the rows scroll. Only here, inside the window (computer). */
+@media (min-width: 1024px) {
+  .head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: var(--space-3) var(--space-3) 0;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+}
+
 /* The item side: the page's grey, like the item's screen on a phone. min-width 0: a long word must not widen it. */
 .item {
   min-width: 0;

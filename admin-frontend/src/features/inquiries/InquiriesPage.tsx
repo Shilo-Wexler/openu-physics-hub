@@ -13,7 +13,7 @@ import {
 } from "../../shared/api/inquiries";
 import { ListMessage, ListRow, LoadMore, RowList } from "../../shared/components/ListRow";
 import SegmentedControl from "../../shared/components/SegmentedControl";
-import { useReportPosition, useSplit } from "../../shared/components/SplitView";
+import { ListHead, positionText, useAutoOpen, useReportPosition, useSplit } from "../../shared/components/SplitView";
 import { courseLabel, STATUS_LABEL, TYPE_LABEL } from "../../shared/lib/inquiryLabels";
 import { errorMessage } from "../../shared/lib/errors";
 import { useAdmin, useLoad } from "../../layout/consoleContext";
@@ -69,7 +69,7 @@ export default function InquiriesPage() {
       {!split && <h1>פניות</h1>}
 
       {/* The switch and the filters. On a computer they stay at the top while the rows scroll under them. */}
-      <div className={styles.head}>
+      <ListHead>
         <SegmentedControl
           label="מצב הפניות"
           segments={VIEWS.map((v) => ({ ...v, count: countFor(v.value) }))}
@@ -83,7 +83,7 @@ export default function InquiriesPage() {
           <CourseFilter value={filters.course} onChange={changeCourse} />
           <TypeFilter value={filters.type} onChange={changeType} />
         </div>
-      </div>
+      </ListHead>
 
       <InquiryList filters={filters} search={search} total={countFor(filters.view)} />
     </>
@@ -108,11 +108,7 @@ interface Shown {
 
 function InquiryList({ filters, search, total }: ListProps) {
   const { token, version, onAuthError } = useAdmin();
-  const { idle } = useSplit();
-  const navigate = useNavigate();
   const [shown, setShown] = useState<Shown | null>(null);
-  // Which list (filters and version) last came from the server; a cached or older list doesn't count.
-  const [fresh, setFresh] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -135,7 +131,6 @@ function InquiryList({ filters, search, total }: ListProps) {
       .then((page) => {
         rememberPage(search, version, page);
         setShown({ search, items: page.items, nextBefore: page.next_before });
-        setFresh(`${version}${search}`);
         setLoading(false);
       })
       .catch((e: unknown) => {
@@ -149,20 +144,17 @@ function InquiryList({ filters, search, total }: ListProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, search, version, onAuthError]);
 
-  // On a computer with nothing open, the newest inquiry opens beside the list, like a mail app; after a save
-  // this is the next one. Only from a fresh list: an older one may still hold the inquiry just saved.
-  const first = shown?.items[0];
-  const ready = fresh === `${version}${search}`;
-  useEffect(() => {
-    if (idle && ready && first) navigate(`/inquiries/${first.id}${search}`, { replace: true });
-  }, [idle, ready, first, search, navigate]);
+  // On a computer with nothing open, the newest inquiry opens beside the list; after a save, the next one.
+  // A list of other filters (still on screen while the right one loads) is not this list.
+  const first = shown?.search === search ? shown.items[0] : undefined;
+  useAutoOpen(first ? `/inquiries/${first.id}${search}` : null, loading, version);
 
   // Where the open inquiry sits in this list, shown above it on a computer: "פנייה 2 מתוך 9".
   const openId = Number(useMatch("/inquiries/:id")?.params.id);
   const index = shown?.items.findIndex((inquiry) => inquiry.id === openId) ?? -1;
   // Without a count (a filter is on), the loaded rows are the whole list once there is no next page.
   const of = total ?? (shown?.nextBefore === null ? shown.items.length : undefined);
-  useReportPosition(index < 0 ? null : of === undefined ? `פנייה ${index + 1}` : `פנייה ${index + 1} מתוך ${of}`);
+  useReportPosition(positionText("פנייה", index, of));
 
   async function loadMore() {
     if (!shown || shown.nextBefore === null) return;

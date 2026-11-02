@@ -1,0 +1,28 @@
+.text {
+  overflow-wrap: anywhere;
+}
+
+/* Eight lines at most (lh: one line of this text, whatever its size). */
+.cut {
+  max-height: 8lh;
+  overflow: hidden;
+}
+
+/* The last lines fade out, so the cut looks meant and not broken. */
+.fade {
+  mask-image: linear-gradient(to bottom, #000 70%, transparent);
+}
+
+/* A plain blue text button, like the console's action rows. */
+.toggle {
+  display: block;
+  margin-block-start: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  white-space: normal;
+  cursor: pointer;
+}

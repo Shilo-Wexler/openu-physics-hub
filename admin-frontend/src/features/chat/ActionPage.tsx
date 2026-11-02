@@ -8,6 +8,8 @@ import { moderationAction, undoModerationAction, type ModerationAction } from ".
 import BackLink from "../../shared/components/BackLink";
 import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
+import LongText from "../../shared/components/LongText";
+import { useSplit } from "../../shared/components/SplitView";
 import { formatDateTime } from "../../shared/lib/format";
 import { errorMessage } from "../../shared/lib/errors";
 import AdminLabel from "../../layout/AdminLabel";
@@ -22,13 +24,15 @@ export default function ActionPage() {
   const { token, version, changed, onAuthError } = useAdmin();
   const confirm = useConfirm();
   const navigate = useNavigate();
+  const { split } = useSplit();
   const id = Number(useParams().id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loaded = useLoad((signal) => moderationAction(token, id, signal), [token, id, version]);
 
-  const back = <BackLink to={BACK} label="יומן" />;
+  // Beside the list (computer) there is nothing to go back to.
+  const back = split ? null : <BackLink to={BACK} label="יומן" />;
 
   if (loaded.failed) {
     return (
@@ -93,9 +97,9 @@ export default function ActionPage() {
         (a.message.author_id === null ? (
           <p className={styles.status}>התוכן נמחק יחד עם החשבון.</p>
         ) : (
-          <div className={styles.content} dir="auto">
+          <LongText key={a.id} className={styles.content}>
             {a.message.content}
-          </div>
+          </LongText>
         ))}
 
       <Details action={a} />
