@@ -10,7 +10,7 @@ import { ConfirmProvider } from "../shared/components/ConfirmSheet";
 import SplitView from "../shared/components/SplitView";
 import type { Level } from "../shared/lib/levels";
 import AdminEditorPage from "../features/admins/AdminEditorPage";
-import AdminsListPage from "../features/admins/AdminsListPage";
+import AdminsListPage, { NewAdminLink } from "../features/admins/AdminsListPage";
 import AnnouncementEditorPage from "../features/announcements/AnnouncementEditorPage";
 import AnnouncementListPage, { NewAnnouncementLink } from "../features/announcements/AnnouncementListPage";
 import { DEV_SIGN_IN, type Identity } from "../features/auth/identity";
@@ -259,8 +259,18 @@ function ConsoleRoutes({ onSignOut }: { onSignOut: () => void }) {
           </Route>
           <Route path="stats" element={<StatsPage />} />
           <Route path="more" element={<MorePage onSignOut={onSignOut} />} />
-          <Route path="more/admins">
-            <Route index element={<AdminsListPage />} />
+          <Route
+            path="more/admins"
+            element={
+              <SplitView
+                base="/more/admins"
+                title="צוות"
+                action={<NewAdminLink />}
+                list={<AdminsListPage />}
+                empty="אין חברי צוות."
+              />
+            }
+          >
             <Route path="new" element={<AdminEditorPage />} />
             <Route path=":email" element={<AdminEditorPage />} />
           </Route>

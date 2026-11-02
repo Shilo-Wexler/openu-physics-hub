@@ -8,6 +8,29 @@
   margin: 0 0 var(--space-3);
 }
 
+/* The form measures its own width (not the window's): on a computer it sits beside the list. */
+.form {
+  container-type: inline-size;
+}
+
+/* On a computer, when the form has room (640px), two columns, as in the announcement form: name and level,
+   and a fixed column beside them (save, details, removing). The phone keeps one column. */
+@media (min-width: 1024px) {
+  @container (min-width: 640px) {
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: var(--space-5);
+      align-items: start;
+    }
+
+    .side {
+      position: sticky;
+      top: 0;
+    }
+  }
+}
+
 .section {
   margin-block-end: var(--space-4);
 }
