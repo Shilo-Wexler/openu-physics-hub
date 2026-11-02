@@ -90,7 +90,7 @@ function PeopleList({ title, people }: { title: string; people: Person[] }) {
   return (
     <>
       <h2 className={styles.sideTitle}>{title}</h2>
-      <ul className={styles.people}>
+      <ul className={styles.sideList}>
         {people.map((person) => {
           const { Icon, label } = SITES[person.site];
           return (
