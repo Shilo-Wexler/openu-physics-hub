@@ -64,6 +64,10 @@ backends:
         # Cloudflare Access app in front of the console; set per environment.
         CF_ACCESS_TEAM_DOMAIN: ""
         CF_ACCESS_AUD: ""
+        # Console staff sync to a Cloudflare Access group is off here. An environment turns it on in
+        # values-<env>.yaml with CF_ACCOUNT_ID + CF_ACCESS_GROUP_ID in env, CF_API_TOKEN: cf-api-token
+        # in secretFiles, and accessSync.enabled. Not in this file: a secretFiles key missing from the
+        # Secret stops the pod from starting.
       secretName: admin-backend
       secretFiles:
         DATABASE_URL: database-url
@@ -92,6 +96,13 @@ migrate:
 purge:
   schedule: "0 3 * * *"
   timeZone: Asia/Jerusalem
+
+# Job that makes the console's Cloudflare Access group equal to the admins table
+# (admin-backend app/jobs/sync_access.py). Every console change already syncs; this catches a
+# sync that failed. Needs the admin server's sync settings (see backends.admin.server.env).
+accessSync:
+  enabled: false
+  schedule: "*/15 * * * *"
 
 # Demo content (reviews, users, inquiries, announcements) loaded after each deploy; see
 # templates/demo-seed.yaml and deploy/demo/build.py. Only staging turns it on, never production.

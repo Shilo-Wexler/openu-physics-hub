@@ -1,10 +1,10 @@
 """Console basics: who am I, the course list, and the admins table. All endpoints require an admin."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 
 from app.routes.deps import Admin, Conn, Manager, http_errors, require_admin
 from app.schemas.admins import AdminNameIn, AdminRole, NewAdmin
-from app.services import admins, courses
+from app.services import access_sync, admins, courses
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -16,6 +16,13 @@ _ERRORS = {
     admins.NeedsAdmin: (status.HTTP_403_FORBIDDEN, "requires an admin"),
     admins.NeedsManager: (status.HTTP_403_FORBIDDEN, "requires a committee member"),
 }
+
+
+def _sync_access(conn: Conn, background_tasks: BackgroundTasks) -> None:
+    """After adding or removing an admin: saves the change now, so the sync (on its own connection)
+    reads the new list, and updates Cloudflare Access after the response is sent."""
+    conn.commit()
+    background_tasks.add_task(access_sync.sync_in_background)
 
 
 # ---------- Who am I ----------
@@ -42,9 +49,11 @@ def list_admins(conn: Conn):
 
 
 @router.post("/admins", status_code=status.HTTP_201_CREATED)
-def add_admin(payload: NewAdmin, user: Manager, conn: Conn):
+def add_admin(payload: NewAdmin, user: Manager, conn: Conn, background_tasks: BackgroundTasks):
     with http_errors(_ERRORS):
-        return admins.add(conn, user.email, user.role, payload.email, payload.name, payload.role)
+        row = admins.add(conn, user.email, user.role, payload.email, payload.name, payload.role)
+    _sync_access(conn, background_tasks)
+    return row
 
 
 @router.put("/admins/{email}/role")
@@ -60,6 +69,7 @@ def set_admin_name(email: str, payload: AdminNameIn, user: Admin, conn: Conn):
 
 
 @router.delete("/admins/{email}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_admin(email: str, user: Manager, conn: Conn):
+def remove_admin(email: str, user: Manager, conn: Conn, background_tasks: BackgroundTasks):
     with http_errors(_ERRORS):
         admins.remove(conn, user.email, user.role, email)
+    _sync_access(conn, background_tasks)

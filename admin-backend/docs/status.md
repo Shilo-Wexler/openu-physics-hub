@@ -1,6 +1,6 @@
 # Admin side: status
 
-Updated 2026-11-01.
+Updated 2026-11-02.
 
 ## Who owns what
 
@@ -21,6 +21,12 @@ Updated 2026-11-01.
   the chat's `/internal/stats/courses` (`null` when the chat backend fails, the rest still answers).
 - Admins, names and levels: `admins` table, `GET /api/admin/me`, add, rename, change level and remove from the console. Three levels, see `docs/CONTRACT.md`.
 - Sign-in: Cloudflare Access. The server checks the `Cf-Access-Jwt-Assertion` header.
+- Console staff sync (`app/services/access_sync.py`): after adding or removing an admin, the console's
+  Cloudflare Access rule group is set to the emails of the `admins` table, in the background (the change
+  itself never waits for Cloudflare or fails because of it). The table is the source of truth: each sync
+  writes the whole list, and a Postgres advisory lock keeps two syncs from crossing. The CronJob
+  `python -m app.jobs.sync_access` fixes the group every 15 minutes if a sync failed. Off when the
+  `CF_*` settings below are not set (local dev). Setup in `deploy/README.md`.
 - Errors are always `{"detail": "..."}`.
 - `/docs`, `/redoc` and `/openapi.json` only when `ENV=dev`.
 - One health route: `/health`.
@@ -38,6 +44,8 @@ Updated 2026-11-01.
 | `CHAT_API_URL`, `MOD_API_TOKEN` | Chat moderation and chat stats |
 | `TURNSTILE_SECRET` | Required in prod |
 | `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD` | Required in prod |
+| `CF_API_TOKEN` | Console staff sync: Cloudflare API token (Access groups, edit). Secret |
+| `CF_ACCOUNT_ID`, `CF_ACCESS_GROUP_ID` | Console staff sync: the account and the rule group. Set all three `CF_*` or none |
 
 Secrets can also come from a `<NAME>_FILE`.
 
@@ -56,6 +64,6 @@ No automated tests: changes are checked by hand in the console and the site.
 
 ## Next
 
-- Cloudflare Access app for `admin.openuvoice.com`.
-- Deploy: Docker, Helm, migrations as a Job, security headers in nginx.
+- Prod: Cloudflare Access app `admin` for `admin.openuvoice.com`, rule group `prod-console-staff`,
+  and its own API token (see `deploy/README.md`).
 - Align the Python version (Dockerfile 3.12, local 3.14).
