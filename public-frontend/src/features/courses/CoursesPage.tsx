@@ -1,9 +1,11 @@
-/** /courses: pick a course on the wheel to open its chat. */
+/** /courses: pick a course to open its chat. Phone: on the wheel. Computer: in a grid of tiles. */
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 import type { Course } from "../../shared/api/chat";
+import { useIsDesktop } from "../../shared/browser/useIsDesktop";
+import CourseGrid, { GRID_COLUMNS, type GridControls } from "./CourseGrid";
 import { loadCourses } from "./courseList";
 import CourseWheel, { type WheelControls } from "./CourseWheel";
 import styles from "./CoursesPage.module.css";
@@ -13,13 +15,23 @@ type State =
   | { status: "error" }
   | { status: "ready"; courses: Course[] };
 
+// The grid's arrow keys. Right to left: the left arrow goes to the next tile.
+const GRID_STEPS: Record<string, number> = {
+  ArrowLeft: 1,
+  ArrowRight: -1,
+  ArrowDown: GRID_COLUMNS,
+  ArrowUp: -GRID_COLUMNS,
+};
+
 export default function CoursesPage() {
   const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
   const [state, setState] = useState<State>({ status: "loading" });
   // ?q= lets a link open the page with a search already typed.
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const wheel = useRef<WheelControls>(null);
+  const grid = useRef<GridControls>(null);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -54,11 +66,20 @@ export default function CoursesPage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    wheel.current?.openCurrent();
+    if (isDesktop) grid.current?.openCurrent();
+    else wheel.current?.openCurrent();
   }
 
-  // The arrow keys turn the wheel while typing stays in the search box.
+  // The arrow keys move through the courses while typing stays in the search box:
+  // up and down turn the wheel; on a computer all four move through the grid.
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (isDesktop) {
+      const step = GRID_STEPS[event.key];
+      if (step === undefined) return;
+      event.preventDefault();
+      grid.current?.move(step);
+      return;
+    }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       wheel.current?.move(event.key === "ArrowDown" ? 1 : -1);
@@ -95,23 +116,28 @@ export default function CoursesPage() {
         />
       </form>
       <p id="course-search-hint" className={styles.visuallyHidden}>
-        החצים למעלה ולמטה מחליפים קורס, ו-Enter פותח אותו.
+        {isDesktop
+          ? "החצים עוברים בין הקורסים, ו-Enter פותח את הקורס."
+          : "החצים למעלה ולמטה מחליפים קורס, ו-Enter פותח אותו."}
       </p>
 
-      {/* Keeps the wheel's space while the list loads, so nothing jumps. */}
-      <div className={styles.wheelSlot}>
+      {/* Phone: keeps the wheel's space while the list loads, so nothing jumps. */}
+      <div className={isDesktop ? styles.gridSlot : styles.wheelSlot}>
         {state.status === "loading" && <p className={styles.message}>טוען קורסים…</p>}
         {state.status === "error" && (
           <p className={styles.message}>לא הצלחנו לטעון את הקורסים. אפשר לרענן את הדף ולנסות שוב.</p>
         )}
-        {state.status === "ready" && (
-          <CourseWheel
-            courses={state.courses}
-            query={query}
-            onOpen={openCourse}
-            controls={wheel}
-          />
-        )}
+        {state.status === "ready" &&
+          (isDesktop ? (
+            <CourseGrid courses={state.courses} query={query} onOpen={openCourse} controls={grid} />
+          ) : (
+            <CourseWheel
+              courses={state.courses}
+              query={query}
+              onOpen={openCourse}
+              controls={wheel}
+            />
+          ))}
       </div>
     </>
   );
