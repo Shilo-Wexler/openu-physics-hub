@@ -1,6 +1,6 @@
 """Settings read from environment variables (or a .env file in admin-backend/).
 
-A secret (DATABASE_URL, MOD_API_TOKEN, TURNSTILE_SECRET) may instead come from a file:
+A secret (DATABASE_URL, MOD_API_TOKEN, TURNSTILE_SECRET, CF_API_TOKEN) may instead come from a file:
 set NAME_FILE to its path, as a Kubernetes secret mounted into the pod.
 """
 
@@ -22,6 +22,10 @@ def _required(name: str) -> str:
     if not value:
         raise RuntimeError(f"Missing required environment variable: {name}")
     return value
+
+
+def _optional(name: str) -> str | None:
+    return os.environ.get(name, "").strip() or None
 
 
 def _optional_secret(name: str) -> str | None:
@@ -103,3 +107,16 @@ if MOD_API_TOKEN is not None and len(MOD_API_TOKEN) < 32:
 TURNSTILE_SECRET = _optional_secret("TURNSTILE_SECRET")
 if TURNSTILE_SECRET is None and ENV == "prod":
     raise RuntimeError("Missing required environment variable: TURNSTILE_SECRET (required when ENV=prod)")
+
+# Console staff sync (services/access_sync.py): the console's Access application allows one Cloudflare
+# Access rule group, and admin-backend keeps that group's emails equal to the admins table.
+# One group per environment, since each environment has its own admins table.
+# Token: a custom API token with "Access: Organizations, Identity Providers, and Groups: Edit" on one account.
+# Account ID: in the dashboard URL, dash.cloudflare.com/<account id>/home. Group ID: on the Rule groups page.
+# All three or none: without them the sync is off (local dev) and console access is managed by hand.
+CF_API_TOKEN = _optional_secret("CF_API_TOKEN")
+CF_ACCOUNT_ID = _optional("CF_ACCOUNT_ID")
+CF_ACCESS_GROUP_ID = _optional("CF_ACCESS_GROUP_ID")
+ACCESS_SYNC_ENABLED = all((CF_API_TOKEN, CF_ACCOUNT_ID, CF_ACCESS_GROUP_ID))
+if any((CF_API_TOKEN, CF_ACCOUNT_ID, CF_ACCESS_GROUP_ID)) and not ACCESS_SYNC_ENABLED:
+    raise RuntimeError("CF_API_TOKEN, CF_ACCOUNT_ID and CF_ACCESS_GROUP_ID must be set together")

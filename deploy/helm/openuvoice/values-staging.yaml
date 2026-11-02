@@ -19,10 +19,22 @@ backends:
   admin:
     server:
       env:
-        # The "staging" Access application, which covers staging and admin-staging.
+        # The "admin-staging" Access application, which covers admin-staging only.
         # Identifiers, not secrets.
         CF_ACCESS_TEAM_DOMAIN: "dark-frog-20e8.cloudflareaccess.com"
-        CF_ACCESS_AUD: "e495dfbfb447850874f522fac1cb884a8e6741f2ad08697594985a13e0abfc38"
+        CF_ACCESS_AUD: "4ddbc61097a1941fe5fce0716c615e60d739342848bafdff265a83ff5c0a69ea"
+        # Console staff sync: the "staging-console-staff" rule group, which the admin-staging
+        # application allows. Identifiers, not secrets; the token is cf-api-token below.
+        CF_ACCOUNT_ID: "7c5bf39729c48a468136124cae03c6b5"
+        CF_ACCESS_GROUP_ID: "2acb0290-a159-4e71-9440-8d7c04a40100"
+      # Added to the secretFiles of values.yaml. The token may edit Access groups of this account
+      # only, and only from the server's public IP address.
+      secretFiles:
+        CF_API_TOKEN: cf-api-token
+
+# Every 15 minutes, fixes the group if a sync after a console change failed.
+accessSync:
+  enabled: true
 
 frontends:
   public:
@@ -34,7 +46,8 @@ frontends:
 
 # Served by the "openuvoice-staging" Cloudflare tunnel (cloudflared runs in the cluster, see
 # deploy/cluster/k3s/cloudflared.yaml), which reaches Traefik inside the cluster.
-# Both hosts sit behind the "staging" Access application.
+# Each host sits behind its own Access application: "staging" (testers) and "admin-staging"
+# (the staging-console-staff group, kept equal to the admins table).
 ingress:
   hosts:
     public: staging.openuvoice.com
@@ -42,3 +55,4 @@ ingress:
 # Fill staging with demo content (deploy/demo/). Never in production.
 demo:
   enabled: true
+  
