@@ -151,10 +151,12 @@
   text-underline-offset: 3px;
 }
 
-/* Privacy: a section's row. Grey until it is the one being read. */
+/* Privacy: a section's row, icon then title. Grey until it is the one being read. */
 .tocLink {
-  display: block;
-  padding-block: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
   color: var(--color-text-muted);
   text-decoration: none;
   transition: color 0.15s;
@@ -167,6 +169,24 @@
 
 .tocCurrent {
   font-weight: var(--weight-medium);
+}
+
+/* Thin line icons, like the home page's; they take the row's color. */
+.tocIcon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The cookie's crumbs are small filled dots, not rings. */
+.tocDot {
+  fill: currentColor;
+  stroke: none;
 }
 
 @media (min-width: 1024px) {

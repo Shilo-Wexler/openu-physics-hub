@@ -7,12 +7,55 @@ const CONTACT_EMAIL = "contact@openuvoice.com";
 // Change together with the text whenever the terms change.
 const LAST_UPDATED = "נובמבר 2026";
 
+/** Thin line icons for the side list, drawn like the home page's icons. */
+function PeopleIcon() {
+  return (
+    <svg className={styles.tocIcon} viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+      <circle cx="17" cy="9" r="2.6" />
+      <path d="M17.5 14.6c2.3.3 3.7 1.9 4 4.4" />
+    </svg>
+  );
+}
+
+function DocumentIcon() {
+  return (
+    <svg className={styles.tocIcon} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 2.8h8.5L19 7.3v13.9H6z" />
+      <path d="M14 2.8v5h5" />
+      <path d="M9 12h7M9 15.5h7M9 19h4" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg className={styles.tocIcon} viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4.5" y="10.5" width="15" height="10.5" rx="2" />
+      <path d="M8 10.5v-3a4 4 0 0 1 8 0v3" />
+      <path d="M12 14.5v3" />
+    </svg>
+  );
+}
+
+function CookieIcon() {
+  return (
+    <svg className={styles.tocIcon} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20.8 12.6A8.8 8.8 0 1 1 11.4 3.2a3 3 0 0 0 3.8 3.6 3 3 0 0 0 3.6 3.8 3 3 0 0 0 2 2z" />
+      <circle className={styles.tocDot} cx="8.5" cy="10" r=".9" />
+      <circle className={styles.tocDot} cx="14.5" cy="15" r=".9" />
+      <circle className={styles.tocDot} cx="9" cy="15.5" r=".9" />
+    </svg>
+  );
+}
+
 // The page's sections, in order. Titles show both above each section and in the side list.
 const SECTIONS = {
-  operator: { id: "privacy-operator", title: "מי מפעיל את האתר" },
-  terms: { id: "privacy-terms", title: "תנאי שימוש" },
-  data: { id: "privacy-data", title: "פרטיות" },
-  cookies: { id: "privacy-cookies", title: "עוגיות" },
+  operator: { id: "privacy-operator", title: "מי מפעיל את האתר", Icon: PeopleIcon },
+  terms: { id: "privacy-terms", title: "תנאי שימוש", Icon: DocumentIcon },
+  data: { id: "privacy-data", title: "פרטיות", Icon: LockIcon },
+  cookies: { id: "privacy-cookies", title: "עוגיות", Icon: CookieIcon },
 };
 const SECTION_LIST = Object.values(SECTIONS);
 
@@ -173,7 +216,7 @@ export default function PrivacyPage() {
       <nav className={styles.side} aria-label="בעמוד הזה">
         <p className={styles.sideTitle}>בעמוד הזה</p>
         <ol className={styles.sideList}>
-          {SECTION_LIST.map(({ id, title }) => (
+          {SECTION_LIST.map(({ id, title, Icon }) => (
             <li key={id}>
               <a
                 className={id === current ? `${styles.tocLink} ${styles.tocCurrent}` : styles.tocLink}
@@ -181,6 +224,7 @@ export default function PrivacyPage() {
                 aria-current={id === current ? "location" : undefined}
                 onClick={(event) => jumpTo(event, id)}
               >
+                <Icon />
                 {title}
               </a>
             </li>
