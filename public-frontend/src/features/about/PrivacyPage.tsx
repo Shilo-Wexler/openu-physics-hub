@@ -131,7 +131,7 @@ export default function PrivacyPage() {
             {SECTIONS.operator.title}
           </h2>
           <p className={styles.text}>
-            OpenUVoice הוא מיזם התנדבותי של סטודנטים לפיזיקה באוניברסיטה הפתוחה, ואינו קשור רשמית
+            OpenUVoice הוא מיזם התנדבותי של ועד הסטודנטים לפיזיקה באוניברסיטה הפתוחה, ואינו קשור רשמית
             לאוניברסיטה או לאגודת הסטודנטים. לשאלות על האתר:{" "}
             <a className={styles.link} href={`mailto:${CONTACT_EMAIL}`} dir="ltr">
               {CONTACT_EMAIL}
