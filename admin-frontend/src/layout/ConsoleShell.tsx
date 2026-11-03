@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 
 import { listAdmins } from "../shared/api/admins";
@@ -7,29 +7,61 @@ import { ApiError, isAbort, isAuthError } from "../shared/api/client";
 import { getInquiryCounts } from "../shared/api/inquiries";
 import { getMe } from "../shared/api/me";
 import { ConfirmProvider } from "../shared/components/ConfirmSheet";
+import PageLoading from "../shared/components/PageLoading";
 import SplitView from "../shared/components/SplitView";
 import type { Level } from "../shared/lib/levels";
-import AdminEditorPage from "../features/admins/AdminEditorPage";
 import AdminsListPage, { NewAdminLink } from "../features/admins/AdminsListPage";
-import AnnouncementEditorPage from "../features/announcements/AnnouncementEditorPage";
 import AnnouncementListPage, { NewAnnouncementLink } from "../features/announcements/AnnouncementListPage";
 import { DEV_SIGN_IN, type Identity } from "../features/auth/identity";
 import SignIn from "../features/auth/SignIn";
 import { useIdentity } from "../features/auth/useIdentity";
-import ActionPage from "../features/chat/ActionPage";
-import BlockedUserPage from "../features/chat/BlockedUserPage";
-import ChatPage from "../features/chat/ChatPage";
-import ReportPage from "../features/chat/ReportPage";
 import InquiriesPage from "../features/inquiries/InquiriesPage";
 import InquiryDetailPage from "../features/inquiries/InquiryDetailPage";
-import MeetingEditorPage from "../features/meetings/MeetingEditorPage";
 import MeetingListPage, { NewMeetingLink } from "../features/meetings/MeetingListPage";
-import MorePage from "../features/more/MorePage";
-import StatsPage from "../features/stats/StatsPage";
 import BottomNav from "./BottomNav";
 import ConsoleHeader from "./ConsoleHeader";
 import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./consoleContext";
 import { SECTIONS } from "./sections";
+
+// Loaded with the console: the inquiries (the first screen) and the lists whose "new" buttons sit in
+// the header. The editors and the other sections are files of their own, downloaded in the background
+// once the console is open (usePrefetchScreens), so the first load is lighter and a click is still instant.
+const SCREENS = {
+  adminEditor: () => import("../features/admins/AdminEditorPage"),
+  announcementEditor: () => import("../features/announcements/AnnouncementEditorPage"),
+  chatAction: () => import("../features/chat/ActionPage"),
+  chatBlocked: () => import("../features/chat/BlockedUserPage"),
+  chat: () => import("../features/chat/ChatPage"),
+  chatReport: () => import("../features/chat/ReportPage"),
+  meetingEditor: () => import("../features/meetings/MeetingEditorPage"),
+  more: () => import("../features/more/MorePage"),
+  stats: () => import("../features/stats/StatsPage"),
+};
+
+const AdminEditorPage = lazy(SCREENS.adminEditor);
+const AnnouncementEditorPage = lazy(SCREENS.announcementEditor);
+const ActionPage = lazy(SCREENS.chatAction);
+const BlockedUserPage = lazy(SCREENS.chatBlocked);
+const ChatPage = lazy(SCREENS.chat);
+const ReportPage = lazy(SCREENS.chatReport);
+const MeetingEditorPage = lazy(SCREENS.meetingEditor);
+const MorePage = lazy(SCREENS.more);
+const StatsPage = lazy(SCREENS.stats);
+
+/** Once the console is open and the browser is idle, downloads the other screens in the background,
+    so a click opens its screen at once instead of waiting for its file. Each file is fetched once. */
+function usePrefetchScreens() {
+  useEffect(() => {
+    const prefetch = () => Object.values(SCREENS).forEach((load) => void load().catch(() => undefined));
+    // Safari has no requestIdleCallback: a short delay instead.
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(prefetch, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = setTimeout(prefetch, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+}
 
 type Access = "checking" | "ok" | "forbidden" | "error";
 
@@ -219,78 +251,81 @@ function ConsoleRoutes({ onSignOut }: { onSignOut: () => void }) {
   const newInquiries = useNewInquiries();
   const openReports = useOpenReports();
   const badges = { inquiries: newInquiries, chat: openReports };
+  usePrefetchScreens();
 
   return (
     <>
       <ConsoleHeader sections={SECTIONS} badges={badges} />
       <main>
-        <Routes>
-          <Route index element={<Navigate to="/inquiries" replace />} />
-          {/* On a computer the list and the open inquiry share the screen; on a phone they are two screens. */}
-          <Route
-            path="inquiries"
-            element={<SplitView base="/inquiries" title="פניות" list={<InquiriesPage />} empty="אין פנייה פתוחה." />}
-          >
-            <Route path=":id" element={<InquiryDetailPage />} />
-          </Route>
-          <Route
-            path="chat"
-            element={<SplitView base="/chat" title="צ'אט" list={<ChatPage />} empty="אין מה להציג כאן." />}
-          >
-            <Route path="reports/:id" element={<ReportPage />} />
-            <Route path="blocked/:userId" element={<BlockedUserPage />} />
-            <Route path="log/:id" element={<ActionPage />} />
-          </Route>
-          {/* "new" is matched before ":id", so both open the same form, empty or filled. */}
-          <Route
-            path="announcements"
-            element={
-              <SplitView
-                base="/announcements"
-                title="הכרזות"
-                action={<NewAnnouncementLink />}
-                list={<AnnouncementListPage />}
-                empty="עוד אין הכרזות."
-              />
-            }
-          >
-            <Route path="new" element={<AnnouncementEditorPage />} />
-            <Route path=":id" element={<AnnouncementEditorPage />} />
-          </Route>
-          <Route path="stats" element={<StatsPage />} />
-          <Route path="more" element={<MorePage onSignOut={onSignOut} />} />
-          <Route
-            path="more/admins"
-            element={
-              <SplitView
-                base="/more/admins"
-                title="צוות"
-                action={<NewAdminLink />}
-                list={<AdminsListPage />}
-                empty="אין חברי צוות."
-              />
-            }
-          >
-            <Route path="new" element={<AdminEditorPage />} />
-            <Route path=":email" element={<AdminEditorPage />} />
-          </Route>
-          <Route
-            path="more/meetings"
-            element={
-              <SplitView
-                base="/more/meetings"
-                title="סיכומי ישיבות"
-                action={<NewMeetingLink />}
-                list={<MeetingListPage />}
-                empty="עוד אין סיכומים."
-              />
-            }
-          >
-            <Route path="new" element={<MeetingEditorPage />} />
-            <Route path=":id" element={<MeetingEditorPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<PageLoading />}>
+          <Routes>
+            <Route index element={<Navigate to="/inquiries" replace />} />
+            {/* On a computer the list and the open inquiry share the screen; on a phone they are two screens. */}
+            <Route
+              path="inquiries"
+              element={<SplitView base="/inquiries" title="פניות" list={<InquiriesPage />} empty="אין פנייה פתוחה." />}
+            >
+              <Route path=":id" element={<InquiryDetailPage />} />
+            </Route>
+            <Route
+              path="chat"
+              element={<SplitView base="/chat" title="צ'אט" list={<ChatPage />} empty="אין מה להציג כאן." />}
+            >
+              <Route path="reports/:id" element={<ReportPage />} />
+              <Route path="blocked/:userId" element={<BlockedUserPage />} />
+              <Route path="log/:id" element={<ActionPage />} />
+            </Route>
+            {/* "new" is matched before ":id", so both open the same form, empty or filled. */}
+            <Route
+              path="announcements"
+              element={
+                <SplitView
+                  base="/announcements"
+                  title="הכרזות"
+                  action={<NewAnnouncementLink />}
+                  list={<AnnouncementListPage />}
+                  empty="עוד אין הכרזות."
+                />
+              }
+            >
+              <Route path="new" element={<AnnouncementEditorPage />} />
+              <Route path=":id" element={<AnnouncementEditorPage />} />
+            </Route>
+            <Route path="stats" element={<StatsPage />} />
+            <Route path="more" element={<MorePage onSignOut={onSignOut} />} />
+            <Route
+              path="more/admins"
+              element={
+                <SplitView
+                  base="/more/admins"
+                  title="צוות"
+                  action={<NewAdminLink />}
+                  list={<AdminsListPage />}
+                  empty="אין חברי צוות."
+                />
+              }
+            >
+              <Route path="new" element={<AdminEditorPage />} />
+              <Route path=":email" element={<AdminEditorPage />} />
+            </Route>
+            <Route
+              path="more/meetings"
+              element={
+                <SplitView
+                  base="/more/meetings"
+                  title="סיכומי ישיבות"
+                  action={<NewMeetingLink />}
+                  list={<MeetingListPage />}
+                  empty="עוד אין סיכומים."
+                />
+              }
+            >
+              <Route path="new" element={<MeetingEditorPage />} />
+              <Route path=":id" element={<MeetingEditorPage />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
       <BottomNav sections={SECTIONS} badges={badges} />
     </>
