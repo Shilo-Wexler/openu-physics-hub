@@ -3,6 +3,12 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Vite puts small files (under 4KB) inside the JavaScript. Never the avatars: every visitor
+    // would download them on the first load, even without opening the chat or the profile.
+    // As files they are fetched only where shown, and cached for a year.
+    assetsInlineLimit: (filePath) => (filePath.includes("/assets/avatars/") ? false : undefined),
+  },
   server: {
     port: 5173,
     // Fail instead of silently moving to another port: Google sign-in only

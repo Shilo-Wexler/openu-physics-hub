@@ -22,7 +22,7 @@ _NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9א-ת _.-]{3,30}")
 _NICKNAME_ATTEMPTS = 5
 
 # Ready-made avatars a user can pick from; the frontend shows each key as a picture
-# (public-frontend/public/avatars/<key>.svg). A new user gets a random one.
+# (public-frontend/src/shared/assets/avatars/<key>.svg). A new user gets a random one.
 # Adding a key here (and its picture in the frontend) is enough.
 AVATARS = frozenset({
     "atom", "telescope", "microscope", "rocket", "satellite", "saturn",
