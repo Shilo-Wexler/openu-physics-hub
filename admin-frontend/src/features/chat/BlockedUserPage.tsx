@@ -43,7 +43,7 @@ export default function BlockedUserPage() {
     setError(null);
     try {
       await unblockUser(token, userId);
-      changed();
+      changed("chat");
       navigate(BACK, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();

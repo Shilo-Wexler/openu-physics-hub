@@ -66,7 +66,7 @@ export default function ActionPage() {
     setError(null);
     try {
       await undoModerationAction(token, a.id);
-      changed();
+      changed("chat");
       navigate(BACK, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
@@ -74,7 +74,7 @@ export default function ActionPage() {
       // message, or the author deleted their account).
       else if (e instanceof ApiError && e.status === 409) {
         setError("אי אפשר לבטל את הפעולה הזו, כי ההודעה או המשתמש השתנו מאז.");
-        changed();
+        changed("chat");
       } else setError(errorMessage(e));
       setBusy(false);
     }

@@ -118,7 +118,7 @@ function AdminEditor({ email }: { email: string | null }) {
       if (isNew) {
         const added = newEmail.trim().toLowerCase();
         await addAdmin(token, added, name.trim(), level);
-        changed();
+        changed("admins");
         navigate(split ? `${BACK}/${encodeURIComponent(added)}` : BACK, { replace: true });
         return;
       }
@@ -132,7 +132,7 @@ function AdminEditor({ email }: { email: string | null }) {
           await setAdminRole(token, saved.email, level);
           current = { ...current, role: level };
         }
-        changed();
+        changed("admins");
         if (!split) {
           navigate(BACK, { replace: true });
           return;
@@ -144,7 +144,7 @@ function AdminEditor({ email }: { email: string | null }) {
       }
     } catch (e) {
       // A name saved before the level failed stays saved: the form now starts from it.
-      changed();
+      changed("admins");
       if (isAuthError(e)) onAuthError();
       else setError(errorMessage(e));
       setSaving(false);
@@ -163,7 +163,7 @@ function AdminEditor({ email }: { email: string | null }) {
     setError(null);
     try {
       await removeAdmin(token, saved.email);
-      changed();
+      changed("admins");
       // On a computer the list then opens its first person beside it.
       navigate(BACK, { replace: true });
     } catch (e) {

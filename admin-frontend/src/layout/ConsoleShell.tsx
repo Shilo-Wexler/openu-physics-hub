@@ -20,7 +20,7 @@ import InquiryDetailPage from "../features/inquiries/InquiryDetailPage";
 import MeetingListPage, { NewMeetingLink } from "../features/meetings/MeetingListPage";
 import BottomNav from "./BottomNav";
 import ConsoleHeader from "./ConsoleHeader";
-import { AdminContext, useAdmin, useLoad, type AdminContextValue } from "./consoleContext";
+import { AdminContext, useAdmin, useLoad, type AdminContextValue, type ChangeArea } from "./consoleContext";
 import { SECTIONS } from "./sections";
 
 // Loaded with the console: the inquiries (the first screen) and the lists whose "new" buttons sit in
@@ -200,8 +200,13 @@ interface ConsoleProps {
 
 function AdminConsole({ identity, email, role, onSignOut, onAuthError }: ConsoleProps) {
   const [version, setVersion] = useState(0);
-  const changed = useCallback(() => setVersion((v) => v + 1), []);
-  const names = useAdminNames(identity.token, version, onAuthError);
+  // Per area, for what only that area's changes affect: the tab badges and the admins' names.
+  const [areaVersion, setAreaVersion] = useState<Record<ChangeArea, number>>({ inquiries: 0, chat: 0, admins: 0 });
+  const changed = useCallback((area?: ChangeArea) => {
+    setVersion((v) => v + 1);
+    if (area) setAreaVersion((a) => ({ ...a, [area]: a[area] + 1 }));
+  }, []);
+  const names = useAdminNames(identity.token, areaVersion.admins, onAuthError);
   const nameOf = useCallback((adminEmail: string) => names.get(adminEmail) ?? null, [names]);
 
   const context = useMemo<AdminContextValue>(
@@ -212,10 +217,11 @@ function AdminConsole({ identity, email, role, onSignOut, onAuthError }: Console
       isTeam: role === "team",
       nameOf,
       version,
+      areaVersion,
       changed,
       onAuthError,
     }),
-    [identity.token, email, role, nameOf, version, changed, onAuthError],
+    [identity.token, email, role, nameOf, version, areaVersion, changed, onAuthError],
   );
 
   return (
@@ -228,8 +234,8 @@ function AdminConsole({ identity, email, role, onSignOut, onAuthError }: Console
   );
 }
 
-/** Admins' names by email, so screens show a name instead of an email. Reloads after every change
-    (a rename, a new admin). If the list fails to load, screens just show the emails. */
+/** Admins' names by email, so screens show a name instead of an email. Reloads after a change to the
+    admins (a rename, a new admin). If the list fails to load, screens just show the emails. */
 function useAdminNames(token: string, version: number, onAuthError: () => void): Map<string, string> {
   const [names, setNames] = useState<Map<string, string>>(new Map());
   useEffect(() => {
@@ -332,16 +338,16 @@ function ConsoleRoutes({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
-/** The count on the inquiries tab. Reloads after every change (version). */
+/** The count on the inquiries tab. Reloads only after a change to an inquiry. */
 function useNewInquiries(): number {
-  const { token, version } = useAdmin();
-  const { data } = useLoad((signal) => getInquiryCounts(token, signal), [token, version]);
+  const { token, areaVersion } = useAdmin();
+  const { data } = useLoad((signal) => getInquiryCounts(token, signal), [token, areaVersion.inquiries]);
   return data?.new ?? 0;
 }
 
-/** The count on the chat tab: messages with open reports. Reloads after every change, like the inquiries count. */
+/** The count on the chat tab: messages with open reports. Reloads only after a moderation action. */
 function useOpenReports(): number {
-  const { token, version } = useAdmin();
-  const { data } = useLoad((signal) => reportedMessages(token, signal), [token, version]);
+  const { token, areaVersion } = useAdmin();
+  const { data } = useLoad((signal) => reportedMessages(token, signal), [token, areaVersion.chat]);
   return data?.length ?? 0;
 }

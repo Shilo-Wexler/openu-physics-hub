@@ -97,7 +97,7 @@ function InquiryDetail({ id }: { id: number }) {
     setError(null);
     try {
       await updateInquiry(token, id, change);
-      changed();
+      changed("inquiries");
       navigate(back, { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();

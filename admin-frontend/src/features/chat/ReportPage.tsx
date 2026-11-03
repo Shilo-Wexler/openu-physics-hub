@@ -37,7 +37,7 @@ export default function ReportPage() {
     setError(null);
     try {
       await action();
-      changed();
+      changed("chat");
       if (leave) navigate("/chat", { replace: true });
     } catch (e) {
       if (isAuthError(e)) onAuthError();
