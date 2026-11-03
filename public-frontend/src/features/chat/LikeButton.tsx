@@ -20,8 +20,11 @@ export default function LikeButton({ messageId, liked: serverLiked, count: serve
   const [count, setCount] = useState(serverCount);
   // True only right after the reader liked, so the heart pops on a click and not on load.
   const [popping, setPopping] = useState(false);
-  // Counts clicks, so a slow failure of an old click cannot undo a newer one.
-  const latestRequest = useRef(0);
+  // The state of the reader's last click, and whether a request is on its way.
+  // One request at a time: two at once could reach the server in the other order
+  // and leave it liked while the heart shows unliked.
+  const wanted = useRef(serverLiked);
+  const sending = useRef(false);
 
   // When the server sends new values (the list reloaded), start from them again.
   // Done during render, as the React docs recommend, instead of in an effect.
@@ -32,22 +35,36 @@ export default function LikeButton({ messageId, liked: serverLiked, count: serve
     setCount(serverCount);
   }
 
-  async function toggle() {
+  function toggle() {
     if (!requireSignIn()) return;
     const nextLiked = !liked;
-    const request = ++latestRequest.current;
     setLiked(nextLiked);
     setPopping(nextLiked);
     setCount((current) => current + (nextLiked ? 1 : -1));
-    try {
-      await (nextLiked ? likeMessage(messageId) : unlikeMessage(messageId));
-    } catch (error) {
-      console.error("like failed", error);
-      if (request === latestRequest.current) {
-        setLiked(!nextLiked);
-        setCount((current) => current + (nextLiked ? -1 : 1));
+    wanted.current = nextLiked;
+    if (!sending.current) void send();
+  }
+
+  /** Sends the last click's state; if the reader clicked again meanwhile, sends that one next.
+   * Many quick clicks cost at most two requests, and the server ends on the last click. */
+  async function send() {
+    sending.current = true;
+    let target = wanted.current;
+    do {
+      target = wanted.current;
+      try {
+        await (target ? likeMessage(messageId) : unlikeMessage(messageId));
+      } catch (error) {
+        console.error("like failed", error);
+        // No newer click: show the state from before this one. A newer click is sent next.
+        if (wanted.current === target) {
+          setLiked(!target);
+          setCount((current) => current + (target ? -1 : 1));
+          break;
+        }
       }
-    }
+    } while (wanted.current !== target);
+    sending.current = false;
   }
 
   return (
@@ -56,7 +73,7 @@ export default function LikeButton({ messageId, liked: serverLiked, count: serve
       className={[styles.button, liked && styles.liked, popping && styles.pop]
         .filter(Boolean)
         .join(" ")}
-      onClick={() => void toggle()}
+      onClick={toggle}
       onAnimationEnd={() => setPopping(false)}
       aria-pressed={liked}
       aria-label={`${liked ? "ביטול לייק" : "לייק"}, ${count}`}
