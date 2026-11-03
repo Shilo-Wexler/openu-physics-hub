@@ -3,6 +3,8 @@
 import re
 from typing import Annotated, Literal
 
+import phonenumbers
+from email_validator import EmailNotValidError, validate_email
 from pydantic import (
     AfterValidator,
     BaseModel,
@@ -14,28 +16,36 @@ from pydantic import (
 InquiryType = Literal["exams", "staff", "accessibility", "admin", "other"]
 InquiryStatus = Literal["new", "in_progress", "closed"]
 
-# What people type between the digits of a phone number. Dropped before the check,
-# so only digits (and a leading +) are stored.
-_PHONE_SEPARATORS = re.compile(r"[\s\-().]")
-# 7 to 15 digits: 15 is the international maximum (E.164).
-_PHONE = re.compile(r"\+?[0-9]{7,15}")
-# Only the basic shape (something@something.something), as in the DB check.
-# A stricter pattern starts rejecting real addresses.
-_EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+# A number without a leading + is read as Israeli (0501234567).
+_DEFAULT_REGION = "IL"
+_ISRAEL_COUNTRY_CODE = 972
+_NOT_DIGIT = re.compile(r"\D")
 
 
 def _normalize_phone(value: str) -> str:
-    value = _PHONE_SEPARATORS.sub("", value)
-    if not _PHONE.fullmatch(value):
+    """A real number by its country's numbering plan (prefix and length), checked by phonenumbers.
+    Stored as digits only: an Israeli number in its local form with the leading 0 (0501234567),
+    any other as + and the full international number. The console's WhatsApp link reads both."""
+    try:
+        number = phonenumbers.parse(value, _DEFAULT_REGION)
+    except phonenumbers.NumberParseException:
+        raise ValueError("invalid phone number") from None
+    if not phonenumbers.is_valid_number(number):
         raise ValueError("invalid phone number")
-    return value
+    if number.country_code == _ISRAEL_COUNTRY_CODE:
+        local = phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.NATIONAL)
+        return _NOT_DIGIT.sub("", local)
+    return phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.E164)
 
 
 def _normalize_email(value: str) -> str:
-    value = value.lower()
-    if not _EMAIL.fullmatch(value):
-        raise ValueError("invalid email address")
-    return value
+    """A well-formed address, checked by email-validator. No DNS lookup: it would slow every send and
+    depend on the network, and a typo in a real domain (gmail.cm) passes it anyway."""
+    try:
+        address = validate_email(value, check_deliverability=False)
+    except EmailNotValidError:
+        raise ValueError("invalid email address") from None
+    return address.normalized.lower()
 
 
 ContactName = Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)]
@@ -88,3 +98,4 @@ class InquiryUpdate(BaseModel):
 
     status: InquiryStatus | None = None
     internal_note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] | None = None
+    
