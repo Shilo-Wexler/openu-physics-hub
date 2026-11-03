@@ -133,7 +133,7 @@ export default function AboutPage() {
             להעלות.
           </p>
           <p className={styles.text}>
-            האתר הוא מיזם עצמאי של סטודנטים, ואינו קשור רשמית ל
+            האתר הוא מיזם עצמאי של ועד הסטודנטים, ואינו קשור רשמית ל
             <ExternalLink href={OPENU_URL}>אוניברסיטה הפתוחה</ExternalLink> או ל
             <ExternalLink href={STUDENT_UNION_URL}>אגודת הסטודנטים</ExternalLink>.
           </p>
