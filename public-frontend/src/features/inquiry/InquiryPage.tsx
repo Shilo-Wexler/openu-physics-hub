@@ -18,6 +18,8 @@ import {
   MAX_CONTACT_PHONE_LENGTH,
   MAX_INQUIRY_LENGTH,
   TURNSTILE_ERRORS,
+  looksLikeEmail,
+  looksLikePhone,
   sendInquiry,
   type InquiryType,
 } from "../../shared/api/inquiries";
@@ -68,10 +70,15 @@ const IDENTITIES: SegmentOption<Identity>[] = [
   { value: "contact", label: "עם פרטים" },
 ];
 
+// Shown when the phone or the email looks wrong, whether the check before sending or the backend
+// found it.
+const PHONE_MESSAGE = "מספר הטלפון לא תקין. כדאי לבדוק ולשלוח שוב.";
+const EMAIL_MESSAGE = "כתובת המייל לא תקינה. כדאי לבדוק ולשלוח שוב.";
+
 // What the backend's 422 "detail" means, for the contact fields.
 const CONTACT_ERRORS: Record<string, string> = {
-  [CONTACT_PHONE_ERROR]: "מספר הטלפון לא תקין. כדאי לבדוק ולשלוח שוב.",
-  [CONTACT_EMAIL_ERROR]: "כתובת המייל לא תקינה. כדאי לבדוק ולשלוח שוב.",
+  [CONTACT_PHONE_ERROR]: PHONE_MESSAGE,
+  [CONTACT_EMAIL_ERROR]: EMAIL_MESSAGE,
   "missing contact details": "צריך למלא טלפון או מייל.",
 };
 
@@ -145,11 +152,25 @@ export default function InquiryPage() {
     }
   }
 
+  /** The message for a phone or an email that is clearly mistyped, or null. Checked before sending,
+      so the Turnstile token is not used up on an inquiry the backend would refuse. */
+  function contactProblem(): string | null {
+    if (anonymous) return null;
+    if (contact.phone && !looksLikePhone(contact.phone)) return PHONE_MESSAGE;
+    if (contact.email && !looksLikeEmail(contact.email)) return EMAIL_MESSAGE;
+    return null;
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     // TypeScript follows the checks inside `ready`: below, courseId is a number, type an
     // InquiryType and token a string.
     if (!ready) return;
+    const problem = contactProblem();
+    if (problem) {
+      setError(problem);
+      return;
+    }
     // Only what was filled is sent (undefined is left out of the JSON), and nothing when anonymous.
     const contactFields = anonymous
       ? {}

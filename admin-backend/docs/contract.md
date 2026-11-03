@@ -16,8 +16,8 @@ A sender may choose to leave contact details instead (see below); nothing else a
 | `content` | 1 to 2000 characters after trimming |
 | `anonymous` | `true` (the default) or `false`. Not stored: it only says which contact rule applies |
 | `contact_name` | Optional, up to 100 characters after trimming |
-| `contact_phone` | Optional. Spaces, dashes, dots and brackets are dropped; then 7 to 15 digits, with an optional leading `+` |
-| `contact_email` | Optional, up to 254 characters, `name@domain.tld` shape. Stored lowercased |
+| `contact_phone` | Optional. A real number by the numbering plan of its country (checked with `phonenumbers`); without a leading `+` it is read as Israeli. Stored as digits: Israeli numbers with the leading 0 (`0501234567`), others as `+` and the international number |
+| `contact_email` | Optional, up to 254 characters, a well-formed address (checked with `email-validator`, no DNS lookup). Stored lowercased |
 | `website` | Honeypot. Filled in: `201 {"id": 0}`, nothing is saved |
 | `turnstile_token` | Required. Missing or rejected: `422`. Cloudflare unreachable: `503` |
 
