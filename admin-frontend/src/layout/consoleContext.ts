@@ -3,6 +3,9 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { ApiError, isAbort, isAuthError } from "../shared/api/client";
 import type { Level } from "../shared/lib/levels";
 
+/** What a change can touch beyond its own screen: the inquiries and chat tab badges, and the admins' names. */
+export type ChangeArea = "inquiries" | "chat" | "admins";
+
 /** What every admin screen needs: the token, a "data changed" signal, and what to do on 401. */
 export interface AdminContextValue {
   token: string;
@@ -14,9 +17,12 @@ export interface AdminContextValue {
   isTeam: boolean;
   /** An admin's name by email, from the admins list; null when unknown (removed, or the list not loaded yet). */
   nameOf: (email: string) => string | null;
-  /** Goes up after every change, so lists and counters reload. */
+  /** Goes up after every change, so lists reload. */
   version: number;
-  changed: () => void;
+  /** Goes up per area, so a badge or the names reload only after a change that touches them. */
+  areaVersion: Record<ChangeArea, number>;
+  /** Call after a change; name the area when it touches one, e.g. changed("chat") after a moderation action. */
+  changed: (area?: ChangeArea) => void;
   onAuthError: () => void;
 }
 
