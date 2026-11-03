@@ -230,9 +230,14 @@ def unpublish(conn: Connection, announcement_id: int) -> dict:
 
 
 def pin(conn: Connection, announcement_id: int) -> dict:
-    """Puts it on the home page, in place of the one pinned before. Only a published announcement."""
+    """Puts it on the home page, in place of the one pinned before. Only a published announcement.
+    The row is read "for update", so an unpublish at the same moment waits for the pin or the pin
+    sees the draft (NotPublished), never a pin of an unpublished one. The pin lock comes first: taking
+    the row first could deadlock with another pin that is unpinning this row."""
+    conn.execute("select pg_advisory_xact_lock(%s)", (PIN_LOCK_KEY,))
     row = conn.execute(
-        "select published_at is not null as published from announcements where id = %s", (announcement_id,)
+        "select published_at is not null as published from announcements where id = %s for update",
+        (announcement_id,),
     ).fetchone()
     if row is None:
         raise NotFound()
