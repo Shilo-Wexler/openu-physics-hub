@@ -1,6 +1,6 @@
 # Admin side: status
 
-Updated 2026-11-02.
+Updated 2026-11-03.
 
 ## Who owns what
 
@@ -13,13 +13,14 @@ Updated 2026-11-02.
 ## What exists
 
 **admin-backend** (Python, FastAPI, psycopg 3, Postgres):
-- Inquiries: the public form (anonymous, or with a phone or email the sender chose to leave), and console routes to list, filter and handle them. See `docs/CONTRACT.md`.
+- Inquiries: the public form (anonymous, or with a phone or email the sender chose to leave), and console routes to list, filter and handle them. See `docs/contract.md`.
 - Announcements: public read, console create, edit, publish and pin.
 - Chat moderation: `/api/admin/chat/...` forwards to the chat's `/internal` with `MOD_API_TOKEN`, and logs each action.
 - Stats: `GET /api/admin/stats?period=7|30|all` returns the whole stats screen at once: inquiries received in the
   period vs the period before (`null` for `all`), by type, top 5 courses; and the 5 most active chat courses from
   the chat's `/internal/stats/courses` (`null` when the chat backend fails, the rest still answers).
-- Admins, names and levels: `admins` table, `GET /api/admin/me`, add, rename, change level and remove from the console. Three levels, see `docs/CONTRACT.md`.
+- Admins, names and levels: `admins` table, `GET /api/admin/me`, add, rename, change level and remove from the console. Three levels, see `docs/contract.md`.
+- Meeting summaries: console create, edit and delete, with attached files.
 - Sign-in: Cloudflare Access. The server checks the `Cf-Access-Jwt-Assertion` header.
 - Console staff sync (`app/services/access_sync.py`): after adding or removing an admin, the console's
   Cloudflare Access rule group is set to the emails of the `admins` table, in the background (the change
@@ -29,10 +30,11 @@ Updated 2026-11-02.
   `CF_*` settings below are not set (local dev). Setup in `deploy/README.md`.
 - Errors are always `{"detail": "..."}`.
 - `/docs`, `/redoc` and `/openapi.json` only when `ENV=dev`.
-- One health route: `/health`.
+- Health: `/health/live` (the process answers) and `/health/ready` (the DB answers), for the Kubernetes probes.
+  Not exposed through the Ingress.
 
 **admin-frontend** (React, TypeScript, Vite):
-- Tabs: inquiries, chat moderation, announcements, stats, more (admins).
+- Tabs: inquiries, chat moderation, announcements, stats, more (staff, meeting summaries).
 - Every level sees every screen; only the actions a level may not do are missing.
 
 ## Settings
@@ -66,4 +68,4 @@ No automated tests: changes are checked by hand in the console and the site.
 
 - Prod: Cloudflare Access app `admin` for `admin.openuvoice.com`, rule group `prod-console-staff`,
   and its own API token (see `deploy/README.md`).
-- Align the Python version (Dockerfile 3.12, local 3.14).
+  
