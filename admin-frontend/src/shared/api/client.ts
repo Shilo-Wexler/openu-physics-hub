@@ -1,6 +1,6 @@
 /** The single place that talks HTTP: JSON in and out, and one error type for every failure. */
 
-/** A failed request. status 0 means the server was not reached at all (offline, proxy down). */
+/** A failed request. status 0 means the server was not reached at all (offline, proxy down, no answer in time). */
 export class ApiError extends Error {
   readonly status: number;
 
@@ -26,18 +26,53 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
+// How long a request may take, answer included, before it counts as a network error. Without a limit,
+// a connection lost on the way (the phone moving from WiFi to cellular) can leave a request waiting
+// forever, and its button on "saving". An upload gets longer: up to 10MB from a slow phone.
+const TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 120_000;
+
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const response = await send(path, options);
-  if (response.status === 204) {
-    return undefined as T;
-  }
-  return (await response.json()) as T;
+  return withTimeout(path, options, async (response) => {
+    if (response.status === 204) {
+      return undefined as T;
+    }
+    return (await response.json()) as T;
+  });
 }
 
 /** For a file that needs the sign-in token (an image an img tag cannot fetch by itself). */
 export async function requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
-  const response = await send(path, options);
-  return response.blob();
+  return withTimeout(path, options, (response) => response.blob());
+}
+
+/** Sends the request and reads its answer within the time limit. Running out of time becomes
+    ApiError(0), like being offline; the page's own cancel (options.signal) stays a cancel. */
+async function withTimeout<R>(
+  path: string,
+  options: RequestOptions,
+  read: (response: Response) => Promise<R>,
+): Promise<R> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.file ? UPLOAD_TIMEOUT_MS : TIMEOUT_MS);
+  // The page's cancel stops this request too. Done by hand: AbortSignal.any is missing in older iPhone Safari.
+  const pageSignal = options.signal;
+  const forward = () => controller.abort();
+  if (pageSignal?.aborted) forward();
+  else pageSignal?.addEventListener("abort", forward, { once: true });
+
+  try {
+    const response = await send(path, { ...options, signal: controller.signal });
+    return await read(response);
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (pageSignal?.aborted) throw new DOMException("The request was cancelled", "AbortError");
+    // Out of time, or the connection broke while the answer was being read.
+    throw new ApiError(0, "network error");
+  } finally {
+    clearTimeout(timer);
+    pageSignal?.removeEventListener("abort", forward);
+  }
 }
 
 /** Sends the request and returns the response; any failure becomes an ApiError. */
