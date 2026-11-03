@@ -1,0 +1,8 @@
+# Search engines may crawl the whole site, except pages that only make sense for one signed-in
+# person and the API. Staging and dev sit behind Cloudflare Access, so crawlers never reach them.
+User-agent: *
+Disallow: /profile
+Disallow: /auth/
+Disallow: /api/
+
+Sitemap: https://openuvoice.com/sitemap.xml

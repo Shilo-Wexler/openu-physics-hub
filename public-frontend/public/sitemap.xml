@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The site's main pages, for search engines (see robots.txt). Course pages are not listed:
+     /courses links to every course, and crawlers follow those links. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://openuvoice.com/</loc></url>
+  <url><loc>https://openuvoice.com/courses</loc></url>
+  <url><loc>https://openuvoice.com/chat</loc></url>
+  <url><loc>https://openuvoice.com/chat/general</loc></url>
+  <url><loc>https://openuvoice.com/announcements</loc></url>
+  <url><loc>https://openuvoice.com/inquiry</loc></url>
+  <url><loc>https://openuvoice.com/about</loc></url>
+  <url><loc>https://openuvoice.com/privacy</loc></url>
+</urlset>
