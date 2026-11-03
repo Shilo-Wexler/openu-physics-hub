@@ -1,5 +1,0 @@
-/* About a screen's height: the page that replaces it is at least that tall on a phone. */
-.loading {
-  min-height: 100vh;
-  min-height: 100dvh;
-}
