@@ -9,6 +9,7 @@ import {
   type SharedMessage,
 } from "../../shared/api/chat";
 import { ApiError } from "../../shared/api/client";
+import { usePageTitle } from "../../shared/browser/usePageTitle";
 import { useIsDesktop } from "../../shared/browser/useIsDesktop";
 import CourseNav from "./CourseNav";
 import RatingPanel from "./RatingPanel";
@@ -19,6 +20,9 @@ import ShareButton from "./ShareButton";
 import { coursePath, courseUrl, messagePath } from "./share";
 import { useViewerGeneration } from "./useViewerGeneration";
 import styles from "./CourseChatPage.module.css";
+
+const GENERAL_TITLE = "צ'אט כללי";
+const NOT_FOUND_TEXT = "הקורס לא נמצא";
 
 /** The course's own page on the Open University site, where its syllabus and details are. */
 function openUniversityUrl(courseId: number): string {
@@ -43,6 +47,14 @@ interface PageProps {
   courseId?: number;
 }
 
+/** The tab title: the course name once it is loaded; null keeps the current one while loading. */
+function titleFor(state: State): string | null {
+  if (state.status === "ready") {
+    return state.course.id === GENERAL_COURSE_ID ? GENERAL_TITLE : state.course.name;
+  }
+  return state.status === "not-found" ? NOT_FOUND_TEXT : null;
+}
+
 /**
  * A course page: /courses/:courseId, or /courses/:courseId/m/:messageId for a shared message.
  * The general chat is the same page for its own course, at /chat/general.
@@ -51,8 +63,10 @@ export default function CourseChatPage(props: PageProps) {
   const params = useParams();
   const courseId = props.courseId ?? Number(params.courseId);
   const messageId = params.messageId === undefined ? null : Number(params.messageId);
-  if (!Number.isInteger(courseId) || courseId < 0) {
-    return <p className={styles.message}>הקורס לא נמצא.</p>;
+  const validCourseId = Number.isInteger(courseId) && courseId >= 0;
+  usePageTitle(validCourseId ? null : NOT_FOUND_TEXT);
+  if (!validCourseId) {
+    return <p className={styles.message}>{NOT_FOUND_TEXT}.</p>;
   }
   // /courses/0 typed by hand: the general chat lives at its own address.
   if (props.courseId === undefined && courseId === GENERAL_COURSE_ID) {
@@ -77,6 +91,7 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   // review (liked_by_me) again.
   const generation = useViewerGeneration();
   const isDesktop = useIsDesktop();
+  usePageTitle(titleFor(state));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -116,7 +131,7 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   if (state.status === "loading" || shared?.status === "loading") {
     return <p className={styles.message}>טוען…</p>;
   }
-  if (state.status === "not-found") return <p className={styles.message}>הקורס לא נמצא.</p>;
+  if (state.status === "not-found") return <p className={styles.message}>{NOT_FOUND_TEXT}.</p>;
   if (state.status === "error") {
     return <p className={styles.message}>לא הצלחנו לטעון את הקורס. אפשר לרענן את הדף ולנסות שוב.</p>;
   }
@@ -133,7 +148,7 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
           <header className={styles.header}>
             <div className={styles.heading}>
               {!general && <p className={styles.eyebrow}>קורס {course.id}</p>}
-              <h1 className={styles.title}>{general ? "צ'אט כללי" : course.name}</h1>
+              <h1 className={styles.title}>{general ? GENERAL_TITLE : course.name}</h1>
             </div>
             {!isDesktop && <ShareButton url={courseUrl(course.id)} />}
           </header>

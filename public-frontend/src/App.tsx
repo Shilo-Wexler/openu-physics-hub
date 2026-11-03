@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router";
 
 import { GENERAL_COURSE_ID } from "./shared/api/chat";
+import { useRouteTitle } from "./shared/browser/usePageTitle";
 import AboutPage from "./features/about/AboutPage";
 import PrivacyPage from "./features/about/PrivacyPage";
 import AnnouncementsPage from "./features/announcements/AnnouncementsPage";
@@ -19,6 +20,8 @@ import SiteHeader from "./layout/SiteHeader";
 
 /** The site frame (header, footer, phone bottom bar) around the page of the current route. */
 export default function App() {
+  useRouteTitle();
+
   return (
     <>
       <SiteHeader />
