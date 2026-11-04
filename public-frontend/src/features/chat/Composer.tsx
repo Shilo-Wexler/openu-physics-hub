@@ -198,6 +198,7 @@ function errorMessage(error: unknown): string {
     if (error.status === 422) return `ההודעה צריכה להיות באורך 1-${MAX_MESSAGE_LENGTH} תווים.`;
     if (error.status === 404) return "ההודעה שהגבת עליה נמחקה.";
     if (error.status === 403) return "החשבון חסום, אז אי אפשר לפרסם.";
+    if (error.status === 429) return "פרסמת הרבה הודעות בזמן קצר. אפשר לנסות שוב בעוד דקה.";
     if (error.status === 401) return "צריך להתחבר מחדש.";
   }
   return "לא הצלחנו לפרסם את ההודעה.";
