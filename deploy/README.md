@@ -1,22 +1,26 @@
 # Deploy
 
-How OpenUVoice runs outside a laptop. Staging runs on one Oracle Cloud server (arm64, Ubuntu)
-with k3s; prod will run on the same server in its own namespace. Argo CD deploys everything from
-this repo, so after the one-time setup below, a merge to `main` is the only deploy step.
+How OpenUVoice runs outside a laptop. Staging and prod run on one Oracle Cloud server (arm64,
+Ubuntu) with k3s, each in its own namespace. Argo CD deploys everything from this repo, so after
+the one-time setup below, a merge to `main` deploys staging and the **Promote to prod** workflow
+deploys prod. Rare tasks (rollback, restore, a broken server, expiring tokens) are in
+[RUNBOOK.md](RUNBOOK.md).
 
 ## Folder map
 
 | Path | What it is |
 |---|---|
-| `../.github/workflows/ci.yml` | Checks every PR; on `main` builds the 6 images to GHCR and writes `tag-staging.yaml` |
+| `../.github/workflows/ci.yml` | Checks every PR; on `main` builds the 7 images to GHCR and writes `tag-staging.yaml` |
+| `../.github/workflows/promote.yml` | **Promote to prod**, run by hand: pins prod to one commit and its images |
 | `argocd/root.yaml` | The parent Argo CD app, applied once by hand (its header has the Argo CD install) |
 | `argocd/values.yaml` | Argo CD's own Helm values (hourly git polling) |
-| `argocd/apps/` | One file per Argo CD app: `argocd`, `cluster-k3s`, `staging-db`, `staging-app` |
+| `argocd/apps/` | One file per Argo CD app: `argocd`, `cluster-k3s`, `staging-db`, `staging-app`, `prod-db`, `prod-app` |
+| `backup/` | The backup image (pg_dump, age, rclone), run by the chart's `backup` CronJob in prod |
 | `cluster/k3s/` | Cluster-wide config: Traefik settings, in-cluster cloudflared |
 | `helm/openuvoice-db/` | Chart for the two Postgres databases (chat, admin) |
-| `helm/openuvoice/` | Chart for the app: backends, frontends, migrations Job, purge and access-sync CronJobs, Ingress |
+| `helm/openuvoice/` | Chart for the app: backends, frontends, migrations Job, purge, access-sync and backup CronJobs, Ingress |
 | `helm/openuvoice/values-<env>.yaml` | Per-environment values: hosts and public keys only |
-| `helm/openuvoice/tag-<env>.yaml` | Image tag per environment; written by CI, never by hand |
+| `helm/openuvoice/tag-staging.yaml` | Staging's image tag; written by CI, never by hand. Prod's tag and commit live in `argocd/apps/prod-*.yaml`, written by the promote workflow |
 | `host/` | Files that live on the server itself, outside Kubernetes |
 | `migrate/` | The migrations image (one per backend), run by the chart before each upgrade |
 
@@ -28,19 +32,20 @@ Same shape in every environment, so a name says which one it belongs to.
 
 | | dev (Mac) | staging | prod |
 |---|---|---|---|
-| Hosts | `localhost`, `dev` + `admin-dev.openuvoice.com` | `staging` + `admin-staging.openuvoice.com` | `openuvoice.com` + `admin.openuvoice.com` |
+| Hosts | `localhost`, `dev` + `admin-dev.openuvoice.com` | `staging` + `admin-staging.openuvoice.com` | `openuvoice.com` + `admin.openuvoice.com` (`www` redirects to the root) |
 | Namespace | none | `openuvoice-staging` | `openuvoice-prod` |
 | Argo CD apps | none | `staging-db`, `staging-app` | `prod-db`, `prod-app` |
-| Cloudflare tunnel | `openuvoice-dev` (cloudflared on the Mac) | `openuvoice-staging` (in the cluster) | `openuvoice-prod` |
+| Cloudflare tunnel | `openuvoice-dev` (cloudflared on the Mac) | `openuvoice` (in the cluster, shared) | `openuvoice` (same tunnel) |
 | Cloudflare Access apps | `dev` | `staging` (site, testers) + `admin-staging` (console) | `admin` (console only; the site is public) |
 | Console staff (Access rule group + policy) | none | `staging-console-staff` | `prod-console-staff` |
 | Cloudflare API token (staff sync) | none | `staging-access-sync` | `prod-access-sync` |
 | Google client (chat sign-in) | `chat dev` | `chat staging` | `chat prod` |
 | Turnstile widget | Cloudflare's test keys | `openuvoice-staging` | `openuvoice-prod` |
+| Backups | none | none | R2 bucket `openuvoice-backups`, token `prod-backups` |
 
 Shared by all: the Google client `Cloudflare Access` (the Google login on every Access gate).
-Public IDs (Google client IDs, Access AUD, Turnstile site keys, Cloudflare account and rule group IDs)
-are in `values-<env>.yaml`.
+Public IDs (Google client IDs, Access AUD, Turnstile site keys, Cloudflare account and rule group IDs,
+the backup public key) are in `values-<env>.yaml`.
 
 ## A new server from zero
 
@@ -65,6 +70,8 @@ Run from the repo root on the Mac unless it says "on the server". `ssh oracle` i
    - `admin-backend`: `database-url`, `mod-api-token` (same value as chat), `turnstile-secret`,
      `cf-api-token` (step 7)
    - `ghcr`: docker-registry Secret with a read-only (`read:packages`) GitHub token
+   - Prod only, `backup`: `r2-access-key-id`, `r2-secret-access-key` (the R2 token `prod-backups`:
+     Object Read & Write, this bucket only, client IP filter = the server's public IP)
    - In namespace `cloudflared`: `cloudflared-token`, the tunnel token (see `cluster/k3s/cloudflared.yaml`)
 
    Type secret values with `read -rs VAR` (alone on its line), use the variable, then `unset` it,
@@ -89,8 +96,11 @@ Run from the repo root on the Mac unless it says "on the server". `ssh oracle` i
 
 ## Everyday
 
-- **Deploy:** merge to `main`. CI builds the images and commits the tag; Argo CD picks it up
-  within an hour, or at once with `argo-refresh` on the server.
+- **Deploy to staging:** merge to `main`. CI builds the images and the bot commits
+  `Deploy <sha> to staging`; Argo CD picks it up within an hour, or at once with `argo-refresh`
+  on the server (wait for the bot commit first).
+- **Deploy to prod:** Actions, **Promote to prod**, Run workflow with an empty tag, then
+  `argo-refresh`. Details and rollback in [RUNBOOK.md](RUNBOOK.md).
 - **Argo CD UI:** `ssh -L 8080:localhost:8080 oracle 'KUBECONFIG=$HOME/.kube/config kubectl -n argocd port-forward svc/argocd-server 8080:443'`,
   then https://localhost:8080.
 - **Console staff:** add or remove people in the console only, never in the Access rule group
@@ -104,4 +114,3 @@ Run from the repo root on the Mac unless it says "on the server". `ssh oracle` i
   Either way the sync fails with an error in the admin-backend and CronJob logs.
 - **k3s upgrade:** compare `host/cri-containerd.apparmor.d` with the new containerd template
   first; drop the profile once containerd ships the fix (containerd issue #14485).
-  
