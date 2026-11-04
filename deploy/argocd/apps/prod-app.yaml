@@ -14,7 +14,7 @@ spec:
   project: default
   source:
     repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
-    targetRevision: 149a2c0f71b6bc4ec22db16f43320643f9760da0
+    targetRevision: 2af1ce1be90305d19a6812b69da60dacd1b94179
     path: deploy/helm/openuvoice
     helm:
       releaseName: openuvoice
@@ -24,7 +24,7 @@ spec:
         # The short hash of the same commit, which CI tagged its images with. A string always:
         # a hash made only of digits would otherwise become a number.
         - name: image.tag
-          value: "149a2c0"
+          value: "2af1ce1"
           forceString: true
   destination:
     server: https://kubernetes.default.svc
