@@ -71,7 +71,8 @@ Run from the repo root on the Mac unless it says "on the server". `ssh oracle` i
      `cf-api-token` (step 7)
    - `ghcr`: docker-registry Secret with a read-only (`read:packages`) GitHub token
    - Prod only, `backup`: `r2-access-key-id`, `r2-secret-access-key` (the R2 token `prod-backups`:
-     Object Read & Write, this bucket only, client IP filter = the server's public IP)
+     Object Read & Write, this bucket only, client IP filter = the server's public IP) and
+     `ping-url` (the Healthchecks.io check `openuvoice-prod-backup`)
    - In namespace `cloudflared`: `cloudflared-token`, the tunnel token (see `cluster/k3s/cloudflared.yaml`)
 
    Type secret values with `read -rs VAR` (alone on its line), use the variable, then `unset` it,

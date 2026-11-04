@@ -1,8 +1,8 @@
 {{- if .Values.backup.enabled }}
 {{- $ctx := dict "root" $ "component" "backup" }}
 # Nightly backup of every database in backends to Cloudflare R2, encrypted (deploy/backup/backup.sh).
-# The R2 keys come from backup.secretName, made by hand. The age private key that opens the files
-# is never in the cluster.
+# The R2 keys and the Healthchecks ping URL come from backup.secretName, made by hand. The age
+# private key that opens the files is never in the cluster.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -57,8 +57,8 @@ spec:
               volumeMounts:
                 - name: tmp
                   mountPath: /tmp
-                - name: r2
-                  mountPath: /secrets/r2
+                - name: backup
+                  mountPath: /secrets/backup
                   readOnly: true
                 {{- range $name, $backend := .Values.backends }}
                 - name: db-{{ $name }}
@@ -68,7 +68,7 @@ spec:
           volumes:
             - name: tmp
               emptyDir: {}
-            - name: r2
+            - name: backup
               secret:
                 secretName: {{ .Values.backup.secretName }}
                 defaultMode: 0444
