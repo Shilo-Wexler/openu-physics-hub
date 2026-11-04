@@ -21,6 +21,7 @@ _ERRORS = {
     messages.InvalidContent: (422, f"content must be 1-{messages.MAX_LENGTH} characters"),
     messages.OffensiveContent: (422, "offensive content"),
     messages.AlreadyReported: (409, "already reported"),
+    messages.TooManyMessages: (429, "too many messages"),
     UserBlocked: (403, "user is blocked"),
 }
 

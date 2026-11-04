@@ -16,6 +16,10 @@ from app.services.users import UserBlocked
 PAGE_SIZE = 50
 # Same limit as the messages_content_length check on messages.content.
 MAX_LENGTH = 4000
+# Posting limits per user, reviews and replies together. Far above what a person writes,
+# low enough to stop a script. Deleted messages count too, so deleting does not reset them.
+POSTS_PER_MINUTE = 10
+POSTS_PER_HOUR = 100
 
 Sort = Literal["new", "top"]
 
@@ -109,6 +113,15 @@ _SHARED = f"""
        and {_REVIEW_VISIBLE}
 """
 
+# How many messages user $1 posted in the last minute and hour.
+# Uses messages_user_created_idx.
+_RECENT_POSTS = """
+    select count(*) filter (where created_at > now() - interval '1 minute') as last_minute,
+           count(*)                                                         as last_hour
+      from messages
+     where user_id = $1 and created_at > now() - interval '1 hour'
+"""
+
 
 class InvalidContent(Exception):
     pass
@@ -128,6 +141,10 @@ class ReplyTargetNotFound(Exception):
 
 class AlreadyReported(Exception):
     pass
+
+
+class TooManyMessages(Exception):
+    """Over POSTS_PER_MINUTE or POSTS_PER_HOUR."""
 
 
 def _clean(content: str) -> str:
@@ -179,35 +196,45 @@ async def post(
     Replying to a review starts or continues its discussion; replying to a reply adds
     to the same discussion and quotes that reply. There is never a deeper level."""
     content = _clean(content)
-    thread_id = quote_id = None
-    if reply_to_id is not None:
-        target = await db.pool.fetchrow(
-            """
-            select id, thread_id from messages
-             where id = $1 and course_id = $2 and deleted_at is null
-            """,
-            reply_to_id, course_id,
+    async with db.pool.acquire() as conn, conn.transaction():
+        # One post at a time per user, so parallel requests cannot all pass the count.
+        await conn.execute(
+            "select pg_advisory_xact_lock(hashtext('messages.post'), hashtext($1))",
+            str(user_id),
         )
-        if target is None:
-            raise ReplyTargetNotFound()
-        if target["thread_id"] is None:
-            thread_id = target["id"]
-        else:
-            thread_id, quote_id = target["thread_id"], target["id"]
-    try:
-        return await db.pool.fetchrow(
-            """
-            insert into messages (course_id, user_id, thread_id, reply_to_id, content)
-            values ($1, $2, $3, $4, $5)
-            returning id, thread_id, reply_to_id, created_at
-            """,
-            course_id, user_id, thread_id, quote_id, content,
-        )
-    except asyncpg.ForeignKeyViolationError:
-        raise CourseNotFound() from None
-    except asyncpg.RaiseError:
-        # Raised by the reject_blocked_user trigger.
-        raise UserBlocked() from None
+        recent = await conn.fetchrow(_RECENT_POSTS, user_id)
+        if recent["last_minute"] >= POSTS_PER_MINUTE or recent["last_hour"] >= POSTS_PER_HOUR:
+            raise TooManyMessages()
+
+        thread_id = quote_id = None
+        if reply_to_id is not None:
+            target = await conn.fetchrow(
+                """
+                select id, thread_id from messages
+                 where id = $1 and course_id = $2 and deleted_at is null
+                """,
+                reply_to_id, course_id,
+            )
+            if target is None:
+                raise ReplyTargetNotFound()
+            if target["thread_id"] is None:
+                thread_id = target["id"]
+            else:
+                thread_id, quote_id = target["thread_id"], target["id"]
+        try:
+            return await conn.fetchrow(
+                """
+                insert into messages (course_id, user_id, thread_id, reply_to_id, content)
+                values ($1, $2, $3, $4, $5)
+                returning id, thread_id, reply_to_id, created_at
+                """,
+                course_id, user_id, thread_id, quote_id, content,
+            )
+        except asyncpg.ForeignKeyViolationError:
+            raise CourseNotFound() from None
+        except asyncpg.RaiseError:
+            # Raised by the reject_blocked_user trigger.
+            raise UserBlocked() from None
 
 
 async def edit(message_id: int, user_id: UUID, content: str) -> asyncpg.Record:
@@ -298,4 +325,4 @@ async def report(message_id: int, user_id: UUID) -> None:
         raise UserBlocked() from None
     if report_id is None:
         raise MessageNotFound()
-    
+
