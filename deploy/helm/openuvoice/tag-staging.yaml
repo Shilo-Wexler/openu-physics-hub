@@ -1,4 +1,5 @@
 # Written by CI after every merge to main (.github/workflows/ci.yml); do not edit by hand.
-# The image tag Argo CD deploys to staging. Promoting to production copies it to tag-prod.yaml.
+# The image tag Argo CD deploys to staging. Promoting to production (promote.yml) pins
+# deploy/argocd/apps/prod-app.yaml to it.
 image:
-  tag: "48f9400"
+  tag: "d18cd57"
