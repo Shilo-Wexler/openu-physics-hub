@@ -79,6 +79,11 @@ with `pg_dump`, encrypts them with `age` and uploads them to the R2 bucket `open
 
 R2 deletes old files by itself (lifecycle rules on the bucket).
 
+Each run reports to Healthchecks.io (check `openuvoice-prod-backup`, account
+shilowexler@gmail.com): a ping on success, a `/fail` ping on any error. Healthchecks emails when a
+run fails, or when no successful run arrives by 05:30. The ping URL is the key `ping-url` in the
+`backup` Secret; without it the backup still runs, only without the report.
+
 The files are encrypted to a public key in `values-prod.yaml`. The private key exists only in
 the Mac Passwords app, entry `openuvoice backup private key`. **Without it no backup can be
 read.** The R2 keys are in the entry `openuvoice R2 prod-backups`.
@@ -104,6 +109,8 @@ kubectl -n openuvoice-prod delete job backup-now
 A second run on the same day overwrites that day's file.
 
 ### If the backup fails
+
+The Healthchecks email is the first sign. Then read the Job log (above).
 
 - `403` or `AccessDenied` from R2: the server's public IP changed. Edit the client IP filter of
   the R2 token `prod-backups` (R2, Manage API tokens).
