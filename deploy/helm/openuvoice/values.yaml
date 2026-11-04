@@ -104,6 +104,29 @@ accessSync:
   enabled: false
   schedule: "*/15 * * * *"
 
+# Nightly backup of every database in backends to Cloudflare R2 (templates/backup-cronjob.yaml,
+# deploy/backup/backup.sh). Each dump is encrypted with age to recipient; only the matching
+# private key, kept offline, can open it. Lifecycle rules on the bucket delete old files.
+# An environment turns it on in values-<env>.yaml with endpoint, bucket and recipient.
+backup:
+  enabled: false
+  schedule: "30 3 * * *"
+  timeZone: Asia/Jerusalem
+  image: backup
+  # R2 S3 API URL, https://<account id>.r2.cloudflarestorage.com.
+  endpoint: ""
+  bucket: ""
+  # age public key (age1...). Not secret.
+  recipient: ""
+  # Secret made by hand with the keys r2-access-key-id and r2-secret-access-key.
+  secretName: backup
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
 # Demo content (reviews, users, inquiries, announcements) loaded after each deploy; see
 # templates/demo-seed.yaml and deploy/demo/build.py. Only staging turns it on, never production.
 demo:
@@ -148,4 +171,3 @@ ingress:
   hosts:
     public: ""
     admin: ""
-    

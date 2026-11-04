@@ -52,3 +52,11 @@ ingress:
     public: openuvoice.com
     admin: admin.openuvoice.com
 # No demo content: demo.enabled stays false (values.yaml) in production, always.
+
+# Nightly encrypted backups to R2 (see backup in values.yaml). The R2 keys are in the Secret
+# "backup"; the age private key matching recipient is kept offline, never in the cluster.
+backup:
+  enabled: true
+  endpoint: "https://7c5bf39729c48a468136124cae03c6b5.r2.cloudflarestorage.com"
+  bucket: openuvoice-backups
+  recipient: "age1723a03ez9pzxkmuks525ac833wj9tslrs0tfq2w286u3m3zgja4qkhhmt2"

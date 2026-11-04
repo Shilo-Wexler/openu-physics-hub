@@ -1,0 +1,85 @@
+{{- if .Values.backup.enabled }}
+{{- $ctx := dict "root" $ "component" "backup" }}
+# Nightly backup of every database in backends to Cloudflare R2, encrypted (deploy/backup/backup.sh).
+# The R2 keys come from backup.secretName, made by hand. The age private key that opens the files
+# is never in the cluster.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  timeZone: {{ .Values.backup.timeZone }}
+  # Never two runs at once, and a run missed by more than an hour waits for the next night.
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
+      template:
+        metadata:
+          labels:
+            {{- include "openuvoice.labels" $ctx | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          {{- include "openuvoice.imagePullSecrets" $ | nindent 10 }}
+          securityContext:
+            {{- include "openuvoice.podSecurityContext" $ | nindent 12 }}
+          containers:
+            - name: backup
+              image: {{ include "openuvoice.image" (dict "root" $ "name" .Values.backup.image) }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              # One "name:host:database:user" per database.
+              args:
+                {{- range $name, $backend := .Values.backends }}
+                - {{ printf "%s:%s:%s:%s" $name $backend.database.host $backend.database.name $backend.database.user | quote }}
+                {{- end }}
+              env:
+                - name: BACKUP_RECIPIENT
+                  value: {{ required "Set backup.recipient (age public key)" .Values.backup.recipient | quote }}
+                - name: R2_ENDPOINT
+                  value: {{ required "Set backup.endpoint (R2 S3 API URL)" .Values.backup.endpoint | quote }}
+                - name: R2_BUCKET
+                  value: {{ required "Set backup.bucket" .Values.backup.bucket | quote }}
+                # rclone keeps small files under HOME; the root filesystem is read-only.
+                - name: HOME
+                  value: /tmp
+              securityContext:
+                {{- include "openuvoice.containerSecurityContext" $ | nindent 16 }}
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: r2
+                  mountPath: /secrets/r2
+                  readOnly: true
+                {{- range $name, $backend := .Values.backends }}
+                - name: db-{{ $name }}
+                  mountPath: /secrets/db/{{ $name }}
+                  readOnly: true
+                {{- end }}
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: r2
+              secret:
+                secretName: {{ .Values.backup.secretName }}
+                defaultMode: 0444
+            # Only the app user's password from each database Secret.
+            {{- range $name, $backend := .Values.backends }}
+            - name: db-{{ $name }}
+              secret:
+                secretName: {{ $backend.database.secretName }}
+                defaultMode: 0444
+                items:
+                  - key: app-password
+                    path: password
+            {{- end }}
+{{- end }}

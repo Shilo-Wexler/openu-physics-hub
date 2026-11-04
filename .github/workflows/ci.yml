@@ -1,4 +1,4 @@
-# Checks every pull request and every push to main. On main it then builds the six images for
+# Checks every pull request and every push to main. On main it then builds the seven images for
 # arm64 (the Oracle server's architecture), pushes them to GHCR tagged with the short commit hash,
 # and writes that tag to deploy/helm/openuvoice/tag-staging.yaml, which Argo CD deploys to staging.
 # Production moves only by hand, with the "Promote to prod" workflow (promote.yml).
@@ -86,6 +86,8 @@ jobs:
             context: public-frontend
           - name: admin-frontend
             context: admin-frontend
+          - name: backup
+            context: deploy/backup
           # The migration images build from the repo root (deploy/migrate/Dockerfile).
           - name: chat-migrate
             context: .
