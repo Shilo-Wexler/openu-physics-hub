@@ -135,11 +135,11 @@ jobs:
         run: |
           TAG="${GITHUB_SHA::7}"
           FILE=deploy/helm/openuvoice/tag-staging.yaml
-          # Written only by workflows (this tag and the promote workflow's pin), never new code.
-          PROD_FILE=deploy/argocd/apps/prod-app.yaml
+          # Written only by workflows (this tag and the promote workflow's pins), never new code.
+          PROD_FILES='deploy/argocd/apps/prod-*.yaml'
           # A newer commit on main (other than those workflow commits) will deploy itself; never
           # replace its tag with this older one.
-          if [ -n "$(git log --format=%H "$GITHUB_SHA..HEAD" -- . ":!$FILE" ":!$PROD_FILE")" ]; then
+          if [ -n "$(git log --format=%H "$GITHUB_SHA..HEAD" -- . ":!$FILE" ":!$PROD_FILES")" ]; then
             echo "main has newer code than $TAG; leaving the tag to its run"
             exit 0
           fi

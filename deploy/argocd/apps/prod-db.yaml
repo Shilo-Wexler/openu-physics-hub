@@ -1,5 +1,9 @@
 # The production databases: one Postgres per backend (chart deploy/helm/openuvoice-db), the same
 # chart and defaults as staging, on the same server's disk (k3s local-path).
+# Pinned to the promoted commit, like prod-app.yaml: a change to the database chart reaches
+# production only with a promotion. The "Promote to prod" workflow (.github/workflows/promote.yml)
+# rewrites targetRevision in both files together; do not edit it by hand. When the chart did not
+# change between two commits, a promotion leaves the databases untouched.
 # The chat-db and admin-db Secrets are made by hand in openuvoice-prod first.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -10,7 +14,7 @@ spec:
   project: default
   source:
     repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
-    targetRevision: main
+    targetRevision: d18cd57cab95e93d9ca9d1bed885df51c05c81fd
     path: deploy/helm/openuvoice-db
     helm:
       releaseName: openuvoice-db
