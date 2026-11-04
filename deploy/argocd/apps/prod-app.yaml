@@ -1,0 +1,43 @@
+# The production app: both backends, both sites, the migrations Job and the CronJobs
+# (chart deploy/helm/openuvoice), with values-prod.yaml.
+# Pinned to one commit: the chart, its values and the images all come from the commit that was
+# promoted, so a merge to main never reaches production by itself. The "Promote to prod" workflow
+# (.github/workflows/promote.yml) rewrites targetRevision and image.tag together; do not edit them
+# by hand. Rolling back is promoting an older tag.
+# The chat-backend, admin-backend and ghcr Secrets are made by hand in openuvoice-prod first.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prod-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
+    targetRevision: 48f9400049f72f5737a5a1e4a8c506c88c2289d9
+    path: deploy/helm/openuvoice
+    helm:
+      releaseName: openuvoice
+      valueFiles:
+        - values-prod.yaml
+      parameters:
+        # The short hash of the same commit, which CI tagged its images with. A string always:
+        # a hash made only of digits would otherwise become a number.
+        - name: image.tag
+          value: "48f9400"
+          forceString: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openuvoice-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # As in staging: the migrations Job fails while the databases are still starting, so a failed
+    # sync is tried again for a few minutes.
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

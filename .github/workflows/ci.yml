@@ -1,6 +1,7 @@
 # Checks every pull request and every push to main. On main it then builds the six images for
 # arm64 (the Oracle server's architecture), pushes them to GHCR tagged with the short commit hash,
 # and writes that tag to deploy/helm/openuvoice/tag-staging.yaml, which Argo CD deploys to staging.
+# Production moves only by hand, with the "Promote to prod" workflow (promote.yml).
 name: CI
 
 on:
@@ -62,6 +63,9 @@ jobs:
       - run: >-
           helm lint deploy/helm/openuvoice
           -f deploy/helm/openuvoice/values-staging.yaml --set-string image.tag=ci
+      - run: >-
+          helm lint deploy/helm/openuvoice
+          -f deploy/helm/openuvoice/values-prod.yaml --set-string image.tag=ci
 
   images:
     name: Image ${{ matrix.name }}
@@ -131,15 +135,18 @@ jobs:
         run: |
           TAG="${GITHUB_SHA::7}"
           FILE=deploy/helm/openuvoice/tag-staging.yaml
-          # A newer commit on main (other than our own tag commits) will deploy itself; never
+          # Written only by workflows (this tag and the promote workflow's pin), never new code.
+          PROD_FILE=deploy/argocd/apps/prod-app.yaml
+          # A newer commit on main (other than those workflow commits) will deploy itself; never
           # replace its tag with this older one.
-          if [ -n "$(git log --format=%H "$GITHUB_SHA..HEAD" -- . ":!$FILE")" ]; then
+          if [ -n "$(git log --format=%H "$GITHUB_SHA..HEAD" -- . ":!$FILE" ":!$PROD_FILE")" ]; then
             echo "main has newer code than $TAG; leaving the tag to its run"
             exit 0
           fi
           cat > "$FILE" <<EOF
           # Written by CI after every merge to main (.github/workflows/ci.yml); do not edit by hand.
-          # The image tag Argo CD deploys to staging. Promoting to production copies it to tag-prod.yaml.
+          # The image tag Argo CD deploys to staging. Promoting to production (promote.yml) pins
+          # deploy/argocd/apps/prod-app.yaml to it.
           image:
             tag: "$TAG"
           EOF
@@ -147,4 +154,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$FILE"
           git commit -m "Deploy $TAG to staging"
+          # A promote commit may have landed on main meanwhile; it touches another file.
+          git pull --rebase origin main
           git push

@@ -1,0 +1,54 @@
+# Values for production on the Oracle server (k3s), layered on top of values.yaml.
+# Argo CD (deploy/argocd/apps/prod-app.yaml) reads this file from the promoted commit and sets
+# image.tag to that commit's images. Same images and settings as staging; only names and keys differ.
+# No secrets: those live in Secrets made by hand in the openuvoice-prod namespace.
+
+# Private images built by CI. The ghcr Secret holds a read-only (read:packages) token.
+image:
+  registry: "ghcr.io/shilo-wexler/"
+  pullSecret: ghcr
+
+backends:
+  chat:
+    server:
+      env:
+        # The "chat prod" OAuth client. Not a secret. Its Google settings list
+        # https://openuvoice.com as an origin and redirect target.
+        GOOGLE_CLIENT_ID: "706995094901-or6gaeltjjuk2tcqbbscbs50uf743k21.apps.googleusercontent.com"
+  admin:
+    server:
+      env:
+        # The "admin" Access application, which covers admin.openuvoice.com only.
+        # Identifiers, not secrets.
+        CF_ACCESS_TEAM_DOMAIN: "dark-frog-20e8.cloudflareaccess.com"
+        CF_ACCESS_AUD: "b58f0e63aed7161be7ab1515c79c9a798c5c770e989cedbe7221f3135d765ba2"
+        # Console staff sync: the "prod-console-staff" rule group, which the admin application
+        # allows. Identifiers, not secrets; the token is cf-api-token below.
+        CF_ACCOUNT_ID: "7c5bf39729c48a468136124cae03c6b5"
+        CF_ACCESS_GROUP_ID: "6e0cbbce-6f9e-47f9-a260-eaeb65505f9a"
+      # Added to the secretFiles of values.yaml. The token (prod-access-sync) may edit Access groups
+      # of this account only, and only from the server's public IP address.
+      secretFiles:
+        CF_API_TOKEN: cf-api-token
+
+# Every 15 minutes, fixes the group if a sync after a console change failed.
+accessSync:
+  enabled: true
+
+frontends:
+  public:
+    env:
+      # Same client as the chat backend above.
+      GOOGLE_CLIENT_ID: "706995094901-or6gaeltjjuk2tcqbbscbs50uf743k21.apps.googleusercontent.com"
+      # The "openuvoice-prod" Turnstile widget; its secret is in the admin-backend Secret.
+      TURNSTILE_SITE_KEY: "0x4AAAAAAFx2irN0WYg6YMZf"
+
+# Served by the same Cloudflare tunnel as staging (cloudflared runs in the cluster, see
+# deploy/cluster/k3s/cloudflared.yaml), which reaches Traefik inside the cluster.
+# The console host sits behind the "admin" Access application (the prod-console-staff group, kept
+# equal to the admins table). The site is public.
+ingress:
+  hosts:
+    public: openuvoice.com
+    admin: admin.openuvoice.com
+# No demo content: demo.enabled stays false (values.yaml) in production, always.

@@ -1,0 +1,24 @@
+# The production databases: one Postgres per backend (chart deploy/helm/openuvoice-db), the same
+# chart and defaults as staging, on the same server's disk (k3s local-path).
+# The chat-db and admin-db Secrets are made by hand in openuvoice-prod first.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prod-db
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
+    targetRevision: main
+    path: deploy/helm/openuvoice-db
+    helm:
+      releaseName: openuvoice-db
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openuvoice-prod
+  syncPolicy:
+    automated:
+      # Never delete a database because a file changed: removing one is done by hand, on purpose.
+      prune: false
+      selfHeal: true

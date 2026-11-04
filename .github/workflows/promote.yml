@@ -1,0 +1,98 @@
+# Promote to prod: run by hand (Actions > Promote to prod > Run workflow). Pins production
+# (deploy/argocd/apps/prod-app.yaml) to one commit and its images; Argo CD then deploys it.
+# Without a tag it takes the one staging runs now (tag-staging.yaml). With an older tag it rolls back:
+# the code, the chart and its values all return to that commit together.
+name: Promote to prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag (short commit hash). Empty: the one staging runs now."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io/shilo-wexler
+  APP_FILE: deploy/argocd/apps/prod-app.yaml
+
+jobs:
+  promote:
+    name: Promote
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+      packages: read
+    # One at a time, so two runs never write the file at once.
+    concurrency:
+      group: promote-prod
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pick the commit
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          TAG="$INPUT_TAG"
+          if [ -z "$TAG" ]; then
+            TAG=$(sed -nE 's/^  tag: "(.*)"/\1/p' deploy/helm/openuvoice/tag-staging.yaml)
+          fi
+          if ! printf '%s' "$TAG" | grep -Eq '^[0-9a-f]{7}$'; then
+            echo "::error::'$TAG' is not a short commit hash (7 hex characters)"
+            exit 1
+          fi
+          SHA=$(git rev-parse --verify --quiet "$TAG^{commit}") || {
+            echo "::error::no commit $TAG in this repository"
+            exit 1
+          }
+          # Only what was merged to main can reach production.
+          if ! git merge-base --is-ancestor "$SHA" HEAD; then
+            echo "::error::$TAG is not on main"
+            exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "SHA=$SHA" >> "$GITHUB_ENV"
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # CI builds the six images on every merge to main; a missing one means that build failed.
+      - name: Check the images
+        run: |
+          for name in chat-backend admin-backend public-frontend admin-frontend chat-migrate admin-migrate; do
+            if ! docker manifest inspect "$REGISTRY/$name:$TAG" > /dev/null; then
+              echo "::error::image $name:$TAG is missing in GHCR"
+              exit 1
+            fi
+          done
+
+      - name: Pin production
+        run: |
+          sed -i -E \
+            -e "s/^(    targetRevision: ).*/\1$SHA/" \
+            -e "s/^(          value: ).*/\1\"$TAG\"/" \
+            "$APP_FILE"
+          # Both lines must now hold the new values, or the file's layout changed.
+          grep -q "^    targetRevision: $SHA\$" "$APP_FILE"
+          grep -q "^          value: \"$TAG\"\$" "$APP_FILE"
+          if git diff --quiet; then
+            echo "Production already runs $TAG; nothing to change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$APP_FILE"
+          git commit -m "Promote $TAG to prod"
+          # main may have moved while this ran (a merge, or the staging tag commit).
+          git pull --rebase origin main
+          git push origin HEAD:main
