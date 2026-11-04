@@ -89,7 +89,9 @@ export default function TurnstileWidget({ siteKey, onToken, onFail }: Props) {
           language: "he",
           // Invisible for most people; a checkbox shows up only when Cloudflare is unsure.
           appearance: "interaction-only",
-          size: "flexible",
+          // Fixed size (300x65), as in Cloudflare's own demo. "flexible" failed for many visitors
+          // with client error 300010 while the same browsers passed the demo.
+          size: "normal",
           callback: (token) => callbacks.current.onToken(token),
           // Tokens expire after 5 minutes; Turnstile then fetches a new one and calls `callback` again.
           "expired-callback": () => callbacks.current.onToken(null),
