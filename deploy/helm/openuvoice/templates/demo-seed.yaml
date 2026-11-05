@@ -51,7 +51,20 @@ spec:
         - name: demo-seed
           image: {{ include "openuvoice.image" (dict "root" $ "name" (printf "%s-migrate" $name)) }}
           imagePullPolicy: {{ $.Values.image.pullPolicy }}
-          command: ["psql", "-X", "-q", "-v", "ON_ERROR_STOP=1", "-f", "/demo/{{ $name }}.sql"]
+          # A new pod is refused by the NetworkPolicy for about its first second (until k3s allows
+          # its address), so wait for the database first, like the migrations do. Gives up after a
+          # minute.
+          command:
+            - sh
+            - -c
+            - |
+              tries=0
+              until pg_isready -q; do
+                tries=$((tries + 1))
+                [ "$tries" -lt 30 ] || { echo "database not reachable" >&2; exit 1; }
+                sleep 2
+              done
+              exec psql -X -q -v ON_ERROR_STOP=1 -f /demo/{{ $name }}.sql
           env:
             - name: PGHOST
               value: {{ $backend.database.host }}
