@@ -1,0 +1,24 @@
+{{- /*
+The databases accept connections only from pods in this namespace (the backends, migrations,
+purge and backup jobs). Pods of another environment (e.g. staging -> prod) are refused.
+Enforced by k3s; minikube's default network ignores it.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db-ingress
+  labels:
+    app.kubernetes.io/part-of: openuvoice
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432

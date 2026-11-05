@@ -1,0 +1,23 @@
+{{- /*
+Traffic may reach the app's pods only from inside this namespace (e.g. admin-backend calling
+chat-backend /internal) and from Traefik in kube-system, which brings in the public traffic.
+Pods of another environment (e.g. staging -> prod) are refused. Outgoing traffic is not limited
+(Google, Cloudflare, R2, Healthchecks). Enforced by k3s; minikube's default network ignores it.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-ingress
+  labels:
+    {{- include "openuvoice.labels" (dict "root" $ "component" "network-policy") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
