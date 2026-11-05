@@ -14,7 +14,7 @@ spec:
   project: default
   source:
     repoURL: git@github.com:Shilo-Wexler/openu-physics-hub.git
-    targetRevision: 01e3fbd14cbb51933ecfbbea720cbd33882ed124
+    targetRevision: 78f78f4063e6de5db688692b0e0f623ebc2a3c88
     path: deploy/helm/openuvoice-db
     helm:
       releaseName: openuvoice-db
