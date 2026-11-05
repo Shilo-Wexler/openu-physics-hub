@@ -47,12 +47,26 @@ interface PageProps {
   courseId?: number;
 }
 
-/** The tab title: the course name once it is loaded; null keeps the current one while loading. */
+/**
+ * The tab title, which is also the headline search engines show: the course name and what the page
+ * holds, once it is loaded; null keeps the current one while loading.
+ */
 function titleFor(state: State): string | null {
   if (state.status === "ready") {
-    return state.course.id === GENERAL_COURSE_ID ? GENERAL_TITLE : state.course.name;
+    const { course } = state;
+    return course.id === GENERAL_COURSE_ID ? GENERAL_TITLE : `${course.name}: ביקורות על הקורס`;
   }
   return state.status === "not-found" ? NOT_FOUND_TEXT : null;
+}
+
+/** The text search engines show under a course's title; other pages keep the site's description. */
+function descriptionFor(state: State): string | undefined {
+  if (state.status !== "ready" || state.course.id === GENERAL_COURSE_ID) return undefined;
+  const { course } = state;
+  return (
+    `ביקורות, דירוגי קושי והמלצה וצ'אט של סטודנטים על הקורס ${course.name} (${course.id}) ` +
+    "באוניברסיטה הפתוחה."
+  );
 }
 
 /**
@@ -91,7 +105,7 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
   // review (liked_by_me) again.
   const generation = useViewerGeneration();
   const isDesktop = useIsDesktop();
-  usePageTitle(titleFor(state));
+  usePageTitle(titleFor(state), descriptionFor(state));
 
   useEffect(() => {
     const controller = new AbortController();
