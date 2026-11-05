@@ -23,6 +23,17 @@ health_ping() {
 }
 trap 'rc=$?; [ "$rc" -eq 0 ] || health_ping /fail' EXIT
 
+# A new pod is refused by the NetworkPolicy for about its first second (until k3s allows its
+# address), so wait for the database before using it. Gives up after a minute.
+wait_for_db() {
+  tries=0
+  until pg_isready -q --host="$1" --username="$2" --dbname="$3"; do
+    tries=$((tries + 1))
+    [ "$tries" -lt 30 ] || { echo "database $3 on $1 not reachable" >&2; return 1; }
+    sleep 2
+  done
+}
+
 : "${BACKUP_RECIPIENT:?}" "${R2_ENDPOINT:?}" "${R2_BUCKET:?}"
 [ "$#" -gt 0 ] || { echo "no databases given" >&2; exit 1; }
 
@@ -45,6 +56,8 @@ $spec
 EOT
   file="$name-$DATE.dump.age"
   daily="r2:$R2_BUCKET/daily/$name/$file"
+
+  wait_for_db "$host" "$user" "$database"
 
   echo "backing up $database to $daily"
   PGPASSWORD="$(cat "/secrets/db/$name/password")" \
