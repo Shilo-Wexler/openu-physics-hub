@@ -1,4 +1,7 @@
-/** The browser tab's title, which is also the headline search engines show for the page. */
+/**
+ * The browser tab's title and the page's description: the headline and the text under it that
+ * search engines show for the page.
+ */
 
 import { useEffect } from "react";
 import { useLocation } from "react-router";
@@ -12,7 +15,7 @@ const HOME_TITLE = `${SITE} · פורטל הסטודנטים לפיזיקה בא
 // they know the course name.
 const ROUTE_TITLES: Record<string, string> = {
   "/chat": "צ'אט",
-  "/courses": "קורסים",
+  "/courses": "ביקורות על קורסים בפיזיקה",
   "/announcements": "הכרזות",
   "/inquiry": "פנייה לוועד הסטודנטים",
   "/profile": "פרופיל",
@@ -22,6 +25,15 @@ const ROUTE_TITLES: Record<string, string> = {
 };
 
 const NOT_FOUND_TITLE = "הדף לא נמצא";
+
+// The description in index.html, for every page without one of its own. Google reads the
+// description after running the app, so a course page can describe itself.
+const descriptionTag = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+const DEFAULT_DESCRIPTION = descriptionTag?.content ?? "";
+
+function setDescription(text: string): void {
+  if (descriptionTag) descriptionTag.content = text;
+}
 
 function withSite(name: string): string {
   return `${name} · ${SITE}`;
@@ -42,14 +54,20 @@ export function useRouteTitle(): void {
   useEffect(() => {
     // "/about/" is the same page as "/about".
     const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-    if (path === "/") document.title = HOME_TITLE;
-    else if (!ownsTitle(path)) document.title = withSite(ROUTE_TITLES[path] ?? NOT_FOUND_TITLE);
+    if (ownsTitle(path)) return;
+    document.title = path === "/" ? HOME_TITLE : withSite(ROUTE_TITLES[path] ?? NOT_FOUND_TITLE);
+    setDescription(DEFAULT_DESCRIPTION);
   }, [pathname]);
 }
 
-/** For a page that sets its own title (see ownsTitle). null keeps the current title, while loading. */
-export function usePageTitle(name: string | null): void {
+/**
+ * For a page that sets its own title (see ownsTitle), and optionally its description.
+ * A null name keeps the current title, while loading.
+ */
+export function usePageTitle(name: string | null, description?: string): void {
   useEffect(() => {
-    if (name !== null) document.title = withSite(name);
-  }, [name]);
+    if (name === null) return;
+    document.title = withSite(name);
+    setDescription(description ?? DEFAULT_DESCRIPTION);
+  }, [name, description]);
 }
