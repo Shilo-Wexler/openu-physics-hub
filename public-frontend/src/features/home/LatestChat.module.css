@@ -1,0 +1,461 @@
+/* "New in the chat" on the home page.
+   Phone: one framed panel: a title with an icon and a link on top, a few one-line rows (avatar,
+   nickname and course, the start of the text), and a wide black "write a review" button.
+   Computer (below): a small gray label and the link on one line, then one row of equal cards
+   closed by a black invitation card. While the chat is empty: one black band on both. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-end: var(--space-6);
+}
+
+/* The phone's panel: one object, so it reads as "what is going on in the chat". */
+.panel {
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.panel .head {
+  padding: var(--space-2) var(--space-4) 0;
+}
+
+/* Same as the announcement's label ("מהוועד") when it stands alone (the empty chat). */
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+}
+
+/* Inside the panel the title is the panel's own: bigger, black, with an icon. */
+.panel .label {
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+}
+
+.titleIcon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Same link as the announcement's "לכל ההכרזות"; 44px tall for a finger. */
+.all {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap-size);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* A chevron pointing forward: left, in a right-to-left page. */
+.all::after {
+  content: "‹";
+  content: "‹" / "";
+  font-size: 1.25em;
+  line-height: 1;
+}
+
+@media (hover: hover) {
+  .all:hover {
+    text-decoration: underline;
+  }
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grid > li {
+  display: flex;
+  min-width: 0;
+}
+
+.computerOnly {
+  display: none !important;
+}
+
+/* Phone: one row per review, a thin line between rows. */
+.card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+  /* The highlight of a new review fades back over this time. */
+  transition:
+    background-color 1.2s ease,
+    border-color 0.2s ease;
+}
+
+.grid > li:first-child .card {
+  border-block-start: 0;
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: -2px;
+}
+
+/* A review that showed up while the page was open: it slides in with a soft yellow behind it
+   for a moment. The one color on the page, and only for a second. */
+.fresh {
+  background-color: #fff6c7;
+  transition: none;
+  animation: enter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Phone: "nickname · course" on one line. */
+.names {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.nickname {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: var(--weight-bold);
+}
+
+.course {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.course::before {
+  content: "· ";
+  content: "· " / "";
+}
+
+/* One line and "…" on a phone, three on a computer. anywhere: a long link or a word with no
+   spaces breaks inside the card instead of pushing the page sideways. */
+.text {
+  margin: 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+/* Likes and replies: computer only, where a card has room for them. */
+.counts {
+  display: none;
+  gap: var(--space-3);
+  margin-block-start: auto;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.counts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.counts svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Read by screen readers only (the clip pattern: never a far offset, which in a right-to-left
+   page makes the page scroll sideways). */
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The phone's wide black button that closes the panel. */
+.writeBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--tap-size);
+  margin: var(--space-2) var(--space-4) var(--space-4);
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+.writeBar svg,
+.button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The black invitation (the computer's last card, and the empty band). */
+.inviteText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.inviteText p {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  opacity: 0.75;
+}
+
+.inviteTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+/* A white pill on black; 44px tall for a finger. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--space-1);
+  min-height: var(--tap-size);
+  padding-inline: var(--space-4);
+  border-radius: 999px;
+  background: var(--color-on-primary);
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+/* While the chat is empty: one black band in place of the reviews. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .fresh {
+    animation: none;
+  }
+}
+
+/* Computer: a full-width band. The label and the link share one line on top, like the
+   announcement's, and the cards share one row: as many equal columns as there are cards, so
+   the row is always full, with one review or with four. */
+@media (min-width: 1024px) {
+  .section {
+    gap: var(--space-2);
+  }
+
+  .panel {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
+  }
+
+  .panel .head {
+    padding: 0;
+  }
+
+  .panel .label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-muted);
+  }
+
+  .label {
+    min-height: var(--tap-size);
+  }
+
+  .titleIcon,
+  .writeBar {
+    display: none;
+  }
+
+  .computerOnly {
+    display: flex !important;
+  }
+
+  .grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+
+  /* A card: avatar beside "nickname / course", then the text, then likes and replies. The
+     body's parts join the card's own grid, so the text can take the card's full width. */
+  .card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "avatar names"
+      "text text"
+      "counts counts";
+    grid-template-rows: auto auto 1fr;
+    align-items: start;
+    column-gap: var(--space-2);
+    row-gap: var(--space-2);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+  }
+
+  .grid > li:first-child .card {
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .card:focus-visible {
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    .card:hover {
+      border-color: var(--color-text-muted);
+    }
+  }
+
+  .card > :first-child {
+    grid-area: avatar;
+  }
+
+  .body {
+    display: contents;
+  }
+
+  .names {
+    grid-area: names;
+    flex-direction: column;
+    align-items: stretch;
+    align-self: center;
+    gap: 0;
+  }
+
+  .nickname {
+    max-width: none;
+  }
+
+  .course::before {
+    content: none;
+  }
+
+  .text {
+    grid-area: text;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .counts {
+    grid-area: counts;
+    display: flex;
+    align-self: end;
+  }
+
+  .fresh {
+    background-color: #fff6c7;
+  }
+
+  /* The invitation card: black, text on top and the pill at the bottom. */
+  .invite {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-4);
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  .grid > li:first-child .invite,
+  .invite:hover {
+    border-color: var(--color-primary);
+  }
+
+  .empty {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-5) var(--space-6);
+  }
+
+  .empty .button {
+    align-self: center;
+    flex: none;
+  }
+}

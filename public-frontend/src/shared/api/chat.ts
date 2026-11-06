@@ -89,6 +89,23 @@ export interface SharedMessage {
   reply_id: number | null;
 }
 
+// A review on the home page's "new in the chat" row: only what its card shows. Never a
+// deleted one, and only the start of its text (the server cuts it, see SNIPPET_LENGTH).
+export interface LatestReview {
+  id: number;
+  course_id: number;
+  course_name: string;
+  nickname: string;
+  avatar: string;
+  like_count: number;
+  reply_count: number;
+  snippet: string;
+}
+
+export interface LatestPage {
+  messages: LatestReview[]; // newest first
+}
+
 export interface NewMessage {
   id: number;
   thread_id: number | null; // the review a new reply went under; null for a new review
@@ -146,6 +163,12 @@ export function rateCourse(courseId: number, rating: Rating) {
 }
 
 // ---- Reviews and replies -----------------------------------------------
+
+/** The newest reviews of all courses, for the home page. The server and the browser both keep
+ * the answer for half a minute, so calling it often costs nothing. */
+export function getLatest(signal?: AbortSignal) {
+  return request<LatestPage>(`${BASE}/latest`, { signal });
+}
 
 export function listReviews(
   courseId: number,
