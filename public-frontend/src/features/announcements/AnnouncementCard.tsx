@@ -1,6 +1,6 @@
 /** One committee announcement: date, a "pinned" mark, and whichever of title, image and text it has
     (each is optional, but a published one has at least one).
-    Used by the announcements page and by the home page (which shows only the pinned one, cut short). */
+    Used by the announcements page and by the home page (which shows only the pinned one). */
 
 import type { Announcement } from "../../shared/api/announcements";
 import styles from "./AnnouncementCard.module.css";
@@ -12,7 +12,7 @@ interface Props {
   announcement: Announcement;
   /** The title's heading level, so the page outline stays right (h2 on its page, h3 on home). */
   headingLevel?: 2 | 3;
-  /** Cuts the text to a few lines, for a preview. */
+  /** The home page preview: the whole text on a phone, at most a set number of lines on a computer. */
   short?: boolean;
   /** On a computer: the text beside the image instead of around it (phone: unchanged). */
   wideOnDesktop?: boolean;
