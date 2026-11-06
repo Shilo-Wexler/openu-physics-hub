@@ -1,4 +1,5 @@
-/** /: the front page: what the site is, the committee's latest announcement, and a link to each main area. */
+/** /: the front page: what the site is, the newest reviews in the chat, the committee's latest
+    announcement, and a link to each main area. */
 
 import { useState } from "react";
 
@@ -6,6 +7,7 @@ import LinkRows, { type LinkRow } from "../../shared/components/LinkRows";
 import LatestAnnouncement from "../announcements/LatestAnnouncement";
 import { COURSE_CHATS_ROW, GENERAL_CHAT_ROW } from "../chat/chatRows";
 import styles from "./HomePage.module.css";
+import LatestChat from "./LatestChat";
 
 /* Thin line icons for the areas (computer only), drawn like the rest of the site's icons. */
 function CourseChatsIcon() {
@@ -79,10 +81,12 @@ const AREAS: LinkRow[] = [
   },
 ];
 
-// Phone: full-width bands, top to bottom: the intro, the announcement, the areas (rows).
-// Computer with a pinned announcement: the intro as a band on top, then two columns that
-// start and end on the same lines: the areas (rows, stretched) on the right, the announcement
-// on the left. Computer without one: as on the phone, but the areas are tiles side by side.
+// Phone: full-width bands, top to bottom: the intro, the newest reviews, the announcement, the
+// areas (rows).
+// Computer: the intro and the newest reviews as full-width bands on top. Then, with a pinned
+// announcement, two columns that start and end on the same lines: the areas (rows, stretched)
+// on the right, the announcement on the left. Without one: as on the phone, but the areas are
+// tiles side by side.
 export default function HomePage() {
   const [hasPinned, setHasPinned] = useState(false);
 
@@ -97,6 +101,9 @@ export default function HomePage() {
           ביקורות ודירוגים מסטודנטים שכבר למדו את הקורס, צ'אט פתוח, ופנייה אנונימית לוועד הסטודנטים.
         </p>
       </section>
+
+      {/* Right under the intro, so the first thing after "what is this" is people using it. */}
+      <LatestChat />
 
       {/* The announcement comes first, so the phone shows it above the areas. */}
       <div className={hasPinned ? styles.columns : undefined}>
