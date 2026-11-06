@@ -14,7 +14,8 @@ router = APIRouter(
 )
 
 # Longest period a stats request may ask for. Longer is "all time" anyway (no days),
-# and the bound keeps now() - days inside the range Postgres dates can hold.
+# and the bound keeps now() - days (and twice that, for the previous period)
+# inside the range Postgres dates can hold.
 MAX_STATS_DAYS = 3650
 
 _ERRORS = {
@@ -100,3 +101,12 @@ async def stats_courses(
     days: Annotated[int | None, Query(ge=1, le=MAX_STATS_DAYS)] = None,
 ):
     return [dict(row) for row in await stats.active_courses(limit, days)]
+
+
+# ?days=30: users, posts and replies in the last 30 days and the 30 days before them,
+# plus accounts waiting to be deleted. Without days: all time (no "new"/"previous" numbers).
+@router.get("/stats/summary")
+async def stats_summary(
+    days: Annotated[int | None, Query(ge=1, le=MAX_STATS_DAYS)] = None,
+):
+    return dict(await stats.summary(days))
