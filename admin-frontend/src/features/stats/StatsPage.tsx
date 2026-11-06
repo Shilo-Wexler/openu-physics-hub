@@ -1,15 +1,16 @@
-/** The stats screen: a period switch, the inquiries received in it compared with the period before,
-    how they split by type, and the busiest courses in inquiries and in the chat. Read-only, every level.
-    On a computer: the switch beside the title, three tiles in a row, and the three lists side by side. */
+/** The stats screen: a period switch; five tiles (site visits, registered users, posts, replies and
+    new inquiries); how the inquiries split by type, and the busiest courses in inquiries and in the chat.
+    Read-only, every level.
+    On a computer: the switch beside the title, the five tiles in one row, and the three lists side by side.
+    On a phone: the tiles two in a row (the inquiries tile across the whole row), then the lists. */
 
 import { useSearchParams } from "react-router";
 
-import { getStats, type Period, type Stats } from "../../shared/api/stats";
+import { getStats, type ChatSummary, type Period, type SiteVisits, type Stats } from "../../shared/api/stats";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { ListMessage } from "../../shared/components/ListRow";
 import SegmentedControl from "../../shared/components/SegmentedControl";
 import { courseLabel, TYPE_LABEL } from "../../shared/lib/inquiryLabels";
-import { useIsDesktop } from "../../shared/lib/useIsDesktop";
 import { useAdmin, useLoad } from "../../layout/consoleContext";
 import LoadError from "../../layout/LoadError";
 import styles from "./StatsPage.module.css";
@@ -26,6 +27,11 @@ const PREVIOUS_LABEL: Record<Period, string> = {
   "30": "מ-30 הימים שלפני",
   all: "",
 };
+
+const CHAT_DOWN = "הצ'אט לא זמין כרגע.";
+
+/** Big numbers with a thousands separator: 1,234. */
+const NUMBER = new Intl.NumberFormat("he-IL");
 
 /** The period is in the URL (?period=30), so it stays when going back to this screen. 7 days by default. */
 function readPeriod(raw: string | null): Period {
@@ -74,7 +80,6 @@ export default function StatsPage() {
 }
 
 function StatsBody({ stats }: { stats: Stats }) {
-  const desktop = useIsDesktop();
   const { inquiries, chat_courses: chatCourses } = stats;
   // Most common type first; the bars are measured against it.
   const types = Object.entries(inquiries.by_type).sort(([, a], [, b]) => b - a) as [keyof typeof TYPE_LABEL, number][];
@@ -83,15 +88,14 @@ function StatsBody({ stats }: { stats: Stats }) {
   return (
     <>
       <div className={styles.tiles}>
+        <VisitsTile visits={stats.visits} period={stats.period} />
+        <ChatTiles chat={stats.chat_summary} period={stats.period} />
+        {/* Last, so on a phone it takes the whole row under the four site tiles. */}
         <Tile
           label="פניות חדשות"
-          value={String(inquiries.count)}
+          value={NUMBER.format(inquiries.count)}
           note={comparison(inquiries.count, inquiries.previous_count, stats.period)}
         />
-        {/* Two more tiles fill the row on a computer. They only sum up the lists under them, so a phone,
-            where the lists are right below, does without them. */}
-        {desktop && <TopTypeTile top={types[0]} count={inquiries.count} />}
-        {desktop && <TopChatTile courses={chatCourses} />}
       </div>
 
       <div className={styles.columns}>
@@ -144,7 +148,42 @@ function StatsBody({ stats }: { stats: Stats }) {
   );
 }
 
-/** A white card with a grey label, a big value (a number, or a name cut with "..."), and a note. */
+/** Page loads on the public site (from Cloudflare, kept in the admin DB). Without a full previous period
+    to compare with (always for "all"), the note says from which day the site is counted. */
+function VisitsTile({ visits, period }: { visits: SiteVisits | null; period: Period }) {
+  if (visits === null) return <Tile label="כניסות לאתר" value="—" note="עדיין אין נתונים." />;
+  const note =
+    visits.previous_count === null
+      ? `נספר מאז ${shortDate(visits.since)}`
+      : comparison(visits.count, visits.previous_count, period);
+  return <Tile label="כניסות לאתר" value={NUMBER.format(visits.count)} note={note} />;
+}
+
+/** Users, posts and replies, from the chat backend. When it does not answer, only these three say so. */
+function ChatTiles({ chat, period }: { chat: ChatSummary | null; period: Period }) {
+  if (chat === null) {
+    return (
+      <>
+        <Tile label="משתמשים רשומים" value="—" note={CHAT_DOWN} />
+        <Tile label="פוסטים" value="—" note={CHAT_DOWN} />
+        <Tile label="תגובות" value="—" note={CHAT_DOWN} />
+      </>
+    );
+  }
+  return (
+    <>
+      <Tile label="משתמשים רשומים" value={NUMBER.format(chat.users_total)} note={usersNote(chat)} />
+      <Tile label="פוסטים" value={NUMBER.format(chat.posts)} note={comparison(chat.posts, chat.posts_previous, period)} />
+      <Tile
+        label="תגובות"
+        value={NUMBER.format(chat.replies)}
+        note={comparison(chat.replies, chat.replies_previous, period)}
+      />
+    </>
+  );
+}
+
+/** A white card with a grey label, a big number and a note. */
 function Tile({ label, value, note }: { label: string; value: string; note: string }) {
   return (
     <section className={styles.tile}>
@@ -157,39 +196,27 @@ function Tile({ label, value, note }: { label: string; value: string; note: stri
   );
 }
 
-/** The most common type in the period, out of all its inquiries. */
-function TopTypeTile({ top, count }: { top: [keyof typeof TYPE_LABEL, number] | undefined; count: number }) {
-  if (!top || top[1] === 0) return <Tile label="הסוג הנפוץ" value="—" note="אין פניות בתקופה הזו." />;
-  const [type, n] = top;
-  return (
-    <Tile
-      label="הסוג הנפוץ"
-      value={TYPE_LABEL[type]}
-      note={`${countLabel(n, "פנייה", "פניות")} מתוך ${count}`}
-    />
-  );
-}
-
-/** The busiest course in the chat in the period: the first of the chat list. */
-function TopChatTile({ courses }: { courses: Stats["chat_courses"] }) {
-  if (courses === null) return <Tile label="הכי פעיל בצ'אט" value="—" note="הצ'אט לא זמין כרגע." />;
-  const first = courses[0];
-  if (!first) return <Tile label="הכי פעיל בצ'אט" value="—" note="אין הודעות בתקופה הזו." />;
-  return (
-    <Tile
-      label="הכי פעיל בצ'אט"
-      value={courseLabel(first.course_id, first.course_name)}
-      note={countLabel(first.message_count, "הודעה", "הודעות")}
-    />
-  );
-}
-
 /** "4 יותר מ-7 הימים שלפני", or a plain note for "all", which has nothing to compare with. */
 function comparison(count: number, previous: number | null, period: Period): string {
   if (previous === null) return "מאז שהאתר עלה";
   const diff = count - previous;
   if (diff === 0) return `כמו ב-${period === "7" ? "7 הימים" : "30 הימים"} שלפני`;
-  return `${diff > 0 ? "▲" : "▼"} ${Math.abs(diff)} ${diff > 0 ? "יותר" : "פחות"} ${PREVIOUS_LABEL[period]}`;
+  return `${diff > 0 ? "▲" : "▼"} ${NUMBER.format(Math.abs(diff))} ${diff > 0 ? "יותר" : "פחות"} ${PREVIOUS_LABEL[period]}`;
+}
+
+/** "3 חדשים בתקופה · אחד ממתין למחיקה". The total is today's, so "all" only says so. */
+function usersNote(chat: ChatSummary): string {
+  const n = chat.users_new;
+  const added = n === null ? "סך הכול" : n === 1 ? "משתמש חדש אחד בתקופה" : `${NUMBER.format(n)} חדשים בתקופה`;
+  const pending = chat.deletion_pending;
+  if (pending === 0) return added;
+  return `${added} · ${pending === 1 ? "אחד ממתין" : `${pending} ממתינים`} למחיקה`;
+}
+
+/** "2026-10-08" as "8.10". */
+function shortDate(day: string): string {
+  const [, month, date] = day.split("-");
+  return `${Number(date)}.${Number(month)}`;
 }
 
 /** Hebrew singular for one, plural otherwise: "פנייה אחת", "3 פניות". */
