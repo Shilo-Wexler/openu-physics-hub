@@ -27,13 +27,24 @@ backends:
         # application allows. Identifiers, not secrets; the token is cf-api-token below.
         CF_ACCOUNT_ID: "7c5bf39729c48a468136124cae03c6b5"
         CF_ACCESS_GROUP_ID: "2acb0290-a159-4e71-9440-8d7c04a40100"
-      # Added to the secretFiles of values.yaml. The token may edit Access groups of this account
-      # only, and only from the server's public IP address.
+        # Site visits: the openuvoice.com zone (an identifier, not a secret; the token is
+        # cf-analytics-token below). Staging counts the real site, not staging.openuvoice.com:
+        # staging's own traffic is only testers, and real numbers are what a test should show.
+        CF_ZONE_ID: "541fd689484158ef8e395e9204774a3a"
+        VISITS_HOSTS: "openuvoice.com,www.openuvoice.com"
+      # Added to the secretFiles of values.yaml. The cf-api-token may edit Access groups of this
+      # account only, and only from the server's public IP address. The cf-analytics-token
+      # (openuvoice-analytics-read) may only read analytics of the openuvoice.com zone.
       secretFiles:
         CF_API_TOKEN: cf-api-token
+        CF_ANALYTICS_TOKEN: cf-analytics-token
 
 # Every 15 minutes, fixes the group if a sync after a console change failed.
 accessSync:
+  enabled: true
+
+# Every hour, copies the site's visits from Cloudflare for the console's stats.
+visitsSync:
   enabled: true
 
 frontends:

@@ -1,0 +1,51 @@
+{{- $server := .Values.backends.admin.server }}
+{{- if and $server.enabled .Values.visitsSync.enabled }}
+{{- $ctx := dict "root" $ "component" "visits-sync" }}
+# Copies daily visits to the public site from Cloudflare into the site_visits table
+# (app/jobs/sync_visits.py). Cloudflare keeps them for 31 days only, so this runs every hour.
+# Same image, settings and secrets as the admin server.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: visits-sync
+  labels:
+    {{- include "openuvoice.labels" $ctx | nindent 4 }}
+spec:
+  schedule: {{ .Values.visitsSync.schedule | quote }}
+  # Never two runs at once, and a run missed by more than 10 minutes waits for the next one.
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  # It runs every hour: keep the last success, and a few failures to look at.
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      # The first run fills 30 days, one Cloudflare query per day; later runs ask for two days.
+      activeDeadlineSeconds: 300
+      template:
+        metadata:
+          labels:
+            {{- include "openuvoice.labels" $ctx | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          {{- include "openuvoice.imagePullSecrets" $ | nindent 10 }}
+          securityContext:
+            {{- include "openuvoice.podSecurityContext" $ | nindent 12 }}
+          containers:
+            - name: sync
+              image: {{ include "openuvoice.image" (dict "root" $ "name" $server.image) }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["python", "-m", "app.jobs.sync_visits"]
+              env:
+                {{- include "openuvoice.serverEnv" (dict "server" $server) | nindent 16 }}
+              securityContext:
+                {{- include "openuvoice.containerSecurityContext" $ | nindent 16 }}
+              resources:
+                {{- toYaml $server.resources | nindent 16 }}
+              volumeMounts:
+                {{- include "openuvoice.serverVolumeMounts" $ | nindent 16 }}
+          volumes:
+            {{- include "openuvoice.serverVolumes" (dict "server" $server) | nindent 12 }}
+{{- end }}

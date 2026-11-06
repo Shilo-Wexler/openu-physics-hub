@@ -68,6 +68,9 @@ backends:
         # values-<env>.yaml with CF_ACCOUNT_ID + CF_ACCESS_GROUP_ID in env, CF_API_TOKEN: cf-api-token
         # in secretFiles, and accessSync.enabled. Not in this file: a secretFiles key missing from the
         # Secret stops the pod from starting.
+        # Site visits from Cloudflare are off here too. An environment turns them on with CF_ZONE_ID +
+        # VISITS_HOSTS in env, CF_ANALYTICS_TOKEN: cf-analytics-token in secretFiles, and
+        # visitsSync.enabled.
       secretName: admin-backend
       secretFiles:
         DATABASE_URL: database-url
@@ -103,6 +106,14 @@ purge:
 accessSync:
   enabled: false
   schedule: "*/15 * * * *"
+
+# Job that copies daily visits to the public site from Cloudflare into the admin DB, for the
+# console's stats (admin-backend app/jobs/sync_visits.py). Cloudflare keeps them for 31 days only.
+# Hourly, at minute 5, so it does not start together with access-sync on the hour.
+# Needs the admin server's visits settings (see backends.admin.server.env).
+visitsSync:
+  enabled: false
+  schedule: "5 * * * *"
 
 # Nightly backup of every database in backends to Cloudflare R2 (templates/backup-cronjob.yaml,
 # deploy/backup/backup.sh). Each dump is encrypted with age to recipient; only the matching
@@ -171,3 +182,4 @@ ingress:
   hosts:
     public: ""
     admin: ""
+    
