@@ -1,9 +1,10 @@
 """Copies daily visits to the public site from Cloudflare's analytics into the site_visits table.
 
-Cloudflare sits in front of the site and counts every request. A "visit" here is one HTML page load
-on the public site's hosts (settings.VISITS_HOSTS): the first load of the site in a tab, since the
-site is a single-page app and moves between its pages without loading HTML again. Files, API calls
-and the console are not counted. Bots that load pages are, since the free plan cannot tell them apart.
+Cloudflare sits in front of the site and counts every request. A "visit" here is Cloudflare's own
+visits metric on the public site's hosts (settings.VISITS_HOSTS): a page load that came from outside
+the site (a search result, a link in a chat group, a typed address), not a reload or a move between
+the site's pages. Files, API calls and the console are not counted. Bots that load pages are, since
+the free plan cannot tell them apart.
 
 Cloudflare keeps these numbers for 31 days only, so the jobs/sync_visits.py CronJob copies them every
 hour and the console reads the table, never Cloudflare. The table stays correct by rewriting whole days:
@@ -28,8 +29,11 @@ TIMEOUT_SECONDS = 20
 SITE_TIMEZONE = ZoneInfo("Asia/Jerusalem")
 # The free plan answers for the last 31 days. Today plus 29 full days before it stays inside that.
 MAX_DAYS_BACK = 29
+# Above this sampling the day's number is only an estimate, and the log says so.
+# A day that is counted in full comes back as 1.00 and a bit, so not exactly 1.
+SAMPLED_ABOVE = 1.05
 
-# HTML page loads on the site's hosts in one time range, as a single total.
+# Visits (entries from outside the site) on the site's HTML pages in one time range, as a single total.
 # One query per day, never one long range: over a long range Cloudflare counts only a sample
 # (e.g. 1 request in 10) and multiplies, so every number came out a multiple of 10.
 # sampleInterval says how much it sampled (1 = every request counted).
@@ -38,7 +42,7 @@ query ($zone: String!, $filter: ZoneHttpRequestsAdaptiveGroupsFilter_InputObject
   viewer {
     zones(filter: {zoneTag: $zone}) {
       httpRequestsAdaptiveGroups(limit: 1, filter: $filter) {
-        count
+        sum { visits }
         avg { sampleInterval }
       }
     }
@@ -68,7 +72,7 @@ def _day_start(day: date) -> datetime:
 
 
 def _count(start: datetime, end: datetime) -> int:
-    """Page loads from `start` to `end`."""
+    """Visits from `start` to `end`."""
     variables = {
         "zone": settings.CF_ZONE_ID,
         "filter": {
@@ -104,10 +108,10 @@ def _count(start: datetime, end: datetime) -> int:
     if not rows:
         return 0
     sample_interval = rows[0]["avg"]["sampleInterval"]
-    if sample_interval > 1:
-        log.warning("visits sync: Cloudflare sampled %s (interval %.1f), the number is an estimate",
+    if sample_interval > SAMPLED_ABOVE:
+        log.warning("visits sync: Cloudflare sampled %s (interval %.2f), the number is an estimate",
                     start.date(), sample_interval)
-    return rows[0]["count"]
+    return rows[0]["sum"]["visits"]
 
 
 def sync(conn: Connection) -> int:
