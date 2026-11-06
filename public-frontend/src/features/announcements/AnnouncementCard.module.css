@@ -75,13 +75,16 @@
   overflow-wrap: break-word;
 }
 
-/* The home page preview: four lines and "…"; the full text is on the announcements page. */
-.short {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-  overflow: hidden;
+/* Computer: the home page preview stops at 20 lines and "…", so a very long announcement cannot
+   stretch the page; the full text is on the announcements page. A phone shows it whole. */
+@media (min-width: 1024px) {
+  .short {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 20;
+    line-clamp: 20;
+    overflow: hidden;
+  }
 }
 
 /* Computer, when wideOnDesktop is set and there is an image: the text on the right, the image
