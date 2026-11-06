@@ -25,5 +25,7 @@ def get_stats(period: Period, conn: Conn):
     return {
         "period": period,
         "inquiries": stats.inquiries(conn, span),
+        "visits": stats.site_visits(conn, days),
+        "chat_summary": stats.chat_summary(days),
         "chat_courses": stats.chat_courses(days),
     }

@@ -1,17 +1,17 @@
 """Numbers for the console's stats screen, for one period.
 
-Inquiry numbers come from this DB. The most active chat courses come from the chat backend's
-/internal API (chat_client); when the chat backend fails, only that part is None and the rest
-of the screen still works.
+Inquiry and site visit numbers come from this DB. Chat numbers (the most active courses, users,
+posts and replies) come from the chat backend's /internal API (chat_client); when the chat backend
+fails, only those parts are None and the rest of the screen still works.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import get_args
 
 from psycopg import Connection
 
 from app.schemas.inquiries import InquiryType
-from app.services import chat_client
+from app.services import chat_client, visits
 
 # How many courses each top list shows.
 TOP_COURSES = 5
@@ -62,6 +62,47 @@ def inquiries(conn: Connection, span: timedelta | None) -> dict:
     }
 
 
+def site_visits(conn: Connection, days: int | None) -> dict | None:
+    """Visits to the public site in the last `days` calendar days (today included, Israel time),
+    and in the `days` before them. None when the table is still empty (the sync job never ran).
+
+    since is the first day the table has, so the console can say "counted since". previous_count
+    is None when the table does not reach back over the whole previous period, since a partial
+    number would make the change look bigger than it is.
+    """
+    bounds = conn.execute(
+        "select min(day) as since, max(updated_at) as updated_at from site_visits"
+    ).fetchone()
+    if bounds["since"] is None:
+        return None
+
+    if days is None:
+        count = conn.execute("select coalesce(sum(visits), 0) as n from site_visits").fetchone()["n"]
+        previous = None
+    else:
+        today = datetime.now(visits.SITE_TIMEZONE).date()
+        start = today - timedelta(days=days - 1)
+        previous_start = start - timedelta(days=days)
+        row = conn.execute(
+            """
+            select coalesce(sum(visits) filter (where day >= %(start)s), 0) as n,
+                   coalesce(sum(visits) filter (where day < %(start)s), 0) as previous
+            from site_visits
+            where day >= %(previous_start)s
+            """,
+            {"start": start, "previous_start": previous_start},
+        ).fetchone()
+        count = row["n"]
+        previous = row["previous"] if bounds["since"] <= previous_start else None
+
+    return {
+        "count": count,
+        "previous_count": previous,
+        "since": bounds["since"],
+        "updated_at": bounds["updated_at"],
+    }
+
+
 def chat_courses(days: int | None) -> list | None:
     """The chat courses with the most messages in the period, or None when the chat backend fails."""
     path = f"/stats/courses?limit={TOP_COURSES}"
@@ -72,4 +113,15 @@ def chat_courses(days: int | None) -> list | None:
     except chat_client.ChatError:
         # chat_client already logged the reason. None tells the console to show this part as unavailable.
         return None
-    
+
+
+def chat_summary(days: int | None) -> dict | None:
+    """Users, posts and replies in the period and the one before it, and accounts waiting to be
+    deleted, or None when the chat backend fails."""
+    path = "/stats/summary"
+    if days is not None:
+        path += f"?days={days}"
+    try:
+        return chat_client.call("GET", path)
+    except chat_client.ChatError:
+        return None

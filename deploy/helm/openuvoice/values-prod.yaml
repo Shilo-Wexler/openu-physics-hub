@@ -26,13 +26,23 @@ backends:
         # allows. Identifiers, not secrets; the token is cf-api-token below.
         CF_ACCOUNT_ID: "7c5bf39729c48a468136124cae03c6b5"
         CF_ACCESS_GROUP_ID: "6e0cbbce-6f9e-47f9-a260-eaeb65505f9a"
+        # Site visits: the openuvoice.com zone (an identifier, not a secret; the token is
+        # cf-analytics-token below), counting the public site's two hosts.
+        CF_ZONE_ID: "541fd689484158ef8e395e9204774a3a"
+        VISITS_HOSTS: "openuvoice.com,www.openuvoice.com"
       # Added to the secretFiles of values.yaml. The token (prod-access-sync) may edit Access groups
-      # of this account only, and only from the server's public IP address.
+      # of this account only, and only from the server's public IP address. The cf-analytics-token
+      # (openuvoice-analytics-read) may only read analytics of the openuvoice.com zone.
       secretFiles:
         CF_API_TOKEN: cf-api-token
+        CF_ANALYTICS_TOKEN: cf-analytics-token
 
 # Every 15 minutes, fixes the group if a sync after a console change failed.
 accessSync:
+  enabled: true
+
+# Every hour, copies the site's visits from Cloudflare for the console's stats.
+visitsSync:
   enabled: true
 
 frontends:
@@ -60,3 +70,4 @@ backup:
   endpoint: "https://7c5bf39729c48a468136124cae03c6b5.r2.cloudflarestorage.com"
   bucket: openuvoice-backups
   recipient: "age1723a03ez9pzxkmuks525ac833wj9tslrs0tfq2w286u3m3zgja4qkhhmt2"
+  
