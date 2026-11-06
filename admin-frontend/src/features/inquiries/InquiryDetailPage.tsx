@@ -18,6 +18,7 @@ import { useReportUnsaved, useSplit } from "../../shared/components/SplitView";
 import { formatDateTime } from "../../shared/lib/format";
 import { courseLabel, STATUS_LABEL, TYPE_LABEL } from "../../shared/lib/inquiryLabels";
 import { errorMessage } from "../../shared/lib/errors";
+import { fieldDir } from "../../shared/lib/text";
 import { LEAVE_QUESTION, useWarnOnLeave } from "../../shared/lib/unsaved";
 import AdminLabel from "../../layout/AdminLabel";
 import { useAdmin } from "../../layout/consoleContext";
@@ -179,7 +180,7 @@ function InquiryDetail({ id }: { id: number }) {
               onChange={(e) => setNote(e.target.value)}
               maxLength={MAX_NOTE_LENGTH}
               rows={3}
-              dir="auto"
+              dir={fieldDir(note)}
             />
           </section>
 

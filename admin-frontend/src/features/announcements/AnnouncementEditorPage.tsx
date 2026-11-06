@@ -24,7 +24,7 @@ import { useConfirm } from "../../shared/components/ConfirmSheet";
 import { Group, Row } from "../../shared/components/GroupedList";
 import { formatDateTime } from "../../shared/lib/format";
 import { errorMessage } from "../../shared/lib/errors";
-import { charLength } from "../../shared/lib/text";
+import { charLength, fieldDir } from "../../shared/lib/text";
 import { LEAVE_QUESTION, useWarnOnLeave } from "../../shared/lib/unsaved";
 import AdminLabel from "../../layout/AdminLabel";
 import { useAdmin } from "../../layout/consoleContext";
@@ -375,7 +375,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
           onChange={(e) => setTitle(e.target.value)}
           readOnly={readOnly}
           maxLength={MAX_TITLE}
-          dir="auto"
+          dir={fieldDir(title)}
         />
       </section>
 
@@ -391,7 +391,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
           readOnly={readOnly}
           maxLength={MAX_BODY}
           rows={5}
-          dir="auto"
+          dir={fieldDir(body)}
         />
       </section>
 
@@ -414,7 +414,7 @@ function AnnouncementEditor({ id }: { id: number | null }) {
             value={alt}
             onChange={(e) => setAlt(e.target.value)}
             maxLength={MAX_ALT}
-            dir="auto"
+            dir={fieldDir(alt)}
           />
           <p className={styles.hint}>בשביל מי שמשתמש בקורא מסך. למשל: לוח הבחינות של סמסטר א.</p>
         </section>

@@ -23,7 +23,7 @@ import { Group, Row } from "../../shared/components/GroupedList";
 import { useReportUnsaved, useSplit } from "../../shared/components/SplitView";
 import { formatDateTime } from "../../shared/lib/format";
 import { errorMessage } from "../../shared/lib/errors";
-import { charLength } from "../../shared/lib/text";
+import { charLength, fieldDir } from "../../shared/lib/text";
 import { LEAVE_QUESTION, useWarnOnLeave } from "../../shared/lib/unsaved";
 import { useAdmin } from "../../layout/consoleContext";
 import MeetingFiles, { toPending, type PendingFile } from "./MeetingFiles";
@@ -36,12 +36,6 @@ const MAX_TITLE = 120;
 const MAX_CONTENT = 20000;
 
 const LIST = "/more/meetings";
-
-/** An empty field is right-to-left, so the cursor starts on the right like the rest of the page.
-    (dir="auto" alone makes an empty field left-to-right.) Typed text then picks its own direction. */
-function fieldDir(value: string): "auto" | "rtl" {
-  return value ? "auto" : "rtl";
-}
 
 /** Opens the browser's calendar from a click anywhere on the date, not only on its small native button.
     Older browsers without showPicker still open it their own way. */

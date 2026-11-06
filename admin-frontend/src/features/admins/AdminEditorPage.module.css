@@ -64,12 +64,6 @@
   color: var(--color-text-muted);
 }
 
-/* dir="auto" turns an empty field left-to-right (no letters to judge by), which flips the Hebrew
-   placeholder. While it shows, the field is right-to-left; typed text then picks its own direction. */
-.field:placeholder-shown {
-  direction: rtl;
-}
-
 .field:focus {
   border-color: var(--color-primary);
 }
