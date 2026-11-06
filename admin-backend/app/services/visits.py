@@ -14,7 +14,7 @@ Off when CF_ANALYTICS_TOKEN, CF_ZONE_ID and VISITS_HOSTS are not set (local dev)
 """
 
 import logging
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import requests
@@ -59,7 +59,7 @@ class SyncError(Exception):
 
 
 def _utc_text(moment: datetime) -> str:
-    return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _day_start(day: date) -> datetime:
@@ -113,7 +113,7 @@ def _count(start: datetime, end: datetime) -> int:
 def sync(conn: Connection) -> int:
     """Rewrites the days from the last one in the table (or from 29 days ago when the table is empty
     or older than that) up to today. Returns how many days were written. Raises SyncError."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     today = now.astimezone(SITE_TIMEZONE).date()
     oldest = today - timedelta(days=MAX_DAYS_BACK)
     last = conn.execute("select max(day) as last from site_visits").fetchone()["last"]
