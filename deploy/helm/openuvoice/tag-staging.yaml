@@ -2,4 +2,4 @@
 # The image tag Argo CD deploys to staging. Promoting to production (promote.yml) pins
 # deploy/argocd/apps/prod-app.yaml to it.
 image:
-  tag: "05790b7"
+  tag: "c5077f9"
