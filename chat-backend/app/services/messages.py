@@ -3,6 +3,7 @@
 A review is a top-level message. Its replies form one flat discussion under it;
 a reply may quote another reply in the same discussion."""
 
+import time
 from typing import Literal
 from uuid import UUID
 
@@ -20,6 +21,12 @@ MAX_LENGTH = 4000
 # low enough to stop a script. Deleted messages count too, so deleting does not reset them.
 POSTS_PER_MINUTE = 10
 POSTS_PER_HOUR = 100
+
+# The home page's "new in the chat" row: how many reviews, how long the start of each
+# one may be, and how long one answer is reused before asking the database again.
+LATEST_COUNT = 4
+SNIPPET_LENGTH = 200
+LATEST_CACHE_SECONDS = 30
 
 Sort = Literal["new", "top"]
 
@@ -78,6 +85,20 @@ _REVIEWS_TOP = _REVIEWS.format(
     order="m.like_count desc, m.id desc",
 )
 
+# The newest active reviews of all courses, for the home page. Only what the card shows:
+# no author id, no times. An active review always has an author, so the joins stay inner.
+_LATEST = f"""
+    select m.id, m.course_id, c.name as course_name,
+           u.nickname, u.avatar, m.content, m.like_count,
+           {_REPLY_COUNT}
+      from messages m
+      join users u on u.id = m.user_id
+      join courses c on c.id = m.course_id
+     where m.thread_id is null and m.deleted_at is null
+     order by m.created_at desc, m.id desc
+     limit $1
+"""
+
 # Active replies of one review, oldest first, with the quoted reply if there is one.
 # The quote is kept even when the quoted reply was deleted (the app shows "deleted").
 # An active reply always has an author, so its own join stays inner.
@@ -122,6 +143,9 @@ _RECENT_POSTS = """
      where user_id = $1 and created_at > now() - interval '1 hour'
 """
 
+# The last answer of latest(): (when it was made, by time.monotonic(), the items).
+_latest_cache: tuple[float, list[dict]] | None = None
+
 
 class InvalidContent(Exception):
     pass
@@ -156,6 +180,20 @@ def _clean(content: str) -> str:
     return content
 
 
+def _snippet(content: str) -> str:
+    """The start of a message, on one line: line breaks and runs of spaces become one
+    space, and a long text is cut at the last whole word before SNIPPET_LENGTH."""
+    text = " ".join(content.split())
+    if len(text) <= SNIPPET_LENGTH:
+        return text
+    cut = text[:SNIPPET_LENGTH]
+    space = cut.rfind(" ")
+    # One very long word (a link, "aaaa...") has no space to cut at: cut inside it.
+    if space > SNIPPET_LENGTH // 2:
+        cut = cut[:space]
+    return cut.rstrip(" .,;:-") + "…"
+
+
 async def list_reviews(
     course_id: int, viewer_id: UUID | None, sort: Sort = "new", before_id: int | None = None
 ) -> list[asyncpg.Record]:
@@ -167,6 +205,24 @@ async def list_reviews(
     ):
         raise CourseNotFound()
     return rows
+
+
+async def latest() -> list[dict]:
+    """The newest reviews of all courses for the home page, each with the start of its text
+    instead of the full text. Every visitor gets the same answer, so it is kept for
+    LATEST_CACHE_SECONDS: the database is asked at most once in that time per server."""
+    global _latest_cache
+    now = time.monotonic()
+    if _latest_cache is not None and now - _latest_cache[0] < LATEST_CACHE_SECONDS:
+        return _latest_cache[1]
+    rows = await db.pool.fetch(_LATEST, LATEST_COUNT)
+    items = []
+    for row in rows:
+        item = dict(row)
+        item["snippet"] = _snippet(item.pop("content"))
+        items.append(item)
+    _latest_cache = (now, items)
+    return items
 
 
 async def list_replies(
@@ -325,4 +381,4 @@ async def report(message_id: int, user_id: UUID) -> None:
         raise UserBlocked() from None
     if report_id is None:
         raise MessageNotFound()
-
+    

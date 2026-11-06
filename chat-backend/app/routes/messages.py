@@ -10,7 +10,7 @@ from app.schemas.messages import MessageEdit, NewMessage
 from app.services import messages
 from app.services.courses import CourseNotFound
 from app.services.users import UserBlocked
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 router = APIRouter(tags=["messages"])
 
@@ -33,6 +33,14 @@ def _public(row, viewer_id: UUID | None) -> dict:
     author_id = item.pop("user_id")
     item["is_mine"] = author_id is not None and author_id == viewer_id
     return item
+
+
+@router.get("/latest")
+async def latest(response: Response):
+    """The newest reviews of all courses, for the home page. The same for every visitor,
+    so the browser may also keep it for as long as the server does."""
+    response.headers["Cache-Control"] = f"public, max-age={messages.LATEST_CACHE_SECONDS}"
+    return {"messages": await messages.latest()}
 
 
 @router.get("/courses/{course_id}/messages")
