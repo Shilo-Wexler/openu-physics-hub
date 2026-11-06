@@ -6,4 +6,17 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: 62%;
+
+  /* Behind the drawings (moments, space): soft colors under black lines. */
+  --pastel-1: #ffd9d2;
+  --pastel-2: #cfe6ff;
+  --pastel-3: #d6f2d8;
+  --pastel-4: #fff0b8;
+  --pastel-5: #e7dcff;
+  --pastel-6: #ffdcef;
+}
+
+/* Portraits and drawings fill the whole circle: they already keep a margin inside. */
+.full {
+  background-size: 100%;
 }

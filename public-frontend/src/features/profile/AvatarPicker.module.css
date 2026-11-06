@@ -1,3 +1,38 @@
+/* The "saved" note after a save. Keeps its height when empty, so nothing below jumps. */
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 1.5em;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  /* Blue so it stands out on the black-and-white page: the one spot of color here. */
+  color: #0b63ce;
+}
+
+/* A check mark drawn with two borders of a rotated box. */
+.check {
+  width: 5px;
+  height: 10px;
+  margin-bottom: 3px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+/* One group of avatars (emoji, scientists, ...) under its heading. */
+.group + .group {
+  margin-top: var(--space-4);
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 /* The ready-made avatars: six in a row on a phone, eight on a wider screen. */
 .grid {
   display: grid;
