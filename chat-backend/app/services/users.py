@@ -25,10 +25,24 @@ _NICKNAME_ATTEMPTS = 5
 # (public-frontend/src/shared/assets/avatars/<key>.svg). A new user gets a random one.
 # Adding a key here (and its picture in the frontend) is enough.
 AVATARS = frozenset({
+    # Emoji
     "atom", "telescope", "microscope", "rocket", "satellite", "saturn",
     "test-tube", "dna", "magnet", "bulb", "comet", "galaxy",
     "flask", "sun", "moon", "earth", "lightning", "snowflake",
     "rainbow", "volcano", "owl", "fox", "octopus", "robot",
+    # Scientists
+    "sci-newton", "sci-galileo", "sci-faraday", "sci-maxwell",
+    "sci-kepler", "sci-copernicus", "sci-huygens", "sci-pascal",
+    "sci-euler", "sci-gauss", "sci-volta", "sci-ampere",
+    "sci-kelvin", "sci-hertz", "sci-chatelet", "sci-somerville",
+    # Famous moments
+    "moment-apple", "moment-cat", "moment-pisa", "moment-cradle",
+    "moment-foucault", "moment-slits", "moment-demon", "moment-kite",
+    "moment-prism", "moment-telescope", "moment-doppler", "moment-magnet",
+    "moment-fma",
+    # Space
+    "space-pulsar", "space-saturn", "space-blackhole", "space-galaxy",
+    "space-comet", "space-supernova", "space-earth", "space-jupiter",
 })
 
 _AVATAR_CHOICES = sorted(AVATARS)
