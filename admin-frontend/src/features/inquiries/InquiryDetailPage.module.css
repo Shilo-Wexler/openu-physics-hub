@@ -91,12 +91,6 @@
   color: var(--color-text-muted);
 }
 
-/* dir="auto" turns an empty box left-to-right (no letters to judge by), which flips the Hebrew
-   placeholder. While it shows, the box is right-to-left; typed text then picks its own direction. */
-.note:placeholder-shown {
-  direction: rtl;
-}
-
 .note:focus {
   border-color: var(--color-primary);
 }

@@ -17,7 +17,7 @@ import { formatDateTime } from "../../shared/lib/format";
 import { LEVEL_HINT, LEVEL_LABEL, levelsManagedBy, type Level } from "../../shared/lib/levels";
 import { emailError } from "../../shared/lib/validation";
 import { errorMessage } from "../../shared/lib/errors";
-import { charLength } from "../../shared/lib/text";
+import { charLength, fieldDir } from "../../shared/lib/text";
 import { LEAVE_QUESTION, useWarnOnLeave } from "../../shared/lib/unsaved";
 import AdminLabel from "../../layout/AdminLabel";
 import { useAdmin } from "../../layout/consoleContext";
@@ -241,7 +241,7 @@ function AdminEditor({ email }: { email: string | null }) {
               onChange={(e) => setName(e.target.value)}
               readOnly={!canRename}
               maxLength={MAX_NAME}
-              dir="auto"
+              dir={fieldDir(name)}
             />
             <p className={styles.hint}>השם שיופיע בקונסולה.</p>
           </section>
