@@ -1,7 +1,7 @@
 """Settings read from environment variables (or a .env file in admin-backend/).
 
-A secret (DATABASE_URL, MOD_API_TOKEN, TURNSTILE_SECRET, CF_API_TOKEN) may instead come from a file:
-set NAME_FILE to its path, as a Kubernetes secret mounted into the pod.
+A secret (DATABASE_URL, MOD_API_TOKEN, TURNSTILE_SECRET, CF_API_TOKEN, CF_ANALYTICS_TOKEN) may instead
+come from a file: set NAME_FILE to its path, as a Kubernetes secret mounted into the pod.
 """
 
 import os
@@ -26,6 +26,11 @@ def _required(name: str) -> str:
 
 def _optional(name: str) -> str | None:
     return os.environ.get(name, "").strip() or None
+
+
+def _optional_list(name: str) -> list[str]:
+    """A comma separated list, lowercased. Empty when unset."""
+    return [v.strip().lower() for v in os.environ.get(name, "").split(",") if v.strip()]
 
 
 def _optional_secret(name: str) -> str | None:
@@ -120,3 +125,17 @@ CF_ACCESS_GROUP_ID = _optional("CF_ACCESS_GROUP_ID")
 ACCESS_SYNC_ENABLED = all((CF_API_TOKEN, CF_ACCOUNT_ID, CF_ACCESS_GROUP_ID))
 if any((CF_API_TOKEN, CF_ACCOUNT_ID, CF_ACCESS_GROUP_ID)) and not ACCESS_SYNC_ENABLED:
     raise RuntimeError("CF_API_TOKEN, CF_ACCOUNT_ID and CF_ACCESS_GROUP_ID must be set together")
+
+# Site visits (services/visits.py): the jobs/sync_visits.py CronJob copies daily page loads from
+# Cloudflare's analytics into the site_visits table, for the console's stats.
+# Token: a custom API token with "Zone: Analytics: Read" on the site's zone only. A separate token from
+# CF_API_TOKEN, so each one can do only its own job.
+# Zone ID: on the domain's overview page in the dashboard, under "API".
+# Hosts: the public site's hosts, comma separated, e.g. "openuvoice.com,www.openuvoice.com".
+# All three or none: without them the job refuses to run and the console shows no visits.
+CF_ANALYTICS_TOKEN = _optional_secret("CF_ANALYTICS_TOKEN")
+CF_ZONE_ID = _optional("CF_ZONE_ID")
+VISITS_HOSTS = _optional_list("VISITS_HOSTS")
+VISITS_SYNC_ENABLED = bool(CF_ANALYTICS_TOKEN and CF_ZONE_ID and VISITS_HOSTS)
+if (CF_ANALYTICS_TOKEN or CF_ZONE_ID or VISITS_HOSTS) and not VISITS_SYNC_ENABLED:
+    raise RuntimeError("CF_ANALYTICS_TOKEN, CF_ZONE_ID and VISITS_HOSTS must be set together")
