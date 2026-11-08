@@ -8,6 +8,12 @@
     <!-- The same text as SITE_DESCRIPTION in src/shared/seo/pageText.ts (the build checks). -->
     <meta name="description" content="פורטל הסטודנטים לפיזיקה באוניברסיטה הפתוחה: ביקורות וחוות דעת על קורסים, צ'אט, ופניות לוועד הסטודנטים." />
 
+    <!-- Site icon for the browser tab, Google results and the phone home screen (files in public/).
+         Google needs a square icon of at least 48px; the .ico holds 16, 32 and 48. -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <!-- Link preview when the site is shared (WhatsApp, Telegram, Facebook, X). Crawlers do not run
          the app, so they only see the HTML: the build writes a copy of this file for each course and
          main page, with its own title and description (vite.config.ts); every other page shows the
