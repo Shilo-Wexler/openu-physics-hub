@@ -11,6 +11,7 @@ import {
 import { ApiError } from "../../shared/api/client";
 import { usePageTitle } from "../../shared/browser/usePageTitle";
 import { useIsDesktop } from "../../shared/browser/useIsDesktop";
+import { courseDescription, courseTitle, GENERAL_CHAT_TITLE } from "../../shared/seo/pageText";
 import CourseNav from "./CourseNav";
 import RatingPanel from "./RatingPanel";
 import { ReplyBarProvider } from "./replyBar";
@@ -21,7 +22,6 @@ import { coursePath, courseUrl, messagePath } from "./share";
 import { useViewerGeneration } from "./useViewerGeneration";
 import styles from "./CourseChatPage.module.css";
 
-const GENERAL_TITLE = "צ'אט כללי";
 const NOT_FOUND_TEXT = "הקורס לא נמצא";
 
 /** The course's own page on the Open University site, where its syllabus and details are. */
@@ -54,7 +54,7 @@ interface PageProps {
 function titleFor(state: State): string | null {
   if (state.status === "ready") {
     const { course } = state;
-    return course.id === GENERAL_COURSE_ID ? GENERAL_TITLE : `${course.name}: ביקורות על הקורס`;
+    return course.id === GENERAL_COURSE_ID ? GENERAL_CHAT_TITLE : courseTitle(course.name);
   }
   return state.status === "not-found" ? NOT_FOUND_TEXT : null;
 }
@@ -62,11 +62,7 @@ function titleFor(state: State): string | null {
 /** The text search engines show under a course's title; other pages keep the site's description. */
 function descriptionFor(state: State): string | undefined {
   if (state.status !== "ready" || state.course.id === GENERAL_COURSE_ID) return undefined;
-  const { course } = state;
-  return (
-    `ביקורות, דירוגי קושי והמלצה וצ'אט של סטודנטים על הקורס ${course.name} (${course.id}) ` +
-    "באוניברסיטה הפתוחה."
-  );
+  return courseDescription(state.course.id, state.course.name);
 }
 
 /**
@@ -162,7 +158,7 @@ function CourseChat({ courseId, messageId }: { courseId: number; messageId: numb
           <header className={styles.header}>
             <div className={styles.heading}>
               {!general && <p className={styles.eyebrow}>קורס {course.id}</p>}
-              <h1 className={styles.title}>{general ? GENERAL_TITLE : course.name}</h1>
+              <h1 className={styles.title}>{general ? GENERAL_CHAT_TITLE : course.name}</h1>
             </div>
             {!isDesktop && <ShareButton url={courseUrl(course.id)} />}
           </header>
