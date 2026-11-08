@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="only light" />
     <title>OpenUVoice</title>
+    <!-- The same text as SITE_DESCRIPTION in src/shared/seo/pageText.ts (the build checks). -->
     <meta name="description" content="פורטל הסטודנטים לפיזיקה באוניברסיטה הפתוחה: ביקורות וחוות דעת על קורסים, צ'אט, ופניות לוועד הסטודנטים." />
 
-    <!-- Link preview when the site is shared (WhatsApp, Telegram, Facebook, X). The same preview for
-         every page: crawlers do not run the app, so they only ever see this file. The image URL must be
-         absolute, so it points at the production domain also on staging. No og:url and no canonical:
-         one fixed value here would mark every page as a copy of the home page. -->
+    <!-- Link preview when the site is shared (WhatsApp, Telegram, Facebook, X). Crawlers do not run
+         the app, so they only see the HTML: the build writes a copy of this file for each course and
+         main page, with its own title and description (vite.config.ts); every other page shows the
+         values here. The image URL must be absolute, so it points at the production domain also on
+         staging. No og:url and no canonical: one fixed value here would mark every page as a copy of
+         the home page. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="OpenUVoice" />
     <meta property="og:locale" content="he_IL" />

@@ -1,42 +1,23 @@
 /**
  * The browser tab's title and the page's description: the headline and the text under it that
- * search engines show for the page.
+ * search engines show for the page. The wording lives in shared/seo/pageText.ts, which the build
+ * also uses to write each page's HTML.
  */
 
 import { useEffect } from "react";
 import { useLocation } from "react-router";
 
-const SITE = "OpenUVoice";
+import { ROUTE_TITLES, SITE, SITE_DESCRIPTION, withSite } from "../seo/pageText";
 
 // The home page says what the site is: most searches that find it land there.
 const HOME_TITLE = `${SITE} · פורטל הסטודנטים לפיזיקה באוניברסיטה הפתוחה`;
 
-// Fixed pages. A course page and the general chat set their own title (usePageTitle), since only
-// they know the course name.
-const ROUTE_TITLES: Record<string, string> = {
-  "/chat": "צ'אט",
-  "/courses": "ביקורות על קורסים בפיזיקה",
-  "/announcements": "הכרזות",
-  "/inquiry": "פנייה לוועד הסטודנטים",
-  "/profile": "פרופיל",
-  "/about": "אודות",
-  "/privacy": "פרטיות ותנאי שימוש",
-  "/auth/done": "התחברות",
-};
-
 const NOT_FOUND_TITLE = "הדף לא נמצא";
 
-// The description in index.html, for every page without one of its own. Google reads the
-// description after running the app, so a course page can describe itself.
 const descriptionTag = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-const DEFAULT_DESCRIPTION = descriptionTag?.content ?? "";
 
 function setDescription(text: string): void {
   if (descriptionTag) descriptionTag.content = text;
-}
-
-function withSite(name: string): string {
-  return `${name} · ${SITE}`;
 }
 
 /** Paths whose page sets its own title. */
@@ -56,7 +37,7 @@ export function useRouteTitle(): void {
     const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
     if (ownsTitle(path)) return;
     document.title = path === "/" ? HOME_TITLE : withSite(ROUTE_TITLES[path] ?? NOT_FOUND_TITLE);
-    setDescription(DEFAULT_DESCRIPTION);
+    setDescription(SITE_DESCRIPTION);
   }, [pathname]);
 }
 
@@ -68,6 +49,6 @@ export function usePageTitle(name: string | null, description?: string): void {
   useEffect(() => {
     if (name === null) return;
     document.title = withSite(name);
-    setDescription(description ?? DEFAULT_DESCRIPTION);
+    setDescription(description ?? SITE_DESCRIPTION);
   }, [name, description]);
 }
