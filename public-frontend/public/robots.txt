@@ -1,8 +1,11 @@
 # Search engines may crawl the whole site, except pages that only make sense for one signed-in
 # person and the API. Staging and dev sit behind Cloudflare Access, so crawlers never reach them.
+# The one API part they may read: courses and their reviews, which a course page loads to show
+# its content (Google runs the page). The longer rule wins, so the rest of /api/ stays closed.
 User-agent: *
 Disallow: /profile
 Disallow: /auth/
 Disallow: /api/
+Allow: /api/chat/courses
 
 Sitemap: https://openuvoice.com/sitemap.xml
