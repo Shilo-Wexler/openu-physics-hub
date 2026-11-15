@@ -9,9 +9,10 @@ import { useAuth } from "../auth/AuthContext";
 import styles from "./NicknameForm.module.css";
 
 // Same rule as _NICKNAME_PATTERN in chat-backend/app/services/users.py:
-// 3-30 Hebrew or English letters, digits, space, underscore, hyphen, dot.
+// 3-30 Hebrew or English letters, digits, space, underscore, dot, apostrophe
+// (' and the Hebrew geresh ׳, which iPhone keyboards type), hyphen.
 // Checked here only for instant feedback; the server still enforces it.
-const NICKNAME_PATTERN = /^[A-Za-z0-9א-ת _.-]{3,30}$/;
+const NICKNAME_PATTERN = /^[A-Za-z0-9א-ת _.'׳-]{3,30}$/;
 
 type Status =
   | { kind: "idle" }
@@ -81,7 +82,7 @@ export default function NicknameForm({ current }: Props) {
 
       {showInvalid && (
         <p id="nickname-hint" className={styles.hint}>
-          3-30 תווים: אותיות בעברית או באנגלית, ספרות, רווח, _ - .
+          3-30 תווים: אותיות בעברית או באנגלית, ספרות, רווח, גרש, _ - .
         </p>
       )}
       {status.kind === "saved" && (

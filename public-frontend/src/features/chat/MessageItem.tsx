@@ -7,6 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 import LikeButton from "./LikeButton";
 import MessageEditor from "./MessageEditor";
 import MessageMenu from "./MessageMenu";
+import MessageText from "./MessageText";
 import { useReplyBar } from "./replyBar";
 import { useSwipeToReply } from "./useSwipeToReply";
 import styles from "./MessageItem.module.css";
@@ -214,10 +215,11 @@ export default function MessageItem({
                 />
               ) : (
                 <>
-                  {/* dir="auto": a message written in English is shown left-to-right. */}
-                  <p className={styles.content} dir="auto">
-                    {edited?.content ?? message.content}
-                  </p>
+                  {/* Links in the text are clickable; video links show as cards under it. */}
+                  <MessageText
+                    text={edited?.content ?? message.content}
+                    className={styles.content}
+                  />
 
                   {saved && (
                     <div className={styles.actions} ref={actions}>
