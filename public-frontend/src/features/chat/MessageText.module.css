@@ -1,0 +1,87 @@
+/* A link inside the text: the text's own color, with a quiet underline. */
+.link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-text-muted);
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+/* A video link as a one-row card: black tile, what it is and where, an "opens outside"
+   icon at the end. Under the text, as wide as the message. */
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 420px;
+  margin-top: var(--space-2);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #ececec);
+  border-radius: 14px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 150ms ease-out;
+}
+
+@media (hover: hover) {
+  .card:hover {
+    background: var(--color-surface-muted);
+  }
+}
+
+.tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--color-text);
+}
+
+.tile svg {
+  width: 20px;
+  height: 20px;
+  fill: #fff;
+}
+
+.tile .lines {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* min-width: 0 lets a long address be cut with "…" instead of widening the card. */
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+
+/* text-align: start of the RTL card (right), though the address itself reads LTR. */
+.address {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.external {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

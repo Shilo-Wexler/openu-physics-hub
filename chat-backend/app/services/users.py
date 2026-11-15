@@ -15,8 +15,9 @@ from uuid import UUID
 import asyncpg
 from app.core import db
 
-# 3-30 characters: Hebrew or English letters, digits, space, underscore, hyphen, dot.
-_NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9א-ת _.-]{3,30}")
+# 3-30 characters: Hebrew or English letters, digits, space, underscore, dot, apostrophe
+# (' and the Hebrew geresh ׳, which iPhone keyboards type), hyphen (last, so not a range).
+_NICKNAME_PATTERN = re.compile(r"[A-Za-z0-9א-ת _.'׳-]{3,30}")
 
 # Attempts at a free random nickname before giving up (collisions are rare).
 _NICKNAME_ATTEMPTS = 5
