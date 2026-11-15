@@ -32,7 +32,9 @@ def _variants(word: str) -> set[str]:
     # Only words that already have an English letter: "a55" -> "ass", but "455" stays a number.
     if _HAS_ENGLISH.search(word):
         forms.add(word.translate(_LOOKALIKES))
-    for form in forms:
+    # Loop over a copy: adding to a set while looping over it raises RuntimeError
+    # (it happened on any word with a triple letter, like "www" in a link).
+    for form in tuple(forms):
         forms.add(_REPEATS.sub(r"\1\1", form))  # "asssss" -> "ass"
         forms.add(_REPEATS.sub(r"\1", form))  # "fuuuck" -> "fuck"
     return forms
